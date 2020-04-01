@@ -25,28 +25,36 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
         self.encoding = mpg123.ENC_FLOAT_32
 
-    def find_loop_pairs(self):
+    def find_loop_pairs(self, min_duration_multiplier=0.2):
         _, beats = librosa.beat.beat_track(y=self.audio, sr=self.rate)
         chroma = librosa.feature.chroma_stft(y=self.audio, sr=self.rate)
-        spectrogram = librosa.stft(self.audio)
-        power_db = librosa.power_to_db(np.abs(spectrogram)**2)
+        mel_spectrogram = librosa.feature.melspectrogram(y=self.audio, sr=self.rate)
+        power_db = librosa.power_to_db(mel_spectrogram)
+        min_duration = int(chroma.shape[-1] * min_duration_multiplier)
         candidate_pairs = []
 
         for i in range(beats.size):
             for j in range(i):
-                dist = np.abs(np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]))
+                if beats[i] - beats[j] < min_duration:
+                    continue
+                
+                dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
+
                 if dist <= 0.1:
                     candidate_pairs.append((beats[j], beats[i], dist))
-
+        
         most_similar_pairs = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:10]
         pruned_list = []
 
         for start, end, dist in most_similar_pairs:
-            if np.abs(np.average(power_db[..., end]) - np.average(power_db[..., start])) < 1:
+            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=2.5):
                 pruned_list.append((start, end, dist))
 
         return pruned_list
-    
+
+    def _is_db_similar(self, power_db_f1, power_db_f2, threshold):
+        return np.abs(np.average(power_db_f1) - np.average(power_db_f2)) <= threshold
+
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
@@ -65,13 +73,13 @@ class MusicLooper:
         adjusted_start_offset = start_offset * self.channels
         adjusted_loop_offset = loop_offset * self.channels
 
-        i = adjusted_loop_offset - 750
+        i = 0
         try:
             while True:
                 out.play(playback_frames[..., i])
                 i += 1
                 
-                if i == adjusted_loop_offset + 1:
+                if i == adjusted_loop_offset:
                     i = adjusted_start_offset
 
         except KeyboardInterrupt:
@@ -84,9 +92,8 @@ def loop_track(filename):
         track = MusicLooper(filename)
 
         a = track.find_loop_pairs()
-        sorted_a = sorted(a, key=lambda x: np.abs(x[0] - x[1]), reverse=True)
-        # Use the loop point with the longest duration
-        start, end, dist = sorted_a[0]
+        # Use the loop point with the best similarity
+        start, end, dist = a[0]
 
         print("Playing with loop from {} back to {} (dist={})".format(
             track.frames_to_ftime(end),
