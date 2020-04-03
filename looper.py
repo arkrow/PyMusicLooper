@@ -20,6 +20,7 @@ class MusicLooper:
             raise FileNotFoundError("Specified file not found.")
 
         # Get the waveform data from the mp3 file
+        self.filename = filename
         self.audio, self.trim_offset = librosa.effects.trim(librosa.core.to_mono(audio))
         self.rate = sr
         self.playback_audio = audio
@@ -53,7 +54,7 @@ class MusicLooper:
                     elif method == 'corr_mod':
                         corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
                         corr = np.abs(np.min(corr.flatten()))
-                        if corr >= 0.99 and np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]) <= np.min([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)]): #and np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]])) <= 10:
+                        if corr >= 0.995 and np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]) <= np.min([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)]): #and np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]])) <= 10:
                             self._candidate_pairs_q.put((beats[j], beats[i], corr))
 
     def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.5, combine_beat_plp=True, keep_at_most=4, multithread=True):
@@ -89,7 +90,7 @@ class MusicLooper:
 
         if multithread:
             processes = []
-            affinity = 32
+            affinity = 8
             i_step = np.concatenate([[1, int(beats.size/2)], np.arange(int(beats.size/2)+int(beats.size/affinity), beats.size, step=int(beats.size/affinity), dtype=np.intp)])
             i_step[-1] = int(beats.size)
             for i in range(i_step.size - 1):
@@ -168,6 +169,17 @@ class MusicLooper:
 
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
+    
+    def export_loop_file(self, start_offset, loop_offset, filename=None, format='WAV'):
+        import soundfile as sf
+        if filename is None:
+            filename = os.path.splitext(self.filename)[0] + '-loop' + '.wav'
+        filename = os.path.abspath(filename)
+        start_offset = self.frames_to_samples(start_offset)
+        loop_offset = self.frames_to_samples(loop_offset)
+        loop_section = self.playback_audio[..., start_offset:loop_offset]
+        sf.write(filename, loop_section.T, self.rate)
+
 
 def lag_finder(y1, y2):
     diff = np.empty(y2.size)
@@ -224,7 +236,7 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         start_s = track.frames_to_samples(start_offset)
         end_s = track.frames_to_samples(loop_offset)
         # lag_finder(track.playback_audio[0, start_s:start_s+512], track.playback_audio[0, end_s:end_s+512])
-        
+        track.export_loop_file(start_offset, loop_offset)
         print("Playing with loop from {} back to {}, prioritizing {}, (score={})".format(
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
