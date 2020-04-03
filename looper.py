@@ -35,7 +35,7 @@ class MusicLooper:
                     if beats[i] - beats[j] < min_duration:
                         continue
                     
-                    if method == 'euclid_dist':
+                    if method == 'dist':
                         dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                         if dist <= 0.15:
                             self._candidate_pairs_q.put((beats[j], beats[i], dist))
@@ -54,10 +54,13 @@ class MusicLooper:
                     elif method == 'corr_mod':
                         corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
                         corr = np.abs(np.min(corr.flatten()))
-                        if corr >= 0.995 and np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]) <= np.min([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)]): #and np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]])) <= 10:
-                            self._candidate_pairs_q.put((beats[j], beats[i], corr))
+                        if corr >= 0.995:
+                            dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
+                            deviation = np.max([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)])
+                            if dist <= deviation:
+                                self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
 
-    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.5, combine_beat_plp=True, keep_at_most=4, multithread=True):
+    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.3, combine_beat_plp=True, keep_at_most=4, multithread=True):
         runtime_start = time.time()
         fmin = 27.5
         fmax = 16000
@@ -69,7 +72,8 @@ class MusicLooper:
             _, beats_bt = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
             beats = np.union1d(beats_bt, beats_plp)
         else:
-            _, beats = librosa.beat.beat_track(y=self.audio, sr=self.rate)
+            onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, fmin=fmin, fmax=fmax)
+            _, beats = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
 
         S = librosa.core.stft(y=self.audio)
         S_power = np.abs(S)**2
@@ -111,12 +115,12 @@ class MusicLooper:
         print(len(candidate_pairs))
         most_similar_pairs = []
 
-        for start, end, dist in candidate_pairs:
+        for start, end, score in candidate_pairs:
             if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=2):
-                most_similar_pairs.append((start, end, dist))
+                most_similar_pairs.append((start, end, score))
         
-        use_decending = True if method == 'corr' or method == 'corr_mod' else False
-        
+        use_decending = True if method == 'corr' else False
+
         pruned_list = sorted(most_similar_pairs, reverse=use_decending, key=lambda x: x[2])[:keep_at_most]
 
         if self.trim_offset[0] > 0:
@@ -144,7 +148,7 @@ class MusicLooper:
         return librosa.core.frames_to_samples(frame)
 
     def frames_to_ftime(self, frame):
-        time_sec = librosa.core.frames_to_time(frame, sr=self.rate, n_fft=2048)
+        time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
         return "{:02.0f}:{:06.3f}".format(
                     time_sec // 60,
                     time_sec % 60
@@ -236,7 +240,7 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         start_s = track.frames_to_samples(start_offset)
         end_s = track.frames_to_samples(loop_offset)
         # lag_finder(track.playback_audio[0, start_s:start_s+512], track.playback_audio[0, end_s:end_s+512])
-        track.export_loop_file(start_offset, loop_offset)
+        # track.export_loop_file(start_offset, loop_offset)
         print("Playing with loop from {} back to {}, prioritizing {}, (score={})".format(
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
