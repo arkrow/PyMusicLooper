@@ -1,9 +1,12 @@
 import os
+import multiprocessing
 import sys
 import numpy as np
 from mpg123 import Mpg123, Out123
 import mpg123
 import librosa
+from multiprocessing import Queue
+import time
 
 class MusicLooper:
     def __init__(self, filename):
@@ -17,7 +20,7 @@ class MusicLooper:
             raise FileNotFoundError("Specified file not found.")
 
         # Get the waveform data from the mp3 file
-        self.audio = librosa.core.to_mono(audio)
+        self.audio, self.trim_offset = librosa.effects.trim(librosa.core.to_mono(audio))
         self.rate = sr
         self.playback_audio = audio
 
@@ -25,13 +28,54 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
         self.encoding = mpg123.ENC_FLOAT_32
 
-    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.5, use_plp=False, keep_at_most=4):
+    def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration, method):
+        for i in range(i_start, i_stop):
+            for j in range(i):
+                    if beats[i] - beats[j] < min_duration:
+                        continue
+                    
+                    if method == 'euclid_dist':
+                        dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
+                        if dist <= 0.15:
+                            self._candidate_pairs_q.put((beats[j], beats[i], dist))
+            
+                    elif method == 'angle':
+                        angle = np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]]))
+                        if angle <= 10:
+                            self._candidate_pairs_q.put((beats[j], beats[i], angle))
+                    
+                    elif method == 'corr':
+                        corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
+                        corr = np.min(corr.flatten())
+                        if corr >= 0.99:
+                            self._candidate_pairs_q.put((beats[j], beats[i], corr))
+
+                    elif method == 'corr_mod':
+                        corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
+                        corr = np.abs(np.min(corr.flatten()))
+                        if corr >= 0.99 and np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]) <= np.min([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)]): #and np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]])) <= 10:
+                            self._candidate_pairs_q.put((beats[j], beats[i], corr))
+
+    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.5, use_plp=False, combine_beat_plp=True, keep_at_most=4, multithread=True):
+        n_fft = 1024
+        lag = 1
+        n_mels = 128
+        fmin = 27.5
+        fmax = 16000.
+        max_size = 3
+        hop_length = int(librosa.time_to_samples(1./200, sr=self.rate))
         
         if use_plp:
-            # onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate)
-            n = (self.rate / 22050) * 384
-            pulse = librosa.beat.plp(y=self.audio, sr=self.rate, win_length=n)
+            onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, lag=lag, fmin=fmin, fmax=fmax)
+            # n = (self.rate / 22050) * 384
+            pulse = librosa.beat.plp(sr=self.rate, onset_envelope=onset_env)
             beats = np.flatnonzero(librosa.util.localmax(pulse))
+        elif combine_beat_plp:
+            onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, lag=lag, fmin=fmin, fmax=fmax)
+            pulse = librosa.beat.plp(sr=self.rate, onset_envelope=onset_env)
+            beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+            _, beats_bt = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
+            beats = np.union1d(beats_bt, beats_plp)
         else:
             _, beats = librosa.beat.beat_track(y=self.audio, sr=self.rate)
 
@@ -46,33 +90,29 @@ class MusicLooper:
         min_duration = int(chroma.shape[-1] * min_duration_multiplier)
         candidate_pairs = []
 
-        for i in range(beats.size):
-            for j in range(i):
-                if beats[i] - beats[j] < min_duration:
-                    continue
-                
-                if method == 'euclid_dist':
-                    dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
-                    if dist <= 0.15:
-                        candidate_pairs.append((beats[j], beats[i], dist))
+        self._candidate_pairs_q = Queue()
+
+
+        if multithread:
+            processes = []
+            affinity = 16
+            i_step = np.concatenate([[1, int(beats.size/2)], np.arange(int(beats.size/2)+int(beats.size/affinity), beats.size, step=int(beats.size/affinity), dtype=np.intp)])
+            i_step[-1] = int(beats.size)
+            for i in range(i_step.size - 1):
+                p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, min_duration, method))
+                processes.append(p)
+                p.start()
+        else:
+            self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration, method)
+
+        if multithread:
+            for process in processes:
+                process.join()
         
-                elif method == 'angle':
-                    angle = np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]]))
-                    if angle <= 10:
-                        candidate_pairs.append((beats[j], beats[i], angle))
-                
-                elif method == 'corr':
-                    corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
-                    corr = np.min(corr.flatten())
-                    if corr >= 0.99:
-                        candidate_pairs.append((beats[j], beats[i], corr))
-
-                elif method == 'corr_mod':
-                    corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
-                    corr = np.min(corr.flatten())
-                    if corr >= 0.99 and np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]]) <= np.min([np.linalg.norm(chroma[..., beats[j]] - (chroma[..., beats[j]] * 1.1)), np.linalg.norm(chroma[..., beats[i]] - (chroma[..., beats[i]] * 1.1))]):# and np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]])) <= 10:
-                        candidate_pairs.append((beats[j], beats[i], corr))
-
+        candidate_pairs = []
+        while not self._candidate_pairs_q.empty():
+            candidate_pairs.append(self._candidate_pairs_q.get())
+        
         print(len(candidate_pairs))
         most_similar_pairs = []
 
@@ -83,6 +123,10 @@ class MusicLooper:
         use_decending = True if method == 'corr' or method == 'corr_mod' else False
         
         pruned_list = sorted(most_similar_pairs, reverse=use_decending, key=lambda x: x[2])[:keep_at_most]
+
+        if self.trim_offset[0] > 0:
+            offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
+            offset_f(pruned_list)
 
         print(pruned_list)
 
@@ -119,7 +163,7 @@ class MusicLooper:
         adjusted_start_offset = start_offset * self.channels
         adjusted_loop_offset = loop_offset * self.channels
 
-        i = adjusted_loop_offset - 1500
+        i = adjusted_loop_offset - 1000
         try:
             while True:
                 out.play(playback_frames[..., i])
@@ -163,6 +207,7 @@ def lag_finder(y1, y2):
 def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offset=None):
     try:
         # Load the file
+        runtime_start = time.time()
         print("Loading {}...".format(filename))
         track = MusicLooper(filename)
         if start_offset is None and loop_offset is None:
@@ -178,6 +223,8 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
             start_offset, loop_offset, score = a[0]
         else:
             score = None
+        runtime_end = time.time()
+        print('Elapsed time (s): {}'.format(runtime_end - runtime_start))
         start_s = track.frames_to_samples(start_offset)
         end_s = track.frames_to_samples(loop_offset)
         # lag_finder(track.playback_audio[0, start_s:start_s+512], track.playback_audio[0, end_s:end_s+512])
