@@ -100,6 +100,7 @@ class MusicLooper:
             for i in range(i_step.size - 1):
                 p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, min_duration, method))
                 processes.append(p)
+                p.daemon=True
                 p.start()
         else:
             self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration, method)
