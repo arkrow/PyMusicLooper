@@ -32,8 +32,9 @@ class MusicLooper:
     def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration, method):
         for i in range(i_start, i_stop):
             for j in range(i):
+                    # Since the beats array is sorted, an j >= current_j will only decrease in duration
                     if beats[i] - beats[j] < min_duration:
-                        continue
+                        break
                     
                     if method == 'dist':
                         dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
@@ -53,14 +54,14 @@ class MusicLooper:
 
                     elif method == 'corr_mod':
                         corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
-                        corr = np.abs(np.min(corr.flatten()))
+                        corr = np.abs(np.amin(corr))
                         if corr >= 0.995:
                             dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                             deviation = np.max([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)])
                             if dist <= deviation:
                                 self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
 
-    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.3, combine_beat_plp=True, keep_at_most=4, multithread=True):
+    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.4, combine_beat_plp=True, keep_at_most=4, concurrency=True):
         runtime_start = time.time()
         fmin = 27.5
         fmax = 16000
@@ -74,6 +75,9 @@ class MusicLooper:
         else:
             onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, fmin=fmin, fmax=fmax)
             _, beats = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
+        
+        beats = np.sort(beats)
+        print('Detected {} beats'.format(beats.size))
 
         S = librosa.core.stft(y=self.audio)
         S_power = np.abs(S)**2
@@ -91,10 +95,9 @@ class MusicLooper:
         runtime_end = time.time()
         print('Finished prep in {}s'.format(runtime_end - runtime_start))
 
-
-        if multithread:
+        if concurrency:
             processes = []
-            affinity = 8
+            affinity = 16
             i_step = np.concatenate([[1, int(beats.size/2)], np.arange(int(beats.size/2)+int(beats.size/affinity), beats.size, step=int(beats.size/affinity), dtype=np.intp)])
             i_step[-1] = int(beats.size)
             for i in range(i_step.size - 1):
@@ -105,7 +108,7 @@ class MusicLooper:
         else:
             self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration, method)
 
-        if multithread:
+        if concurrency:
             for process in processes:
                 process.join()
         
@@ -117,7 +120,7 @@ class MusicLooper:
         most_similar_pairs = []
 
         for start, end, score in candidate_pairs:
-            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=2):
+            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=3):
                 most_similar_pairs.append((start, end, score))
         
         use_decending = True if method == 'corr' else False
