@@ -5,7 +5,7 @@ import numpy as np
 from mpg123 import Mpg123, Out123
 import mpg123
 import librosa
-from multiprocessing import Queue
+from multiprocessing import Manager
 import time
 
 class MusicLooper:
@@ -29,7 +29,7 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
         self.encoding = mpg123.ENC_FLOAT_32
 
-    def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration):
+    def _loop_finding_routine(self, beats, i_start, i_stop, chroma, power_db, min_duration):
         for i in range(i_start, i_stop):
             deviation = np.linalg.norm(chroma[..., beats[i]] * 0.075)
             for j in range(i):
@@ -38,7 +38,8 @@ class MusicLooper:
                     break
                 dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                 if dist <= deviation:
-                    self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
+                    if self._is_db_similar(power_db[..., beats[i]], power_db[..., beats[j]], threshold=6):
+                        self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
 
     def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=4, concurrency=True):
         runtime_start = time.time()
@@ -67,7 +68,7 @@ class MusicLooper:
         min_duration = int(chroma.shape[-1] * min_duration_multiplier)
         candidate_pairs = []
 
-        self._candidate_pairs_q = Queue()
+        self._candidate_pairs_q = Manager().Queue()
 
         runtime_end = time.time()
         print('Finished prep in {}s'.format(runtime_end - runtime_start))
@@ -78,12 +79,12 @@ class MusicLooper:
             i_step = np.concatenate([[1, int(beats.size/2)], np.arange(int(beats.size/2)+int(beats.size/affinity), beats.size, step=int(beats.size/affinity), dtype=np.intp)])
             i_step[-1] = int(beats.size)
             for i in range(i_step.size - 1):
-                p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, min_duration))
+                p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, power_db, min_duration))
                 processes.append(p)
                 p.daemon=True
                 p.start()
         else:
-            self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration)
+            self._loop_finding_routine(beats, 1, beats.size, chroma, power_db, min_duration)
 
         if concurrency:
             for process in processes:
@@ -95,13 +96,8 @@ class MusicLooper:
             candidate_pairs.append(self._candidate_pairs_q.get())
 
         print(len(candidate_pairs))
-        most_similar_pairs = []
 
-        for start, end, score in candidate_pairs:
-            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=6):
-                most_similar_pairs.append((start, end, score))
-
-        pruned_list = sorted(most_similar_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
+        pruned_list = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
