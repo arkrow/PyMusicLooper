@@ -31,8 +31,7 @@ class MusicLooper:
 
     def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration):
         for i in range(i_start, i_stop):
-            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
-
+            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.075)
             for j in range(i):
                 # Since the beats array is sorted, an j >= current_j will only decrease in duration
                 if beats[i] - beats[j] < min_duration:
@@ -41,30 +40,28 @@ class MusicLooper:
                 if dist <= deviation:
                     self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
 
-    def find_loop_pairs(self, min_duration_multiplier=0.4, combine_beat_plp=True, keep_at_most=4, concurrency=True):
+    def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=4, concurrency=True):
         runtime_start = time.time()
-        fmin = 27.5
-        fmax = 16000
-        
-        if combine_beat_plp:
-            onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, fmin=fmin, fmax=fmax)
-            pulse = librosa.beat.plp(sr=self.rate, onset_envelope=onset_env)
-            beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-            _, beats_bt = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
-            beats = np.union1d(beats_bt, beats_plp)
-        else:
-            onset_env = librosa.onset.onset_strength(y=self.audio, sr=self.rate, fmin=fmin, fmax=fmax)
-            _, beats = librosa.beat.beat_track(sr=self.rate, onset_envelope=onset_env)
-        
-        beats = np.sort(beats)
-        print('Detected {} beats'.format(beats.size))
 
         S = librosa.core.stft(y=self.audio)
         S_power = np.abs(S)**2
         S_weighed = librosa.core.perceptual_weighting(S_power, librosa.fft_frequencies(sr=self.rate))
         mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed)
 
-        chroma = librosa.feature.chroma_stft(S=S_power, sr=self.rate)
+        if combine_beat_plp:
+            onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
+            pulse = librosa.beat.plp(onset_envelope=onset_env)
+            beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+            bpm, beats_bt = librosa.beat.beat_track(onset_envelope=onset_env)
+            beats = np.union1d(beats_bt, beats_plp)
+        else:
+            onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
+            bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+
+        beats = np.sort(beats)
+        print('Detected {} beats at {} bpm'.format(beats.size, bpm))
+
+        chroma = librosa.feature.chroma_stft(S=S_power)
 
         power_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
         min_duration = int(chroma.shape[-1] * min_duration_multiplier)
@@ -81,7 +78,7 @@ class MusicLooper:
             i_step = np.concatenate([[1, int(beats.size/2)], np.arange(int(beats.size/2)+int(beats.size/affinity), beats.size, step=int(beats.size/affinity), dtype=np.intp)])
             i_step[-1] = int(beats.size)
             for i in range(i_step.size - 1):
-                p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, min_duration, method))
+                p = multiprocessing.Process(target=self._loop_finding_routine, args=(beats, i_step[i], i_step[i+1], chroma, min_duration))
                 processes.append(p)
                 p.daemon=True
                 p.start()
@@ -91,31 +88,34 @@ class MusicLooper:
         if concurrency:
             for process in processes:
                 process.join()
-        
+
         candidate_pairs = []
+
         while not self._candidate_pairs_q.empty():
             candidate_pairs.append(self._candidate_pairs_q.get())
-        
+
         print(len(candidate_pairs))
         most_similar_pairs = []
 
         for start, end, score in candidate_pairs:
-            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=3):
+            if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=6):
                 most_similar_pairs.append((start, end, score))
 
         pruned_list = sorted(most_similar_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
-            offset_f(pruned_list)
+            for i in range(len(pruned_list)):
+                pruned_list[i] = (offset_f(pruned_list[i][0]), offset_f(pruned_list[i][1]), pruned_list[i][2])
 
         print(pruned_list)
 
         return pruned_list
 
     def _is_db_similar(self, power_db_f1, power_db_f2, threshold):
-        return np.abs(np.average(power_db_f1) - np.average(power_db_f2)) <= threshold
-    
+        average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
+        return  average_diff <= threshold
+
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
@@ -129,7 +129,7 @@ class MusicLooper:
     def play_looping(self, start_offset, loop_offset):
         out = Out123()
         out.start(self.rate, self.channels, self.encoding)
-        
+
         playback_frames  = librosa.util.frame(self.playback_audio.flatten(order='F'))
         adjusted_start_offset = start_offset * self.channels
         adjusted_loop_offset = loop_offset * self.channels
@@ -139,13 +139,13 @@ class MusicLooper:
             while True:
                 out.play(playback_frames[..., i])
                 i += 1
-                
+
                 if i == adjusted_loop_offset:
                     i = adjusted_start_offset
 
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
-    
+
     def export_loop_file(self, start_offset, loop_offset, filename=None, format='WAV'):
         import soundfile as sf
         if filename is None:
@@ -160,13 +160,16 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
     try:
         # Load the file
         runtime_start = time.time()
+
         print("Loading {}...".format(filename))
+
         track = MusicLooper(filename)
+
         runtime_end = time.time()
         print('Loaded file in {}s'.format(runtime_end - runtime_start))
+
         if start_offset is None and loop_offset is None:
             a = track.find_loop_pairs()
-            # Use the loop point with the best similarity
             if len(a) == 0:
                 print('No suitable loop point found.')
                 sys.exit()
@@ -177,19 +180,17 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
             start_offset, loop_offset, score = a[0]
         else:
             score = None
+
         runtime_end = time.time()
         print('Total elapsed time (s): {}'.format(runtime_end - runtime_start))
-        start_s = track.frames_to_samples(start_offset)
-        end_s = track.frames_to_samples(loop_offset)
-        # lag_finder(track.playback_audio[0, start_s:start_s+512], track.playback_audio[0, end_s:end_s+512])
-        # track.export_loop_file(start_offset, loop_offset)
+
         print("Playing with loop from {} back to {}, prioritizing {}, (score={})".format(
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
             'duration' if prioritize_duration else 'beat similarity',
             score if score is not None else 'unknown'))
         print("(press Ctrl+C to exit)")
-        # print(track.frames_to_samples(loop_offset), '\n', track.frames_to_samples(start_offset))
+
         track.play_looping(start_offset, loop_offset)
 
     except (TypeError, FileNotFoundError) as e:
