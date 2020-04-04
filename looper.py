@@ -156,36 +156,6 @@ class MusicLooper:
         loop_section = self.playback_audio[..., start_offset:loop_offset]
         sf.write(filename, loop_section.T, self.rate)
 
-
-def lag_finder(y1, y2):
-    diff = np.empty(y2.size)
-    for i in range(y2.size):
-        diff[i] = np.abs(y1[..., 0]-y2[..., i])
-    arg_min = np.argmin(diff) 
-    print(arg_min)
-    print(diff[arg_min])
-    return np.argmin(diff)
-    # from scipy import signal, fftpack
-    # import matplotlib.pyplot as plt
-    # n = len(y1)
-    # corr = np.correlate(y2, y1, mode='same') #/ np.sqrt(np.correlate(y1, y1, mode='same')[int(n/2)] * np.correlate(y2, y2, mode='same')[int(n/2)])
-    # print('y2 is ' + str(np.argmax(corr)) + 'samples behind y1')
-    # plt.figure()
-    # plt.plot(delay_arr, corr)
-    # plt.title('Lag: ' + str(np.round(delay, 3)) + ' s')
-    # plt.xlabel('Lag')
-    # plt.ylabel('Correlation coeff')
-    # plt.show()
-
-    # A = fftpack.fft(y1)
-    # B = fftpack.fft(y2)
-    # Ar = -A.conjugate()
-    # Br = -B.conjugate()
-    # # print(np.argmax(signal.correlate(a,b)))
-    # # import pdb; pdb.set_trace()
-    # # print(np.argmin(np.abs(np.subtract(a, b))))
-    # print(np.argmax(np.abs(fftpack.ifft(A*Br))))
-
 def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offset=None):
     try:
         # Load the file
