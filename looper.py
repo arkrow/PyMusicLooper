@@ -29,39 +29,19 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
         self.encoding = mpg123.ENC_FLOAT_32
 
-    def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration, method):
+    def _loop_finding_routine(self, beats, i_start, i_stop, chroma, min_duration):
         for i in range(i_start, i_stop):
+            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
+
             for j in range(i):
-                    # Since the beats array is sorted, an j >= current_j will only decrease in duration
-                    if beats[i] - beats[j] < min_duration:
-                        break
-                    
-                    if method == 'dist':
-                        dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
-                        if dist <= 0.15:
-                            self._candidate_pairs_q.put((beats[j], beats[i], dist))
-            
-                    elif method == 'angle':
-                        angle = np.abs(self.angle_between(chroma[..., beats[i]], chroma[..., beats[j]]))
-                        if angle <= 10:
-                            self._candidate_pairs_q.put((beats[j], beats[i], angle))
-                    
-                    elif method == 'corr':
-                        corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
-                        corr = np.min(corr.flatten())
-                        if corr >= 0.99:
-                            self._candidate_pairs_q.put((beats[j], beats[i], corr))
+                # Since the beats array is sorted, an j >= current_j will only decrease in duration
+                if beats[i] - beats[j] < min_duration:
+                    break
+                dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
+                if dist <= deviation:
+                    self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
 
-                    elif method == 'corr_mod':
-                        corr = np.corrcoef(chroma[..., beats[i]], chroma[..., beats[j]])
-                        corr = np.abs(np.amin(corr))
-                        if corr >= 0.995:
-                            dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
-                            deviation = np.max([np.linalg.norm(chroma[..., beats[j]] * 0.1), np.linalg.norm(chroma[..., beats[i]] * 0.1)])
-                            if dist <= deviation:
-                                self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
-
-    def find_loop_pairs(self, method='corr_mod', min_duration_multiplier=0.4, combine_beat_plp=True, keep_at_most=4, concurrency=True):
+    def find_loop_pairs(self, min_duration_multiplier=0.4, combine_beat_plp=True, keep_at_most=4, concurrency=True):
         runtime_start = time.time()
         fmin = 27.5
         fmax = 16000
@@ -106,7 +86,7 @@ class MusicLooper:
                 p.daemon=True
                 p.start()
         else:
-            self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration, method)
+            self._loop_finding_routine(beats, 1, beats.size, chroma, min_duration)
 
         if concurrency:
             for process in processes:
@@ -122,10 +102,8 @@ class MusicLooper:
         for start, end, score in candidate_pairs:
             if self._is_db_similar(power_db[..., end], power_db[..., start], threshold=3):
                 most_similar_pairs.append((start, end, score))
-        
-        use_decending = True if method == 'corr' else False
 
-        pruned_list = sorted(most_similar_pairs, reverse=use_decending, key=lambda x: x[2])[:keep_at_most]
+        pruned_list = sorted(most_similar_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
@@ -137,16 +115,6 @@ class MusicLooper:
 
     def _is_db_similar(self, power_db_f1, power_db_f2, threshold):
         return np.abs(np.average(power_db_f1) - np.average(power_db_f2)) <= threshold
-    
-    def unit_vector(self, vector):
-        """ Returns the unit vector of the vector """
-        return vector / np.linalg.norm(vector)
-
-    def angle_between(self, v1, v2):
-        """ Returns the angle in degrees between vectors 'v1' and 'v2' """
-        v1_u = self.unit_vector(v1)
-        v2_u = self.unit_vector(v2)
-        return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)) * 360 / np.pi
     
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
