@@ -46,7 +46,7 @@ class MusicLooper:
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
         return average_diff
 
-    def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=16, concurrency=True):
+    def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=False, keep_at_most=16, concurrency=True):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
@@ -99,13 +99,14 @@ class MusicLooper:
 
         while not self._candidate_pairs_q.empty():
             candidate_pairs.append(self._candidate_pairs_q.get())
+        
 
         print(len(candidate_pairs))
 
         pruned_list = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
         if len(pruned_list) > 1:
-            ten_beats = librosa.samples_to_frames( np.amin([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
-            subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=ten_beats) for i in range(len(pruned_list))]
+            test_offset = librosa.samples_to_frames( np.amax([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
+            subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=test_offset) for i in range(len(pruned_list))]
             best_beat_idx = np.argmin(subseq_beat_sim)
             tmp = pruned_list[0]
             pruned_list[0] = pruned_list[best_beat_idx]
@@ -181,8 +182,11 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         if start_offset is None and loop_offset is None:
             a = track.find_loop_pairs()
             if len(a) == 0:
-                print('No suitable loop point found.')
-                sys.exit()
+                print('No loop point found. Retrying with expanded parameters.')
+                a = track.find_loop_pairs(combine_beat_plp=True)
+                if len(a) ==0:
+                    print('No suitable loop point found.')
+                    sys.exit()
 
             if prioritize_duration:
                 a = sorted(a, key=lambda x: np.abs(x[0] - x[1]), reverse=True)
