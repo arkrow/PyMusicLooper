@@ -181,18 +181,18 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         print('Loaded file in {}s'.format(runtime_end - runtime_start))
 
         if start_offset is None and loop_offset is None:
-            a = track.find_loop_pairs()
-            if len(a) == 0:
+            loop_pair_list = track.find_loop_pairs()
+            if len(loop_pair_list) == 0:
                 print('No loop point found. Retrying with expanded parameters.')
-                a = track.find_loop_pairs(combine_beat_plp=True)
-                if len(a) ==0:
+                loop_pair_list = track.find_loop_pairs(combine_beat_plp=True)
+                if len(loop_pair_list) == 0:
                     print('No suitable loop point found.')
                     sys.exit()
 
             if prioritize_duration:
-                a = sorted(a, key=lambda x: np.abs(x[0] - x[1]), reverse=True)
+                loop_pair_list = sorted(loop_pair_list, key=lambda x: np.abs(x[0] - x[1]), reverse=True)
 
-            start_offset, loop_offset, score = a[0]
+            start_offset, loop_offset, score = loop_pair_list[0]
         else:
             score = None
 
