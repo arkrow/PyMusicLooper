@@ -149,6 +149,7 @@ class MusicLooper:
         adjusted_loop_offset = loop_offset * self.channels
 
         i = adjusted_loop_offset - 1000
+        loop_count = 0
         try:
             while True:
                 out.play(playback_frames[..., i])
@@ -156,7 +157,8 @@ class MusicLooper:
 
                 if i == adjusted_loop_offset:
                     i = adjusted_start_offset
-                    print('looped!')
+                    loop_count += 1
+                    print('Currently on loop #{}'.format(loop_count), end='\r')
 
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
@@ -211,7 +213,7 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
             'duration' if prioritize_duration else 'beat similarity',
-            score if score is not None else 'unknown'))
+            score if score is not None else 0))
         print("(press Ctrl+C to exit)")
 
         track.play_looping(start_offset, loop_offset)
