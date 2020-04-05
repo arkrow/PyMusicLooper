@@ -185,12 +185,17 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
 
         if start_offset is None and loop_offset is None:
             loop_pair_list = track.find_loop_pairs()
+
+            # TODO: refactor audio preparation code to avoid duplicating work
             if len(loop_pair_list) == 0:
                 print('No loop point found. Retrying with expanded parameters.')
                 loop_pair_list = track.find_loop_pairs(combine_beat_plp=True)
                 if len(loop_pair_list) == 0:
                     print('No suitable loop point found.')
                     sys.exit()
+            elif loop_pair_list[0][2] < 0.9:
+                print('Best similarity in strict mode <90%. Retrying with expanded parameters.')
+                loop_pair_list = track.find_loop_pairs(combine_beat_plp=True)
 
             if prioritize_duration:
                 loop_pair_list = sorted(loop_pair_list, key=lambda x: np.abs(x[0] - x[1]), reverse=True)
