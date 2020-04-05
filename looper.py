@@ -40,13 +40,13 @@ class MusicLooper:
                 if dist <= deviation:
                     avg_db_diff = self.db_diff(power_db[..., beats[i]], power_db[..., beats[j]])
                     if avg_db_diff <= 5:
-                        self._candidate_pairs_q.put((beats[j], beats[i], np.exp(2 * dist/deviation) + np.exp(avg_db_diff)))
+                        self._candidate_pairs_q.put((beats[j], beats[i], avg_db_diff))
 
     def db_diff(self, power_db_f1, power_db_f2):
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
         return average_diff
 
-    def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=4, concurrency=True):
+    def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=16, concurrency=True):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
@@ -103,6 +103,13 @@ class MusicLooper:
         print(len(candidate_pairs))
 
         pruned_list = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
+        if len(pruned_list) > 1:
+            ten_beats = librosa.samples_to_frames( np.amin([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
+            subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=ten_beats) for i in range(len(pruned_list))]
+            best_beat_idx = np.argmin(subseq_beat_sim)
+            tmp = pruned_list[0]
+            pruned_list[0] = pruned_list[best_beat_idx]
+            pruned_list[best_beat_idx] = tmp
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
@@ -112,6 +119,12 @@ class MusicLooper:
         print(pruned_list)
 
         return pruned_list
+    
+    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration=None):
+        if test_duration is None:
+            test_duration = librosa.samples_to_frames(self.rate * 3)
+        test_duration = np.amin([test_duration, chroma[..., b1:b1+test_duration].shape[1], chroma[..., b2:b2+test_duration].shape[1]])
+        return np.linalg.norm( chroma[..., b1:b1+test_duration] - chroma[..., b2:b2+test_duration] )
 
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
