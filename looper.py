@@ -38,8 +38,13 @@ class MusicLooper:
                     break
                 dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                 if dist <= deviation:
-                    if self._is_db_similar(power_db[..., beats[i]], power_db[..., beats[j]], threshold=6):
-                        self._candidate_pairs_q.put((beats[j], beats[i], dist/deviation))
+                    avg_db_diff = self.db_diff(power_db[..., beats[i]], power_db[..., beats[j]])
+                    if avg_db_diff <= 5:
+                        self._candidate_pairs_q.put((beats[j], beats[i], np.exp(2 * dist/deviation) + np.exp(avg_db_diff)))
+
+    def db_diff(self, power_db_f1, power_db_f2):
+        average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
+        return average_diff
 
     def find_loop_pairs(self, min_duration_multiplier=0.35, combine_beat_plp=True, keep_at_most=4, concurrency=True):
         runtime_start = time.time()
@@ -107,10 +112,6 @@ class MusicLooper:
         print(pruned_list)
 
         return pruned_list
-
-    def _is_db_similar(self, power_db_f1, power_db_f2, threshold):
-        average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
-        return  average_diff <= threshold
 
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
