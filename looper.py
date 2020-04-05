@@ -104,16 +104,15 @@ class MusicLooper:
 
         pruned_list = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
 
-        if len(pruned_list) > 1:
-            test_offset = librosa.samples_to_frames( np.amax([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
-            subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=test_offset) for i in range(len(pruned_list))]
+        test_offset = librosa.samples_to_frames( np.amax([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
+        subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=test_offset) for i in range(len(pruned_list))]
 
-            # replace avg_db_diff with cosine similarity
-            for i in range(len(pruned_list)):
-                pruned_list[i] = (pruned_list[i][0], pruned_list[i][1], subseq_beat_sim[i])
+        # replace avg_db_diff with cosine similarity
+        for i in range(len(pruned_list)):
+            pruned_list[i] = (pruned_list[i][0], pruned_list[i][1], subseq_beat_sim[i])
 
-            # re-sort based on new score
-            pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x[2])
+        # re-sort based on new score
+        pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x[2])
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
