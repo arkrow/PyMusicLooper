@@ -99,18 +99,21 @@ class MusicLooper:
 
         while not self._candidate_pairs_q.empty():
             candidate_pairs.append(self._candidate_pairs_q.get())
-        
 
         print(len(candidate_pairs))
 
         pruned_list = sorted(candidate_pairs, reverse=False, key=lambda x: x[2])[:keep_at_most]
+
         if len(pruned_list) > 1:
             test_offset = librosa.samples_to_frames( np.amax([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
             subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=test_offset) for i in range(len(pruned_list))]
-            best_beat_idx = np.argmax(subseq_beat_sim)
-            tmp = pruned_list[0]
-            pruned_list[0] = pruned_list[best_beat_idx]
-            pruned_list[best_beat_idx] = tmp
+
+            # replace avg_db_diff with cosine similarity
+            for i in range(len(pruned_list)):
+                pruned_list[i] = (pruned_list[i][0], pruned_list[i][1], subseq_beat_sim[i])
+
+            # re-sort based on new score
+            pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x[2])
 
         if self.trim_offset[0] > 0:
             offset_f = lambda x: librosa.samples_to_frames(librosa.frames_to_samples(x) + self.trim_offset[0])
@@ -120,7 +123,7 @@ class MusicLooper:
         print(pruned_list)
 
         return pruned_list
-    
+
     def _subseq_beat_similarity(self, b1, b2, chroma, test_duration=None):
         if test_duration is None:
             test_duration = librosa.samples_to_frames(self.rate * 3)
@@ -154,6 +157,7 @@ class MusicLooper:
 
                 if i == adjusted_loop_offset:
                     i = adjusted_start_offset
+                    print('looped!')
 
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
@@ -199,7 +203,7 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         runtime_end = time.time()
         print('Total elapsed time (s): {}'.format(runtime_end - runtime_start))
 
-        print("Playing with loop from {} back to {}, prioritizing {}, (score={})".format(
+        print("Playing with loop from {} back to {}, prioritizing {}, (similarity: {:.4%})".format(
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
             'duration' if prioritize_duration else 'beat similarity',
