@@ -107,7 +107,7 @@ class MusicLooper:
         if len(pruned_list) > 1:
             test_offset = librosa.samples_to_frames( np.amax([int( (bpm / 60) * 0.1 * self.rate ), self.rate * 1.5]) )
             subseq_beat_sim = [self._subseq_beat_similarity(pruned_list[i][0], pruned_list[i][1], chroma, test_duration=test_offset) for i in range(len(pruned_list))]
-            best_beat_idx = np.argmin(subseq_beat_sim)
+            best_beat_idx = np.argmax(subseq_beat_sim)
             tmp = pruned_list[0]
             pruned_list[0] = pruned_list[best_beat_idx]
             pruned_list[best_beat_idx] = tmp
@@ -125,7 +125,8 @@ class MusicLooper:
         if test_duration is None:
             test_duration = librosa.samples_to_frames(self.rate * 3)
         test_duration = np.amin([test_duration, chroma[..., b1:b1+test_duration].shape[1], chroma[..., b2:b2+test_duration].shape[1]])
-        return np.linalg.norm( chroma[..., b1:b1+test_duration] - chroma[..., b2:b2+test_duration] )
+        cosim = [np.dot(chroma[..., b1+i], chroma[..., b2+i]) / ( np.linalg.norm( chroma[..., b1+i]) * np.linalg.norm(chroma[..., b2+i]) ) for i in range(test_duration)]
+        return np.average(cosim)
 
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
