@@ -135,8 +135,14 @@ class MusicLooper:
     def _subseq_beat_similarity(self, b1, b2, chroma, test_duration=None):
         if test_duration is None:
             test_duration = librosa.samples_to_frames(self.rate * 3)
-        test_duration = np.amin([test_duration, chroma[..., b1:b1+test_duration].shape[1], chroma[..., b2:b2+test_duration].shape[1]])
-        cosim = [np.dot(chroma[..., b1+i], chroma[..., b2+i]) / ( np.linalg.norm( chroma[..., b1+i]) * np.linalg.norm(chroma[..., b2+i]) ) for i in range(test_duration)]
+        testable_offset = np.amin([test_duration, chroma[..., b1:b1+test_duration].shape[1], chroma[..., b2:b2+test_duration].shape[1]])
+
+        cosim = [np.dot(chroma[..., b1+i], chroma[..., b2+i]) / ( np.linalg.norm( chroma[..., b1+i]) * np.linalg.norm(chroma[..., b2+i]) ) for i in range(testable_offset)]
+
+        # Pad beats that don't meet the minimum test duration with zeroes (otherwise skews the average as there are less points to compare)
+        if testable_offset < test_duration:
+            cosim.extend([0] * (test_duration - testable_offset))
+
         return np.average(cosim)
 
     def frames_to_samples(self, frame):
@@ -212,7 +218,7 @@ def loop_track(filename, prioritize_duration=False, start_offset=None, loop_offs
         runtime_end = time.time()
         print('Total elapsed time (s): {}'.format(runtime_end - runtime_start))
 
-        print("Playing with loop from {} back to {}, prioritizing {}, (similarity: {:.4%})".format(
+        print("Playing with loop from {} back to {}, prioritizing {}, (similarity: {:.1%})".format(
             track.frames_to_ftime(loop_offset),
             track.frames_to_ftime(start_offset),
             'duration' if prioritize_duration else 'beat similarity',
