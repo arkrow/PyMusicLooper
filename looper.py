@@ -31,7 +31,7 @@ class MusicLooper:
 
     def _loop_finding_routine(self, beats, i_start, i_stop, chroma, power_db, min_duration):
         for i in range(i_start, i_stop):
-            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.075)
+            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
             for j in range(i):
                 # Since the beats array is sorted, an j >= current_j will only decrease in duration
                 if beats[i] - beats[j] < min_duration:
@@ -39,7 +39,7 @@ class MusicLooper:
                 dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                 if dist <= deviation:
                     avg_db_diff = self.db_diff(power_db[..., beats[i]], power_db[..., beats[j]])
-                    if avg_db_diff <= 5:
+                    if avg_db_diff <= 10:
                         self._candidate_pairs_q.put((beats[j], beats[i], avg_db_diff))
 
     def db_diff(self, power_db_f1, power_db_f2):
