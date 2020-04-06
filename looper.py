@@ -1,3 +1,21 @@
+#!/usr/bin/python3
+# coding=utf-8
+""" PyMusicLooper
+    Copyright (C) 2020  Hazem Nabil
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>."""
+
 import os
 import sys
 import time
@@ -8,6 +26,7 @@ import librosa
 import mpg123
 import numpy as np
 from mpg123 import Out123
+import soundfile
 
 
 class MusicLooper:
@@ -263,15 +282,14 @@ class MusicLooper:
                          loop_offset,
                          filename=None,
                          format="WAV"):
-        import soundfile as sf
-
         if filename is None:
             filename = os.path.splitext(self.filename)[0] + "-loop" + ".wav"
+
         filename = os.path.abspath(filename)
         start_offset = self.frames_to_samples(start_offset)
         loop_offset = self.frames_to_samples(loop_offset)
         loop_section = self.playback_audio[..., start_offset:loop_offset]
-        sf.write(filename, loop_section.T, self.rate)
+        soundfile.write(filename, loop_section.T, self.rate)
 
 
 def loop_track(filename,

@@ -1,0 +1,4 @@
+numpy==1.17.2
+librosa==0.7.2
+mpg123==0.4
+SoundFile==0.10.3.post1
