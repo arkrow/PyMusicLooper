@@ -17,6 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -258,6 +259,9 @@ class MusicLooper:
 
         return np.average(cosim)
 
+    def samples_to_frames(self, samples):
+        return librosa.core.samples_to_frames(samples)
+
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
@@ -311,8 +315,41 @@ class MusicLooper:
                         self.rate,
                         format=format)
 
+    def export_json(self, loop_start, loop_end):
+        loop_start = self.frames_to_samples(loop_start)
+        loop_end = self.frames_to_samples(loop_end)
 
-def loop_track(filename, loop_start=None, loop_end=None):
+        out = {
+            "loop_start": int(loop_start),
+            "loop_end": int(loop_end),
+            "score": float(f"{score:.4}")
+        }
+
+        with open(self.filename + "-lps.json", "w") as file:
+            json.dump(out, fp=file)
+
+    def cache_loop_points(self, loop_start, loop_end, score):
+        filename = os.path.abspath(self.filename)
+
+        out = {
+            "loop_start": int(loop_start),
+            "loop_end": int(loop_end),
+            "score": float(f"{score:.4}")
+        }
+
+        dirpath = os.path.dirname(os.path.realpath(__file__))
+        cache_path = os.path.join(dirpath, "cache.json")
+
+        with open(cache_path, "w") as file:
+            try:
+                cache = json.load(file)
+            except Exception:
+                cache = {}
+            cache[filename] = out
+            json.dump(cache, fp=file)
+
+
+def loop_track(filename, loop_start=None, loop_end=None, score=None):
     try:
         runtime_start = time.time()
         # Load the file
@@ -328,8 +365,8 @@ def loop_track(filename, loop_start=None, loop_end=None):
                 sys.exit(1)
 
             loop_start, loop_end, score = loop_pair_list[0]
-        else:
-            score = None
+
+            track.cache_loop_points(loop_start, loop_end, score)
 
         runtime_end = time.time()
         total_runtime = runtime_end - runtime_start
@@ -352,7 +389,8 @@ def loop_track(filename, loop_start=None, loop_end=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="python looper.py",
-        description="Automatically find loop points in music files and play/export them.")
+        description=
+        "Automatically find loop points in music files and play/export them.")
     parser.add_argument("path", type=str, help="Path to music file.")
 
     parser.add_argument(
@@ -369,11 +407,45 @@ if __name__ == "__main__":
         default=False,
         help="Export the song into intro, loop and outro files (WAV format).",
     )
+    parser.add_argument(
+        "-j",
+        "--json",
+        action="store_true",
+        default=False,
+        help=
+        "Export the loop points (in samples) to a JSON file in the song's directory."
+    )
 
     args = parser.parse_args()
 
-    if args.export:
+    cached_loop_start = None
+    cached_loop_end = None
+    cached_score = None
+
+    dirpath = os.path.dirname(os.path.realpath(__file__))
+    cache_path = os.path.join(dirpath, "cache.json")
+
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as file:
+                cache = json.load(file)
+                full_path = os.path.abspath(args.path)
+                if full_path in cache:
+                    cached_loop_start = cache[full_path]["loop_start"]
+                    cached_loop_end = cache[full_path]["loop_end"]
+                    cached_score = cache[full_path]["score"]
+        except Exception:
+            pass
+
+    if args.export or args.json:
         track = MusicLooper(args.path)
+
+        if cached_loop_start is not None and cached_loop_end is not None:
+            if args.json:
+                track.export_json(cached_loop_start, cached_loop_end)
+            if args.export:
+                track.export(cached_loop_start, cached_loop_end)
+            sys.exit(0)
 
         loop_pair_list = track.find_loop_pairs()
 
@@ -383,7 +455,16 @@ if __name__ == "__main__":
 
         loop_start, loop_end, score = loop_pair_list[0]
 
-        track.export(loop_start, loop_end)
+        track.cache_loop_points(loop_start, loop_end, score)
+
+        if args.json:
+            track.export_json(loop_start, loop_end, score)
+
+        if args.export:
+            track.export(loop_start, loop_end)
 
     elif args.play:
-        loop_track(args.path)
+        loop_track(args.path,
+                   loop_start=cached_loop_start,
+                   loop_end=cached_loop_end,
+                   score=cached_score)
