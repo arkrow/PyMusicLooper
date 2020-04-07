@@ -105,7 +105,8 @@ class MusicLooper:
         self._candidate_pairs_q = Manager().Queue()
 
         runtime_end = time.time()
-        print("Finished prep in {:.3}s".format(runtime_end - runtime_start))
+        prep_time = runtime_end - runtime_start
+        print("Finished initial prep in {:.3}s".format(prep_time))
 
         def loop_subroutine(combine_beat_plp=combine_beat_plp,
                             beats=beats,
@@ -115,7 +116,7 @@ class MusicLooper:
                 pulse = librosa.beat.plp(onset_envelope=onset_env)
                 beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
                 beats = np.union1d(beats, beats_plp)
-                print("Detected {} beats by combining PLP with existing beats".
+                print("Detected {} total points by combining PLP with existing beats".
                       format(beats.size))
 
             if concurrency:
@@ -160,8 +161,6 @@ class MusicLooper:
 
             while not self._candidate_pairs_q.empty():
                 candidate_pairs.append(self._candidate_pairs_q.get())
-
-            print(len(candidate_pairs))
 
             candidate_pairs = sorted(candidate_pairs,
                                      reverse=False,
@@ -231,8 +230,6 @@ class MusicLooper:
                     pruned_list[i][2],
                 )
 
-        print(pruned_list)
-
         return pruned_list
 
     def apply_trim_offset(self, frame):
@@ -278,8 +275,7 @@ class MusicLooper:
         adjusted_loop_start = loop_start * self.channels
         adjusted_loop_end = loop_end * self.channels
 
-        i = adjusted_loop_end - 1000
-        # i = 0
+        i = 0
         loop_count = 0
         try:
             while True:
