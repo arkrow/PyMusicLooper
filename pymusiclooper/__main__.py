@@ -17,6 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -39,7 +40,9 @@ def loop_track(filename, loop_start=None, loop_end=None, score=None):
                 print("No suitable loop point found.")
                 sys.exit(1)
 
-            loop_start, loop_end, score = loop_pair_list[0]
+            loop_start = loop_pair_list[0]["loop_start"]
+            loop_end = loop_pair_list[0]["loop_end"]
+            score = loop_pair_list[0]["score"]
 
             track.cache_loop_points(loop_start, loop_end, score)
 
@@ -137,7 +140,9 @@ if __name__ == "__main__":
             print("No suitable loop point found.")
             sys.exit(1)
 
-        loop_start, loop_end, score = loop_pair_list[0]
+        loop_start = loop_pair_list[0]["loop_start"]
+        loop_end = loop_pair_list[0]["loop_end"]
+        score = loop_pair_list[0]["score"]
 
         track.cache_loop_points(loop_start, loop_end, score)
 

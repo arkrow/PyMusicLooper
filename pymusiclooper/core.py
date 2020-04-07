@@ -72,8 +72,11 @@ class MusicLooper:
                     avg_db_diff = self.db_diff(power_db[..., beats[i]],
                                                power_db[..., beats[j]])
                     if avg_db_diff <= 10:
-                        self._candidate_pairs_q.put(
-                            (beats[j], beats[i], avg_db_diff))
+                        self._candidate_pairs_q.put({
+                            "loop_start": beats[j],
+                            "loop_end": beats[i],
+                            "dB_diff": avg_db_diff
+                        })
 
     def db_diff(self, power_db_f1, power_db_f2):
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
@@ -115,8 +118,9 @@ class MusicLooper:
                 pulse = librosa.beat.plp(onset_envelope=onset_env)
                 beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
                 beats = np.union1d(beats, beats_plp)
-                print("Detected {} total points by combining PLP with existing beats".
-                      format(beats.size))
+                print(
+                    "Detected {} total points by combining PLP with existing beats"
+                    .format(beats.size))
 
             if concurrency:
                 processes = []
@@ -163,17 +167,19 @@ class MusicLooper:
 
             candidate_pairs = sorted(candidate_pairs,
                                      reverse=False,
-                                     key=lambda x: x[2])
+                                     key=lambda x: x["dB_diff"])
 
-            db_diff_array = np.array(
-                [candidate_pairs[i][2] for i in range(len(candidate_pairs))])
+            db_diff_array = np.array([
+                candidate_pairs[i]["dB_diff"]
+                for i in range(len(candidate_pairs))
+            ])
             db_diff_avg = np.average(db_diff_array)
             db_diff_std = np.std(db_diff_array)
 
             i = 0
             one_stddev = db_diff_avg - db_diff_std
             while i < len(candidate_pairs):
-                if candidate_pairs[i][2] > one_stddev:
+                if candidate_pairs[i]["dB_diff"] > one_stddev:
                     break
                 i += 1
 
@@ -184,8 +190,8 @@ class MusicLooper:
 
             subseq_beat_sim = [
                 self._subseq_beat_similarity(
-                    pruned_list[i][0],
-                    pruned_list[i][1],
+                    pruned_list[i]["loop_start"],
+                    pruned_list[i]["loop_end"],
                     chroma,
                     test_duration=test_offset,
                 ) for i in range(len(pruned_list))
@@ -193,15 +199,12 @@ class MusicLooper:
 
             # Add cosine similarity as score
             for i in range(len(pruned_list)):
-                pruned_list[i] = (
-                    pruned_list[i][0],
-                    pruned_list[i][1],
-                    subseq_beat_sim[i],
-                    pruned_list[i][2],
-                )
+                pruned_list[i]["score"] = subseq_beat_sim[i]
 
             # re-sort based on new score
-            pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x[2])
+            pruned_list = sorted(pruned_list,
+                                 reverse=True,
+                                 key=lambda x: x["score"])
             return pruned_list
 
         pruned_list = loop_subroutine()
@@ -211,7 +214,7 @@ class MusicLooper:
         # (b) list is empty
         retry = True
         for i in range(len(pruned_list)):
-            if pruned_list[i][3] <= 5.0 and pruned_list[i][2] >= 0.90:
+            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i]["score"] >= 0.90:
                 retry = False
                 break
 
@@ -223,11 +226,8 @@ class MusicLooper:
 
         if self.trim_offset[0] > 0:
             for i in range(len(pruned_list)):
-                pruned_list[i] = (
-                    self.apply_trim_offset(pruned_list[i][0]),
-                    self.apply_trim_offset(pruned_list[i][1]),
-                    pruned_list[i][2],
-                )
+                pruned_list[i]["loop_start"] = self.apply_trim_offset(pruned_list[i]["loop_start"])
+                pruned_list[i]["loop_end"] = self.apply_trim_offset(pruned_list[i]["loop_end"])
 
         return pruned_list
 
