@@ -412,8 +412,13 @@ if __name__ == "__main__":
         "--json",
         action="store_true",
         default=False,
-        help=
-        "Export the loop points (in samples) to a JSON file in the song's directory."
+        help="Export the loop points (in samples) to a JSON file in the song's directory."
+    )
+    parser.add_argument(
+        "--disable-cache",
+        action="store_true",
+        default=False,
+        help="Skip loading/using cached loop points."
     )
 
     args = parser.parse_args()
@@ -425,7 +430,7 @@ if __name__ == "__main__":
     dirpath = os.path.dirname(os.path.realpath(__file__))
     cache_path = os.path.join(dirpath, "cache.json")
 
-    if os.path.exists(cache_path):
+    if not args.disable_cache and os.path.exists(cache_path):
         try:
             with open(cache_path, "r") as file:
                 cache = json.load(file)
