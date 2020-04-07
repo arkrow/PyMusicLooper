@@ -10,10 +10,10 @@ Features:
 
 ## Installation
 
-Requires Python 3 to run. Once you have Python 3 installed, and this repository cloned or downloaded, you can install the necessary packages using the following command:
+Requires Python >=3.6 to run. This program depends on NumPy (arrays and mathematical operations) and Librosa (audio analysis and beat extraction). If you don't have these dependencies installed, you'll automatically download them (but keep in mind it might take a while depending on your internet connection):
 
 ```sh
-pip install -r requirements.txt
+pip install git+https://github.com/arkrow/PyMusicLooper.git
 ```
 
 This program also requires the external library `mpg123` for music playback within the command-line. Available through the following link: https://www.mpg123.de/download.shtml
@@ -21,7 +21,7 @@ This program also requires the external library `mpg123` for music playback with
 ## Usage
 
 ```
-usage: python looper.py [-h] [-p] [-e] [-j] [--disable-cache] path
+usage: python -m pymusiclooper [-h] [-p] [-e] [-j] [--disable-cache] path
 
 Automatically find loop points in music files and play/export them.
 
@@ -49,21 +49,41 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 ## Example Usage
 
+Note: If on Windows, you can Shift+Right-Click in an empty spot in the song's folder and choose command-line/powershell from the context menu. Otherwise, cd/dir to the folder.
+
 Play the song on repeat with the best discovered loop point.
 
 ```sh
-python looper.py track.mp3
+python -m pymusiclooper track.mp3
 ```
 
 Export the song into intro, loop and outro files as well as export loop points used (both are placed in the song's directory by default).
 
 ```sh
-python looper.py track.mp3 -ej
+python -m pymusiclooper /path/to/track.mp3 -ej
+```
+
+## Building from source
+
+Requried python packages: pip and setuptools.
+
+Clone the git repository somewhere and cd to inside the repo.
+
+Run:
+
+```sh
+python setup.py build
+```
+
+Followed by:
+
+```sh
+python setup.py install
 ```
 
 ## Contribution
 
-If there is a song that you think PyMusicLooper should be able to loop but doesn't, please feel free to open an issue with a link to that song and the approximate location at which it loops. Forks and pull requests are of course welcome.
+If there is a song that you think PyMusicLooper should be able to loop but doesn't, please feel free to open an issue with a link to that song and mention the approximate timestamp at which it loops. Forks and pull requests are of course welcome.
 
 ## Acknowledgements
 

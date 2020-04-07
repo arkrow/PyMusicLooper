@@ -66,7 +66,7 @@ def loop_track(filename, loop_start=None, loop_end=None, score=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="python looper.py",
+        prog="python -m pymusiclooper",
         description=
         "Automatically find loop points in music files and play/export them.",
     )
