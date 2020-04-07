@@ -403,34 +403,35 @@ if __name__ == "__main__":
         description=
         "Automatically find loop points in music files and play/export them.",
     )
-    parser.add_argument("path", type=str, help="Path to music file.")
+    parser.add_argument("path", type=str, help="path to music file.")
 
     parser.add_argument(
         "-p",
         "--play",
         action="store_true",
         default=True,
-        help="Play the song with the best discovered loop point (default).",
+        help="play the song on repeat with the best discovered loop point (default).",
     )
     parser.add_argument(
         "-e",
         "--export",
         action="store_true",
         default=False,
-        help="Export the song into intro, loop and outro files (WAV format).",
+        help="export the song into intro, loop and outro files (WAV format).",
     )
     parser.add_argument(
         "-j",
         "--json",
         action="store_true",
         default=False,
-        help="Export the loop points (in samples) to a JSON file in the song's directory.",
+        help=
+        "export the loop points (in samples) to a JSON file in the song's directory.",
     )
     parser.add_argument(
         "--disable-cache",
         action="store_true",
         default=False,
-        help="Skip loading/using cached loop points.",
+        help="skip loading/using cached loop points.",
     )
 
     args = parser.parse_args()
@@ -459,7 +460,8 @@ if __name__ == "__main__":
 
         if cached_loop_start is not None and cached_loop_end is not None:
             if args.json:
-                track.export_json(cached_loop_start, cached_loop_end, cached_score)
+                track.export_json(cached_loop_start, cached_loop_end,
+                                  cached_score)
             if args.export:
                 track.export(cached_loop_start, cached_loop_end)
             sys.exit(0)
