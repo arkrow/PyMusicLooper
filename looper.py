@@ -253,24 +253,24 @@ class MusicLooper:
         time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
-    def play_looping(self, start_offset, loop_offset):
+    def play_looping(self, loop_start, loop_end):
         out = Out123()
         out.start(self.rate, self.channels, self.encoding)
 
         playback_frames = librosa.util.frame(
             self.playback_audio.flatten(order="F"))
-        adjusted_start_offset = start_offset * self.channels
-        adjusted_loop_offset = loop_offset * self.channels
+        adjusted_loop_start = loop_start * self.channels
+        adjusted_loop_end = loop_end * self.channels
 
-        i = adjusted_loop_offset - 1000
+        i = adjusted_loop_end - 1000
         # i = 0
         loop_count = 0
         try:
             while True:
                 out.play(playback_frames[..., i])
                 i += 1
-                if i == adjusted_loop_offset:
-                    i = adjusted_start_offset
+                if i == adjusted_loop_end:
+                    i = adjusted_loop_start
                     loop_count += 1
                     print("Currently on loop #{}".format(loop_count), end="\r")
 
@@ -278,24 +278,24 @@ class MusicLooper:
             print()  # so that the program ends on a newline
 
     def export_loop_file(self,
-                         start_offset,
-                         loop_offset,
+                         loop_start,
+                         loop_end,
                          filename=None,
                          format="WAV"):
         if filename is None:
             filename = os.path.splitext(self.filename)[0] + "-loop" + ".wav"
 
         filename = os.path.abspath(filename)
-        start_offset = self.frames_to_samples(start_offset)
-        loop_offset = self.frames_to_samples(loop_offset)
-        loop_section = self.playback_audio[..., start_offset:loop_offset]
+        loop_start = self.frames_to_samples(loop_start)
+        loop_end = self.frames_to_samples(loop_end)
+        loop_section = self.playback_audio[..., loop_start:loop_end]
         soundfile.write(filename, loop_section.T, self.rate)
 
 
 def loop_track(filename,
                prioritize_duration=False,
-               start_offset=None,
-               loop_offset=None):
+               loop_start=None,
+               loop_end=None):
     try:
         runtime_start = time.time()
         # Load the file
@@ -303,7 +303,7 @@ def loop_track(filename,
 
         track = MusicLooper(filename)
 
-        if start_offset is None and loop_offset is None:
+        if loop_start is None and loop_end is None:
             loop_pair_list = track.find_loop_pairs()
 
             if len(loop_pair_list) == 0:
@@ -315,7 +315,7 @@ def loop_track(filename,
                                         key=lambda x: np.abs(x[0] - x[1]),
                                         reverse=True)
 
-            start_offset, loop_offset, score = loop_pair_list[0]
+            loop_start, loop_end, score = loop_pair_list[0]
         else:
             score = None
 
@@ -326,14 +326,14 @@ def loop_track(filename,
         print(
             "Playing with loop from {} back to {}, prioritizing {}; similarity: {:.1%})"
             .format(
-                track.frames_to_ftime(loop_offset),
-                track.frames_to_ftime(start_offset),
+                track.frames_to_ftime(loop_end),
+                track.frames_to_ftime(loop_start),
                 "duration" if prioritize_duration else "beat similarity",
                 score if score is not None else 0,
             ))
         print("(press Ctrl+C to exit)")
 
-        track.play_looping(start_offset, loop_offset)
+        track.play_looping(loop_start, loop_end)
 
     except (TypeError, FileNotFoundError) as e:
         print("Error: {}".format(e))
