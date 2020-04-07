@@ -21,7 +21,7 @@ This program also requires the external library `mpg123` for music playback with
 ## Usage
 
 ```
-usage: python looper.py [-h] [-p] [-e] [-j] [--disable-cache] file_path
+usage: python looper.py [-h] [-p] [-e] [-j] [--disable-cache] path
 
 Automatically find loop points in music files and play/export them.
 
