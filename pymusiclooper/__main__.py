@@ -21,8 +21,11 @@ import json
 import os
 import sys
 import time
+import warnings
 
 from .core import MusicLooper
+
+warnings.filterwarnings("ignore")
 
 
 def loop_track(filename, loop_start=None, loop_end=None, score=None):
