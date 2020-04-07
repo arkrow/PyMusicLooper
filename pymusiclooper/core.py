@@ -214,7 +214,8 @@ class MusicLooper:
         # (b) list is empty
         retry = True
         for i in range(len(pruned_list)):
-            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i]["score"] >= 0.90:
+            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i][
+                    "score"] >= 0.90:
                 retry = False
                 break
 
@@ -226,8 +227,10 @@ class MusicLooper:
 
         if self.trim_offset[0] > 0:
             for i in range(len(pruned_list)):
-                pruned_list[i]["loop_start"] = self.apply_trim_offset(pruned_list[i]["loop_start"])
-                pruned_list[i]["loop_end"] = self.apply_trim_offset(pruned_list[i]["loop_end"])
+                pruned_list[i]["loop_start"] = self.apply_trim_offset(
+                    pruned_list[i]["loop_start"])
+                pruned_list[i]["loop_end"] = self.apply_trim_offset(
+                    pruned_list[i]["loop_end"])
 
         return pruned_list
 
@@ -340,16 +343,14 @@ class MusicLooper:
 
         dirpath = os.path.dirname(os.path.realpath(__file__))
         cache_path = os.path.join(dirpath, "cache.json")
-
-        with open(cache_path, "r") as file:
-            try:
+        try:
+            with open(cache_path, "r") as file:
                 cache = json.load(file)
-            except Exception:
-                cache = {}
-
-        with open(cache_path, "w") as file:
-            try:
+        except Exception:
+            cache = {}
+        try:
+            with open(cache_path, "w") as file:
                 cache[filename] = out
                 json.dump(cache, fp=file)
-            except Exception as e:
-                sys.stderr(f"Couldn't write to cache. Error: {e}")
+        except Exception as e:
+            sys.stderr(f"Couldn't write to cache. Error: {e}")
