@@ -16,17 +16,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
+import argparse
 import os
 import sys
 import time
-from multiprocessing import Manager
-from multiprocessing import Process
+from multiprocessing import Manager, Process
 
 import librosa
 import mpg123
 import numpy as np
-from mpg123 import Out123
 import soundfile
+from mpg123 import Out123
 
 
 class MusicLooper:
@@ -58,7 +58,6 @@ class MusicLooper:
         chroma,
         power_db,
         min_duration,
-        avg_dB_diff_threshold,
     ):
         for i in range(i_start, i_stop):
             deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
@@ -72,7 +71,7 @@ class MusicLooper:
                 if dist <= deviation:
                     avg_db_diff = self.db_diff(power_db[..., beats[i]],
                                                power_db[..., beats[j]])
-                    if avg_db_diff <= avg_dB_diff_threshold:
+                    if avg_db_diff <= 10:
                         self._candidate_pairs_q.put(
                             (beats[j], beats[i], avg_db_diff))
 
@@ -143,22 +142,14 @@ class MusicLooper:
                             chroma,
                             power_db,
                             min_duration,
-                            avg_dB_diff_threshold,
                         ),
                     )
                     processes.append(p)
                     p.daemon = True
                     p.start()
             else:
-                self._loop_finding_routine(
-                    beats,
-                    1,
-                    beats.size,
-                    chroma,
-                    power_db,
-                    min_duration,
-                    avg_dB_diff_threshold,
-                )
+                self._loop_finding_routine(beats, 1, beats.size, chroma,
+                                           power_db, min_duration)
 
             if concurrency:
                 for process in processes:
@@ -171,11 +162,23 @@ class MusicLooper:
 
             print(len(candidate_pairs))
 
-            keep_at_most = np.amax([int(len(candidate_pairs) * 0.25), 10])
+            candidate_pairs = sorted(candidate_pairs,
+                                     reverse=False,
+                                     key=lambda x: x[2])
 
-            pruned_list = sorted(candidate_pairs,
-                                 reverse=False,
-                                 key=lambda x: x[2])[:keep_at_most]
+            db_diff_array = np.array(
+                [candidate_pairs[i][2] for i in range(len(candidate_pairs))])
+            db_diff_avg = np.average(db_diff_array)
+            db_diff_std = np.std(db_diff_array)
+
+            i = 0
+            one_stddev = db_diff_avg - db_diff_std
+            while i < len(candidate_pairs):
+                if candidate_pairs[i][2] > one_stddev:
+                    break
+                i += 1
+
+            pruned_list = candidate_pairs[:i if i >= 10 else 10]
 
             test_offset = librosa.samples_to_frames(
                 np.amax([int((bpm / 60) * 0.1 * self.rate), self.rate * 1.5]))
@@ -189,12 +192,13 @@ class MusicLooper:
                 ) for i in range(len(pruned_list))
             ]
 
-            # replace avg_db_diff with cosine similarity
+            # Add cosine similarity as score
             for i in range(len(pruned_list)):
                 pruned_list[i] = (
                     pruned_list[i][0],
                     pruned_list[i][1],
                     subseq_beat_sim[i],
+                    pruned_list[i][2],
                 )
 
             # re-sort based on new score
@@ -203,8 +207,16 @@ class MusicLooper:
 
         pruned_list = loop_subroutine()
 
-        if (len(pruned_list) == 0
-                or pruned_list[0][2] < 0.90) and not combine_beat_plp:
+        # Retry will trigger when:
+        # (a) there is no beat sequence with <5dB difference and >90% similarity
+        # (b) list is empty
+        retry = True
+        for i in range(len(pruned_list)):
+            if pruned_list[i][3] <= 5.0 and pruned_list[i][2] >= 0.90:
+                retry = False
+                break
+
+        if retry and not combine_beat_plp:
             print(
                 "No suitable loop points found with current parameters. Retrying with additional beat points from PLP method."
             )
@@ -277,25 +289,30 @@ class MusicLooper:
         except KeyboardInterrupt:
             print()  # so that the program ends on a newline
 
-    def export_loop_file(self,
-                         loop_start,
-                         loop_end,
-                         filename=None,
-                         format="WAV"):
+    def export(self, loop_start, loop_end, filename=None, format="WAV"):
         if filename is None:
-            filename = os.path.splitext(self.filename)[0] + "-loop" + ".wav"
+            filename = os.path.splitext(self.filename)[0]
 
         filename = os.path.abspath(filename)
+
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
-        loop_section = self.playback_audio[..., loop_start:loop_end]
-        soundfile.write(filename, loop_section.T, self.rate)
+
+        soundfile.write(filename + "-intro." + format.lower(),
+                        self.playback_audio[..., :loop_start].T,
+                        self.rate,
+                        format=format)
+        soundfile.write(filename + "-loop." + format.lower(),
+                        self.playback_audio[..., loop_start:loop_end].T,
+                        self.rate,
+                        format=format)
+        soundfile.write(filename + "-outro." + format.lower(),
+                        self.playback_audio[..., loop_end:].T,
+                        self.rate,
+                        format=format)
 
 
-def loop_track(filename,
-               prioritize_duration=False,
-               loop_start=None,
-               loop_end=None):
+def loop_track(filename, loop_start=None, loop_end=None):
     try:
         runtime_start = time.time()
         # Load the file
@@ -310,11 +327,6 @@ def loop_track(filename,
                 print("No suitable loop point found.")
                 sys.exit(1)
 
-            if prioritize_duration:
-                loop_pair_list = sorted(loop_pair_list,
-                                        key=lambda x: np.abs(x[0] - x[1]),
-                                        reverse=True)
-
             loop_start, loop_end, score = loop_pair_list[0]
         else:
             score = None
@@ -324,11 +336,9 @@ def loop_track(filename,
         print("Total elapsed time (s): {:.3}".format(total_runtime))
 
         print(
-            "Playing with loop from {} back to {}, prioritizing {}; similarity: {:.1%})"
-            .format(
+            "Playing with loop from {} back to {}; similarity: {:.1%})".format(
                 track.frames_to_ftime(loop_end),
                 track.frames_to_ftime(loop_start),
-                "duration" if prioritize_duration else "beat similarity",
                 score if score is not None else 0,
             ))
         print("(press Ctrl+C to exit)")
@@ -340,8 +350,40 @@ def loop_track(filename,
 
 
 if __name__ == "__main__":
-    # Load the file
-    if len(sys.argv) == 2:
-        loop_track(sys.argv[1])
-    else:
-        print("Error: No file specified.", "\nUsage: python3 loop.py file.mp3")
+    parser = argparse.ArgumentParser(
+        prog="python looper.py",
+        description="Automatically find loop points in music files and play/export them.")
+    parser.add_argument("path", type=str, help="Path to music file.")
+
+    parser.add_argument(
+        "-p",
+        "--play",
+        action="store_true",
+        default=True,
+        help="Play the song with the best discovered loop point (default).",
+    )
+    parser.add_argument(
+        "-e",
+        "--export",
+        action="store_true",
+        default=False,
+        help="Export the song into intro, loop and outro files (WAV format).",
+    )
+
+    args = parser.parse_args()
+
+    if args.export:
+        track = MusicLooper(args.path)
+
+        loop_pair_list = track.find_loop_pairs()
+
+        if len(loop_pair_list) == 0:
+            print("No suitable loop point found.")
+            sys.exit(1)
+
+        loop_start, loop_end, score = loop_pair_list[0]
+
+        track.export(loop_start, loop_end)
+
+    elif args.play:
+        loop_track(args.path)
