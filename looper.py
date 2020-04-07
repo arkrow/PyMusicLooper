@@ -83,7 +83,7 @@ class MusicLooper:
     def find_loop_pairs(self,
                         min_duration_multiplier=0.35,
                         combine_beat_plp=False,
-                        concurrency=True):
+                        concurrency=False):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
