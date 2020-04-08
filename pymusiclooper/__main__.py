@@ -124,19 +124,19 @@ if __name__ == "__main__":
         type=bounded_float,
         default=0.35,
         help=
-        "Specify minimum loop duration as a multiplier of song duration (default: 0.35).",
+        "specify minimum loop duration as a multiplier of song duration (default: 0.35); use with --skip-cache.",
     )
     parser.add_argument(
-        "--disable-cache",
+        "--skip-cache",
         action="store_true",
         default=False,
-        help="skip loading/using cached loop points.",
+        help="skip loading cached loop points.",
     )
     parser.add_argument(
         "--purge-cache",
         action="store_true",
         default=False,
-        help="Purges all cached loop points and exits.",
+        help="purges all cached loop points and exits.",
     )
 
     args = parser.parse_args()
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     if args.path is None:
         parser.error("missing argument: path.")
 
-    if not args.disable_cache and os.path.exists(cache_path):
+    if not args.skip_cache and os.path.exists(cache_path):
         try:
             with open(cache_path, "r") as file:
                 cache = json.load(file)

@@ -22,7 +22,7 @@ To play music endlessly through the terminal, the external library `mpg123` is r
 
 ```
 usage: python -m pymusiclooper [-h] [-p] [-e] [-j]
-                               [-m MIN_DURATION_MULTIPLIER] [--disable-cache]
+                               [-m MIN_DURATION_MULTIPLIER] [--skip-cache]
                                [--purge-cache]
                                [path]
 
@@ -40,10 +40,10 @@ optional arguments:
   -j, --json            export the loop points (in samples) to a JSON file in
                         the song's directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
-                        Specify minimum loop duration as a multiplier of song
-                        duration (default: 0.35).
-  --disable-cache       skip loading/using cached loop points.
-  --purge-cache         Purges all cached loop points and exits.
+                        specify minimum loop duration as a multiplier of song
+                        duration (default: 0.35); use with --skip-cache.
+  --skip-cache          skip loading cached loop points.
+  --purge-cache         purges all cached loop points and exits.
 ```
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
