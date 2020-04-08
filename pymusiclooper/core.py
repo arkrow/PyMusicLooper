@@ -94,7 +94,7 @@ class MusicLooper:
         bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
 
         beats = np.sort(beats)
-        print("Detected {} beats at {} bpm".format(beats.size, bpm))
+        print("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
         chroma = librosa.feature.chroma_stft(S=S_power)
 

@@ -58,7 +58,7 @@ def loop_track(filename,
         print("Total elapsed time (s): {:.3}".format(total_runtime))
 
         print(
-            "Playing with loop from {} back to {}; similarity: {:.1%})".format(
+            "Playing with loop from {} back to {}; similarity: {:.1%}".format(
                 track.frames_to_ftime(loop_end),
                 track.frames_to_ftime(loop_start),
                 score if score is not None else 0,
