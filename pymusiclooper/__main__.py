@@ -194,13 +194,11 @@ if __name__ == "__main__":
 
         if args.json:
             track.export_json(loop_start, loop_end, score)
-            print("Successfully exported loop points to {}".format(
-                os.path.dirname(args.path)))
+            print(f"Successfully exported loop points to {args.path}-lps.json")
 
         if args.export:
-            track.export(loop_start, loop_end, score)
-            print("Successfully exported intro/loop/outro parts to {}".format(
-                os.path.dirname(args.path)))
+            track.export(loop_start, loop_end)
+            print("Successfully exported intro/loop/outro sections.")
 
     elif args.play:
         loop_track(

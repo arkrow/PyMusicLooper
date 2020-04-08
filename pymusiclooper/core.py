@@ -293,11 +293,8 @@ class MusicLooper:
         except KeyboardInterrupt:
             print()  # so that the program ends on a newline
 
-    def export(self, loop_start, loop_end, filename=None, format="WAV"):
-        if filename is None:
-            filename = os.path.splitext(self.filename)[0]
-
-        filename = os.path.abspath(filename)
+    def export(self, loop_start, loop_end, format="WAV"):
+        filename = os.path.abspath(self.filename)
 
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
