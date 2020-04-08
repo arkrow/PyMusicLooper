@@ -166,6 +166,7 @@ if __name__ == "__main__":
                     cached_loop_start = cache[full_path]["loop_start"]
                     cached_loop_end = cache[full_path]["loop_end"]
                     cached_score = cache[full_path]["score"]
+                    print(f"Using cached loop points for '{args.path}'. Re-run with --skip-cache if undesired.")
         except Exception:
             pass
 
@@ -176,8 +177,12 @@ if __name__ == "__main__":
             if args.json:
                 track.export_json(cached_loop_start, cached_loop_end,
                                   cached_score)
+                print(f"Successfully exported loop points to '{args.path}-lps.json'")
+
             if args.export:
                 track.export(cached_loop_start, cached_loop_end)
+                print("Successfully exported intro/loop/outro sections.")
+
             sys.exit(0)
 
         loop_pair_list = track.find_loop_pairs()
@@ -194,7 +199,7 @@ if __name__ == "__main__":
 
         if args.json:
             track.export_json(loop_start, loop_end, score)
-            print(f"Successfully exported loop points to {args.path}-lps.json")
+            print(f"Successfully exported loop points to '{args.path}-lps.json'")
 
         if args.export:
             track.export(loop_start, loop_end)
