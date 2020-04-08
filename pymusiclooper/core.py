@@ -28,7 +28,7 @@ import soundfile
 
 
 class MusicLooper:
-    def __init__(self, filename):
+    def __init__(self, filename, min_duration_multiplier=0.35):
         # Load the file if it exists
         if os.path.exists(filename) and os.path.isfile(filename):
             try:
@@ -43,6 +43,7 @@ class MusicLooper:
         self.audio, self.trim_offset = librosa.effects.trim(mono_signal)
         self.rate = sr
         self.playback_audio = audio
+        self.min_duration_multiplier = min_duration_multiplier
 
         # Initialize parameters for playback
         self.channels = self.playback_audio.shape[0]
@@ -80,7 +81,6 @@ class MusicLooper:
         return average_diff
 
     def find_loop_pairs(self,
-                        min_duration_multiplier=0.35,
                         combine_beat_plp=False,
                         concurrency=False):
         runtime_start = time.time()
@@ -99,7 +99,7 @@ class MusicLooper:
         chroma = librosa.feature.chroma_stft(S=S_power)
 
         power_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-        min_duration = int(chroma.shape[-1] * min_duration_multiplier)
+        min_duration = int(chroma.shape[-1] * self.min_duration_multiplier)
 
         self._candidate_pairs_q = Manager().Queue()
 

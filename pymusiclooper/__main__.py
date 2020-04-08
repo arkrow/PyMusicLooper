@@ -28,13 +28,17 @@ from .core import MusicLooper
 warnings.filterwarnings("ignore")
 
 
-def loop_track(filename, loop_start=None, loop_end=None, score=None):
+def loop_track(filename,
+               min_duration_multiplier,
+               loop_start=None,
+               loop_end=None,
+               score=None):
     try:
         runtime_start = time.time()
         # Load the file
         print("Loading {}...".format(filename))
 
-        track = MusicLooper(filename)
+        track = MusicLooper(filename, min_duration_multiplier)
 
         if loop_start is None and loop_end is None:
             loop_pair_list = track.find_loop_pairs()
@@ -73,7 +77,10 @@ if __name__ == "__main__":
         description=
         "Automatically find loop points in music files and play/export them.",
     )
-    parser.add_argument("path", type=str, help="path to music file.")
+    parser.add_argument("path",
+                        type=str,
+                        nargs="?",
+                        help="path to music file.")
 
     parser.add_argument(
         "-p",
@@ -98,11 +105,38 @@ if __name__ == "__main__":
         help=
         "export the loop points (in samples) to a JSON file in the song's directory.",
     )
+
+    def bounded_float(x):
+        try:
+            x = float(x)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                "%r not a floating-point literal" % (x, ))
+
+        if x <= 0.0 or x >= 1.0:
+            raise argparse.ArgumentTypeError(
+                "%r not in range (0.0, 1.0) exclusive" % (x, ))
+        return x
+
+    parser.add_argument(
+        "-m",
+        "--min-duration-multiplier",
+        type=bounded_float,
+        default=0.35,
+        help=
+        "Specify minimum loop duration as a multiplier of song duration (default: 0.35).",
+    )
     parser.add_argument(
         "--disable-cache",
         action="store_true",
         default=False,
         help="skip loading/using cached loop points.",
+    )
+    parser.add_argument(
+        "--purge-cache",
+        action="store_true",
+        default=False,
+        help="Purges all cached loop points and exits.",
     )
 
     args = parser.parse_args()
@@ -113,6 +147,15 @@ if __name__ == "__main__":
 
     dirpath = os.path.dirname(os.path.realpath(__file__))
     cache_path = os.path.join(dirpath, "cache.json")
+
+    if args.purge_cache and os.path.exists(cache_path):
+        os.remove(cache_path)
+        print("Cache purged.")
+        sys.exit(0)
+
+    # Remaining options need a path
+    if args.path is None:
+        parser.error("missing argument: path.")
 
     if not args.disable_cache and os.path.exists(cache_path):
         try:
@@ -127,7 +170,7 @@ if __name__ == "__main__":
             pass
 
     if args.export or args.json:
-        track = MusicLooper(args.path)
+        track = MusicLooper(args.path, args.min_duration_multiplier)
 
         if cached_loop_start is not None and cached_loop_end is not None:
             if args.json:
@@ -162,6 +205,7 @@ if __name__ == "__main__":
     elif args.play:
         loop_track(
             args.path,
+            args.min_duration_multiplier,
             loop_start=cached_loop_start,
             loop_end=cached_loop_end,
             score=cached_score,
