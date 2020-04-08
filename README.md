@@ -16,7 +16,7 @@ Requires Python >=3.6 to run. This program depends on NumPy (arrays and mathemat
 pip install git+https://github.com/arkrow/PyMusicLooper.git
 ```
 
-This program also requires the external library `mpg123` for music playback within the command-line. Available through the following link: https://www.mpg123.de/download.shtml
+To play music endlessly through the terminal, the external library `mpg123` is required. Available through the following link: https://www.mpg123.de/download.shtml
 
 ## Usage
 
@@ -41,7 +41,7 @@ optional arguments:
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
 
-(a) play the song on repeat (by default);
+(a) play the song on repeat (default, requires [mpg123](https://www.mpg123.de/download.shtml));
 
 (b) export to intro/loop/outro sections (currently outputs as WAV-only, although you may convert with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
 
