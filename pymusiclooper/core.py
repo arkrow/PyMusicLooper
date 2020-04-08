@@ -23,10 +23,8 @@ import time
 from multiprocessing import Manager, Process
 
 import librosa
-import mpg123
 import numpy as np
 import soundfile
-from mpg123 import Out123
 
 
 class MusicLooper:
@@ -48,7 +46,6 @@ class MusicLooper:
 
         # Initialize parameters for playback
         self.channels = self.playback_audio.shape[0]
-        self.encoding = mpg123.ENC_FLOAT_32
 
     def _loop_finding_routine(
         self,
@@ -269,8 +266,13 @@ class MusicLooper:
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
     def play_looping(self, loop_start, loop_end):
+        from mpg123 import ENC_FLOAT_32
+        from mpg123 import Out123
+
         out = Out123()
-        out.start(self.rate, self.channels, self.encoding)
+        encoding = ENC_FLOAT_32
+
+        out.start(self.rate, self.channels, encoding)
 
         playback_frames = librosa.util.frame(
             self.playback_audio.flatten(order="F"))
