@@ -57,10 +57,10 @@ Play the song on repeat with the best discovered loop point.
 python -m pymusiclooper track.mp3
 ```
 
-Export the song into intro, loop and outro files as well as export loop points used (both are placed in the song's directory by default).
+Export the song into intro, loop and outro files as well as the loop points used (outputs in the same directory/folder as the track).
 
 ```sh
-python -m pymusiclooper /path/to/track.mp3 -ej
+python -m pymusiclooper -ej track.mp3
 ```
 
 ## Building from source
