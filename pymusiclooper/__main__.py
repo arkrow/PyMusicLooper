@@ -114,6 +114,13 @@ if __name__ == "__main__":
         default=False,
         help="process directories and their contents recursively (usage with [-b/--batch] only).",
     )
+    export_options.add_argument(
+        "-n",
+        "--n-jobs",
+        type=int,
+        default=1,
+        help="number of parallel jobs to use for batch processing; specify -1 to use all cores (default: 1). WARNING: changing the value will also result in higher memory consumption.",
+    )
     parameter_options.add_argument(
         "-o",
         "--output-dir",
@@ -193,6 +200,11 @@ if __name__ == "__main__":
         if not args.export or not args.json:
             raise parser.error("Export mode not specified. -e or -j required.")
 
+        if args.n_jobs < -1 or args.n_jobs == 0:
+            raise parser.error(
+                f"n_jobs can either be -1 (for all cores), or any positive integer; n_jobs provided: {args.n_jobs}"
+            )
+
         if args.recursive:
             files = []
             for directory, sub_dir_list, file_list in os.walk(args.path):
@@ -208,25 +220,38 @@ if __name__ == "__main__":
         if len(files) == 0:
             logging.error(f"No files found in '{args.path}'")
 
-        affinity = len(os.sched_getaffinity(0))
-
-        processes = []
-        i = 0
         num_files = len(files)
 
+        if args.n_jobs == 1:
+            tqdm_files = tqdm(files)
+            for file in tqdm_files:
+                tqdm_files.set_description(f"Processing '{file}'")
+                export_handler(file)
+            sys.exit(0)
+
+        affinity = len(os.sched_getaffinity(0)) if args.n_jobs == -1 else args.n_jobs
+
+        processes = []
+        file_idx = 0
+
         with tqdm(total=num_files) as pbar:
-            while i < num_files:
+            while file_idx < num_files:
                 for pid in range(affinity):
                     p = Process(
-                        target=export_handler, args=(files[i]), daemon=True
+                        target=export_handler,
+                        kwargs={"file_path": files[file_idx]},
+                        daemon=True,
                     )
                     processes.append(p)
                     p.start()
-                    i += 1
-                    if i >= num_files:
+                    file_idx += 1
+                    if file_idx >= num_files:
                         break
+
+                # Wait till current batch finishes
                 for process in processes:
                     process.join()
+                    process.terminate()
                     pbar.update()
 
                 processes = []
