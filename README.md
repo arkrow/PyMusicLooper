@@ -47,8 +47,7 @@ optional arguments:
   -r, --recursive       process directories and their contents recursively
                         (usage with [-b/--batch] only).
   -o OUTPUT_DIR, --output-dir OUTPUT_DIR
-                        specify the output directory (defaults to the track's
-                        directory).
+                        specify a different output directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
                         specify minimum loop duration as a multiplier of song
                         duration (default: 0.35)
@@ -72,7 +71,7 @@ Play the song on repeat with the best discovered loop point.
 python -m pymusiclooper "Song I Could Listen To Forever.mp3"
 ```
 
-Export the song into intro, loop and outro files, as well as the loop points used (outputs in the same directory/folder as the track).
+Export the song into intro, loop and outro files, as well as the loop points used.
 
 ```sh
 python -m pymusiclooper -ej "some music track.ogg"
@@ -127,6 +126,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.2.1 Save export output to a "looper_output" folder in the current working directory by default
 - v1.2.0 Removed unreliable cache implementation
 - v1.1.0 Added support for batch processing
 - v1.0.0 Initial Release

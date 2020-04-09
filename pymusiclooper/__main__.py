@@ -119,9 +119,8 @@ if __name__ == "__main__":
         "-o",
         "--output-dir",
         type=str,
-        default=os.getcwd(),
-        help=
-        "specify the output directory (defaults to the track's directory).",
+        default=os.path.join(os.getcwd(), "looper_output"),
+        help="specify a different output directory.",
     )
 
     def bounded_float(x):
@@ -147,10 +146,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    def export_handler(file_path, output_dir=None):
-        if output_dir is None:
-            output_dir = os.getcwd()
-        elif not os.path.exists(output_dir):
+    def export_handler(file_path, output_dir):
+        if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
         output_path = os.path.join(output_dir, os.path.split(file_path)[1])
@@ -210,5 +207,3 @@ if __name__ == "__main__":
 
     if args.play and not (args.export or args.json or args.batch):
         loop_track(args.path, args.min_duration_multiplier)
-
-    sys.exit(0)
