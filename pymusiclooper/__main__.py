@@ -171,7 +171,7 @@ if __name__ == "__main__":
         try:
             track = MusicLooper(file_path, args.min_duration_multiplier)
         except TypeError as e:
-            logging.error(f"Skipping '{file_path}'. {e}")
+            logging.warning(f"Skipping '{file_path}'. {e}")
             return
 
         logging.info("Loaded '{}'".format(file_path))
