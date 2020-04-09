@@ -25,10 +25,9 @@ To play music endlessly through the terminal, the external library `mpg123` is r
 ## Usage
 
 ```
-usage: python -m pymusiclooper [-h] [-p] [-e] [-j]
-                               [-m MIN_DURATION_MULTIPLIER] [--skip-cache]
-                               [--purge-cache]
-                               [path]
+usage: python -m pymusiclooper [-h] [-p] [-e] [-j] [-b] [-r] [-o OUTPUT_DIR]
+                               [-m MIN_DURATION_MULTIPLIER]
+                               path
 
 Automatically find loop points in music files and play/export them.
 
@@ -43,11 +42,16 @@ optional arguments:
                         format).
   -j, --json            export the loop points (in samples) to a JSON file in
                         the song's directory.
+  -b, --batch           batch process all the files within the given path
+                        (usage with export args [-e] or [-j] only).
+  -r, --recursive       process directories and their contents recursively
+                        (usage with [-b/--batch] only).
+  -o OUTPUT_DIR, --output-dir OUTPUT_DIR
+                        specify the output directory (defaults to the track's
+                        directory).
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
                         specify minimum loop duration as a multiplier of song
-                        duration (default: 0.35); use with --skip-cache.
-  --skip-cache          skip loading cached loop points.
-  --purge-cache         purges all cached loop points and exits.
+                        duration (default: 0.35)
 ```
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
@@ -74,13 +78,25 @@ Export the song into intro, loop and outro files, as well as the loop points use
 python -m pymusiclooper -ej "some music track.ogg"
 ```
 
+Export the loop points of all the songs in the current directory.
+
+```sh
+python -m pymusiclooper -bj .
+```
+
+The **I WANT IT ALL** option.
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops".
+
+```sh
+python -m pymusiclooper -brej . -o "Music Loops"
+```
+
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
 If the most of the track is the loop section, specifying a higher multiplier will also speed the algorithm up.
 Here `-m 0.85` means that, excluding silence, the loop section is at least 85% of the music track.
-Note how the `--skip-cache` flag is set, which is needed otherwise the song will skip analysis and use the latest cached loop points instead.
 
 ```sh
-python -m pymusiclooper -m "super long track.flac" -m 0.85 --skip-cache
+python -m pymusiclooper "super long track.flac" -m 0.85
 ```
 
 ## Building from source
@@ -108,3 +124,9 @@ If there is a song that you think PyMusicLooper should be able to loop but doesn
 ## Acknowledgement
 
 This project started out as a fork of [Nolan Nicholson](https://github.com/NolanNicholson)'s project [Looper](https://github.com/NolanNicholson/Looper/). Although at this point only a few lines of code remain from that project due to adopting a completely different approach and implementation, without their contributions this project would not have been possible.
+
+## Version History
+
+- v1.2.0 Removed unreliable cache implementation
+- v1.1.0 Added support for batch processing
+- v1.0.0 Initial Release
