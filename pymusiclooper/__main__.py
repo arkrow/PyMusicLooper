@@ -31,7 +31,7 @@ from .core import MusicLooper
 def loop_track(filename, min_duration_multiplier):
     try:
         # Load the file
-        logging.info("Loading {}...".format(filename))
+        print("Loading {}...".format(filename))
 
         track = MusicLooper(filename, min_duration_multiplier)
 
@@ -155,10 +155,10 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore")
         logging.basicConfig(level=logging.ERROR)
     elif args.verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
         warnings.filterwarnings("ignore")
         logging.basicConfig(level=logging.ERROR)
-    else:
-        logging.basicConfig(level=logging.INFO)
 
     output_dir = args.output_dir
 

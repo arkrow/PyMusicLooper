@@ -18,6 +18,8 @@
 
 import json
 import os
+import time
+import logging
 
 import librosa
 import numpy as np
@@ -74,6 +76,8 @@ class MusicLooper:
         return average_diff
 
     def find_loop_pairs(self, combine_beat_plp=False, concurrency=False):
+        runtime_start = time.time()
+
         S = librosa.core.stft(y=self.audio)
         S_power = np.abs(S) ** 2
         S_weighed = librosa.core.perceptual_weighting(
@@ -84,11 +88,16 @@ class MusicLooper:
         bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
 
         beats = np.sort(beats)
+        logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
         chroma = librosa.feature.chroma_stft(S=S_power)
 
         power_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
         min_duration = int(chroma.shape[-1] * self.min_duration_multiplier)
+
+        runtime_end = time.time()
+        prep_time = runtime_end - runtime_start
+        logging.info("Finished initial prep in {:.3}s".format(prep_time))
 
         def loop_subroutine(combine_beat_plp=combine_beat_plp, beats=beats):
             if combine_beat_plp:
@@ -96,7 +105,11 @@ class MusicLooper:
                 pulse = librosa.beat.plp(onset_envelope=onset_env)
                 beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
                 beats = np.union1d(beats, beats_plp)
-
+                logging.info(
+                    "Detected {} total points by combining PLP with existing beats".format(
+                        beats.size
+                    )
+                )
             candidate_pairs = []
 
             self._loop_finding_routine(
@@ -156,6 +169,9 @@ class MusicLooper:
                 break
 
         if retry and not combine_beat_plp:
+            logging.info(
+                "No suitable loop points found with current parameters. Retrying with additional beat points from PLP method."
+            )
             pruned_list = loop_subroutine(combine_beat_plp=True)
 
         if self.trim_offset[0] > 0:
@@ -166,6 +182,8 @@ class MusicLooper:
                 pruned_list[i]["loop_end"] = self.apply_trim_offset(
                     pruned_list[i]["loop_end"]
                 )
+
+        logging.info(f"Found {len(pruned_list)} possible loop points")
 
         return pruned_list
 
