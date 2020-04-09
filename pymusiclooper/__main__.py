@@ -94,6 +94,13 @@ if __name__ == "__main__":
         help="export the song into intro, loop and outro files (WAV format).",
     )
     export_options.add_argument(
+        "-k",
+        "--keep-tags",
+        action="store_true",
+        default=False,
+        help="export with the track's original tags.",
+    )
+    export_options.add_argument(
         "-j",
         "--json",
         action="store_true",
@@ -160,13 +167,11 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore")
         logging.basicConfig(level=logging.ERROR)
 
-    output_dir = args.output_dir
-
     def export_handler(file_path):
-        if not os.path.exists(output_dir):
-            os.mkdir(output_dir)
+        if not os.path.exists(args.output_dir):
+            os.mkdir(args.output_dir)
 
-        output_path = os.path.join(output_dir, os.path.split(file_path)[1])
+        output_path = os.path.join(args.output_dir, os.path.split(file_path)[1])
 
         try:
             track = MusicLooper(file_path, args.min_duration_multiplier)
@@ -185,14 +190,19 @@ if __name__ == "__main__":
         score = loop_pair_list[0]["score"]
 
         if args.json:
-            track.export_json(loop_start, loop_end, score, output_dir=output_dir)
+            track.export_json(loop_start, loop_end, score, output_dir=args.output_dir)
             logging.info(
                 f"Successfully exported loop points to '{output_path}.loop_points.json'"
             )
         if args.export:
-            track.export(loop_start, loop_end, output_dir=output_dir)
+            track.export(
+                loop_start,
+                loop_end,
+                output_dir=args.output_dir,
+                keep_tags=args.keep_tags,
+            )
             logging.info(
-                f"Successfully exported intro/loop/outro sections to '{output_dir}'"
+                f"Successfully exported intro/loop/outro sections to '{args.output_dir}'"
             )
         logging.info("")
 

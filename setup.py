@@ -20,6 +20,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/arkrow/PyMusicLooper",
     install_requires=get_requirements(),
+    extras_require={"all": ["pytaglib>=1.4.6", "mpg123>=0.4"]},
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

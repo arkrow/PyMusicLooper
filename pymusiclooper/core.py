@@ -110,7 +110,7 @@ class MusicLooper:
                     )
                 )
             candidate_pairs = []
-            
+
             beats = np.sort(beats)
 
             self._loop_finding_routine(
@@ -252,7 +252,10 @@ class MusicLooper:
         except KeyboardInterrupt:
             print()  # so that the program ends on a newline
 
-    def export(self, loop_start, loop_end, format="WAV", output_dir=None):
+    def export(
+        self, loop_start, loop_end, format="WAV", output_dir=None, keep_tags=False
+    ):
+
         if output_dir is not None:
             filename = os.path.split(self.filename)[1]
             out_path = os.path.join(output_dir, filename)
@@ -280,6 +283,36 @@ class MusicLooper:
             self.rate,
             format=format,
         )
+
+        if keep_tags:
+            import taglib
+
+            track = taglib.File(self.filename)
+
+            intro_file = taglib.File(out_path + "-intro." + format.lower())
+            loop_file = taglib.File(out_path + "-loop." + format.lower())
+            outro_file = taglib.File(out_path + "-outro." + format.lower())
+
+            original_title = (
+                track.tags["TITLE"][0]
+                if track.tags is not None
+                and track.tags["TITLE"] is not None
+                and len(track.tags["TITLE"]) > 0
+                else os.path.split(self.filename)[-1]
+            )
+
+            intro_file.tags = track.tags
+            loop_file.tags = track.tags
+            outro_file.tags = track.tags
+
+            intro_file.tags["TITLE"] = [original_title + " - Intro"]
+            intro_file.save()
+
+            loop_file.tags["TITLE"] = [original_title + " - Loop"]
+            loop_file.save()
+
+            outro_file.tags["TITLE"] = [original_title + " - Outro"]
+            outro_file.save()
 
     def export_json(self, loop_start, loop_end, score, output_dir=None):
         if output_dir is not None:
