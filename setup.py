@@ -12,7 +12,7 @@ def get_requirements():
 
 setuptools.setup(
     name="pymusiclooper",
-    version="1.0.0",
+    version="1.1.0",
     author="arkrow",
     author_email="arkrow@protonmail.com",
     description=

@@ -27,6 +27,31 @@ from .core import MusicLooper
 
 warnings.filterwarnings("ignore")
 
+dirpath = os.path.dirname(os.path.realpath(__file__))
+cache_path = os.path.join(dirpath, "cache.json")
+
+
+def load_cached_points(filename):
+    cached_loop_start = None
+    cached_loop_end = None
+    cached_score = None
+
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as file:
+                cache = json.load(file)
+                full_path = os.path.abspath(filename)
+                if full_path in cache:
+                    cached_loop_start = cache[full_path]["loop_start"]
+                    cached_loop_end = cache[full_path]["loop_end"]
+                    cached_score = cache[full_path]["score"]
+                    print(
+                        f"Using cached loop points for '{filename}'. Re-run with --skip-cache if undesired."
+                    )
+        except Exception:
+            pass
+    return (cached_loop_start, cached_loop_end, cached_score)
+
 
 def loop_track(filename,
                min_duration_multiplier,
@@ -105,6 +130,30 @@ if __name__ == "__main__":
         help=
         "export the loop points (in samples) to a JSON file in the song's directory.",
     )
+    parser.add_argument(
+        "-b",
+        "--batch",
+        action="store_true",
+        default=False,
+        help=
+        "batch process all the files within the given path (usage with export args [-e] or [-j] only).",
+    )
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        action="store_true",
+        default=False,
+        help=
+        "process directories and their contents recursively (usage with [-b/--batch] only).",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=str,
+        default=os.getcwd(),
+        help=
+        "specify the output directory (defaults to the track's directory).",
+    )
 
     def bounded_float(x):
         try:
@@ -145,9 +194,6 @@ if __name__ == "__main__":
     cached_loop_end = None
     cached_score = None
 
-    dirpath = os.path.dirname(os.path.realpath(__file__))
-    cache_path = os.path.join(dirpath, "cache.json")
-
     if args.purge_cache and os.path.exists(cache_path):
         os.remove(cache_path)
         print("Cache purged.")
@@ -158,54 +204,78 @@ if __name__ == "__main__":
         parser.error("missing argument: path.")
 
     if not args.skip_cache and os.path.exists(cache_path):
-        try:
-            with open(cache_path, "r") as file:
-                cache = json.load(file)
-                full_path = os.path.abspath(args.path)
-                if full_path in cache:
-                    cached_loop_start = cache[full_path]["loop_start"]
-                    cached_loop_end = cache[full_path]["loop_end"]
-                    cached_score = cache[full_path]["score"]
-                    print(f"Using cached loop points for '{args.path}'. Re-run with --skip-cache if undesired.")
-        except Exception:
-            pass
+        cached_loop_start, cached_loop_end, cached_score = load_cached_points(
+            args.path)
 
-    if args.export or args.json:
-        track = MusicLooper(args.path, args.min_duration_multiplier)
+    def export_handler(file_path, output_dir=None):
+        if output_dir is None:
+            output_dir = os.getcwd()
+        elif not os.path.exists(output_dir):
+            os.mkdir(output_dir)
 
-        if cached_loop_start is not None and cached_loop_end is not None:
-            if args.json:
-                track.export_json(cached_loop_start, cached_loop_end,
-                                  cached_score)
-                print(f"Successfully exported loop points to '{args.path}-lps.json'")
+        output_path = os.path.join(output_dir, os.path.split(file_path)[1])
 
-            if args.export:
-                track.export(cached_loop_start, cached_loop_end)
-                print("Successfully exported intro/loop/outro sections.")
+        track = MusicLooper(file_path, args.min_duration_multiplier)
 
-            sys.exit(0)
+        print("Loaded {}...".format(file_path))
 
-        loop_pair_list = track.find_loop_pairs()
+        if cached_loop_start is None and cached_loop_end is None:
+            loop_pair_list = track.find_loop_pairs()
 
-        if len(loop_pair_list) == 0:
-            print("No suitable loop point found.")
-            sys.exit(1)
+            if len(loop_pair_list) == 0:
+                print("No suitable loop point found.")
+                return
 
-        loop_start = loop_pair_list[0]["loop_start"]
-        loop_end = loop_pair_list[0]["loop_end"]
-        score = loop_pair_list[0]["score"]
-
-        track.cache_loop_points(loop_start, loop_end, score)
+            loop_start = loop_pair_list[0]["loop_start"]
+            loop_end = loop_pair_list[0]["loop_end"]
+            score = loop_pair_list[0]["score"]
+            track.cache_loop_points(loop_start, loop_end, score)
+        else:
+            loop_start = cached_loop_start
+            loop_end = cached_loop_end
+            score = cached_score
 
         if args.json:
-            track.export_json(loop_start, loop_end, score)
-            print(f"Successfully exported loop points to '{args.path}-lps.json'")
-
+            track.export_json(loop_start,
+                              loop_end,
+                              score,
+                              output_dir=output_dir)
+            print(
+                f"Successfully exported loop points to '{output_path}-loop_points.json'"
+            )
         if args.export:
-            track.export(loop_start, loop_end)
-            print("Successfully exported intro/loop/outro sections.")
+            track.export(loop_start, loop_end, output_dir=output_dir)
+            print(
+                f"Successfully exported intro/loop/outro sections to '{output_dir}'"
+            )
 
-    elif args.play:
+    if args.batch:
+        if args.recursive:
+            files = []
+            for directory, sub_dir_list, file_list in os.walk(args.path):
+                for filename in file_list:
+                    files.append(os.path.join(directory, filename))
+        else:
+            files = [
+                f for f in os.listdir(args.path)
+                if os.path.isfile(os.path.join(args.path, f))
+            ]
+
+        if len(files) == 0:
+            print(f"No files found in '{args.path}'")
+
+        for file in files:
+            try:
+                export_handler(file, output_dir=args.output_dir)
+            except (TypeError, FileNotFoundError):
+                print("Skipping: {}".format(file))
+
+        sys.exit(0)
+
+    if args.export or args.json:
+        export_handler(args.path, output_dir=args.output_dir)
+
+    if args.play and not (args.export or args.json or args.batch):
         loop_track(
             args.path,
             args.min_duration_multiplier,
@@ -213,3 +283,5 @@ if __name__ == "__main__":
             loop_end=cached_loop_end,
             score=cached_score,
         )
+
+    sys.exit(0)

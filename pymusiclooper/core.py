@@ -293,32 +293,42 @@ class MusicLooper:
         except KeyboardInterrupt:
             print()  # so that the program ends on a newline
 
-    def export(self, loop_start, loop_end, format="WAV"):
-        filename = os.path.abspath(self.filename)
+    def export(self, loop_start, loop_end, format="WAV", output_dir=None):
+        if output_dir is not None:
+            filename = os.path.split(self.filename)[1]
+            out_path = os.path.join(output_dir, filename)
+        else:
+            out_path = os.path.abspath(self.filename)
 
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
 
         soundfile.write(
-            filename + "-intro." + format.lower(),
+            out_path + "-intro." + format.lower(),
             self.playback_audio[..., :loop_start].T,
             self.rate,
             format=format,
         )
         soundfile.write(
-            filename + "-loop." + format.lower(),
+            out_path + "-loop." + format.lower(),
             self.playback_audio[..., loop_start:loop_end].T,
             self.rate,
             format=format,
         )
         soundfile.write(
-            filename + "-outro." + format.lower(),
+            out_path + "-outro." + format.lower(),
             self.playback_audio[..., loop_end:].T,
             self.rate,
             format=format,
         )
 
-    def export_json(self, loop_start, loop_end, score):
+    def export_json(self, loop_start, loop_end, score, output_dir=None):
+        if output_dir is not None:
+            filename = os.path.split(self.filename)[1]
+            out_path = os.path.join(output_dir, filename)
+        else:
+            out_path = os.path.abspath(self.filename)
+
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
 
@@ -328,7 +338,7 @@ class MusicLooper:
             "score": float(f"{score:.4}"),
         }
 
-        with open(self.filename + "-lps.json", "w") as file:
+        with open(out_path + "-loop_points.json", "w") as file:
             json.dump(out, fp=file)
 
     def cache_loop_points(self, loop_start, loop_end, score):
