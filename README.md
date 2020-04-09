@@ -25,19 +25,25 @@ To play music endlessly through the terminal, the external library `mpg123` is r
 ## Usage
 
 ```
-usage: python -m pymusiclooper [-h] [-p] [-e] [-j] [-b] [-r] [-o OUTPUT_DIR]
-                               [-m MIN_DURATION_MULTIPLIER]
+usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [-j] [-b] [-r] [-n N_JOBS]
+                               [-o OUTPUT_DIR] [-m MIN_DURATION_MULTIPLIER]
                                path
 
-Automatically find loop points in music files and play/export them.
+A script for repeating music seamlessly and endlessly, by automatically
+finding the best loop points.
 
 positional arguments:
   path                  path to music file.
 
 optional arguments:
   -h, --help            show this help message and exit
+  -v, --verbose         enable verbose logging output
+
+Play:
   -p, --play            play the song on repeat with the best discovered loop
                         point (default).
+
+Export:
   -e, --export          export the song into intro, loop and outro files (WAV
                         format).
   -j, --json            export the loop points (in samples) to a JSON file in
@@ -46,6 +52,13 @@ optional arguments:
                         (usage with export args [-e] or [-j] only).
   -r, --recursive       process directories and their contents recursively
                         (usage with [-b/--batch] only).
+  -n N_JOBS, --n-jobs N_JOBS
+                        number of parallel jobs to use for batch processing;
+                        specify -1 to use all cores (default: 1). WARNING:
+                        changing the value will also result in higher memory
+                        consumption.
+
+Parameter adjustment:
   -o OUTPUT_DIR, --output-dir OUTPUT_DIR
                         specify a different output directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
@@ -84,10 +97,10 @@ python -m pymusiclooper -bj .
 ```
 
 The **I WANT IT ALL** option.
-Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops".
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
 
 ```sh
-python -m pymusiclooper -brej . -o "Music Loops"
+python -m pymusiclooper -brej . -o "Music Loops" -n 4
 ```
 
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
