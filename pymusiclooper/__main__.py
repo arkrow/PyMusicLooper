@@ -27,11 +27,7 @@ from .core import MusicLooper
 warnings.filterwarnings("ignore")
 
 
-def loop_track(filename,
-               min_duration_multiplier,
-               loop_start=None,
-               loop_end=None,
-               score=None):
+def loop_track(filename, min_duration_multiplier):
     try:
         runtime_start = time.time()
         # Load the file
@@ -39,16 +35,15 @@ def loop_track(filename,
 
         track = MusicLooper(filename, min_duration_multiplier)
 
-        if loop_start is None and loop_end is None:
-            loop_pair_list = track.find_loop_pairs()
+        loop_pair_list = track.find_loop_pairs()
 
-            if len(loop_pair_list) == 0:
-                print("No suitable loop point found.")
-                sys.exit(1)
+        if len(loop_pair_list) == 0:
+            print("No suitable loop point found.")
+            sys.exit(1)
 
-            loop_start = loop_pair_list[0]["loop_start"]
-            loop_end = loop_pair_list[0]["loop_end"]
-            score = loop_pair_list[0]["score"]
+        loop_start = loop_pair_list[0]["loop_start"]
+        loop_end = loop_pair_list[0]["loop_end"]
+        score = loop_pair_list[0]["score"]
 
         runtime_end = time.time()
         total_runtime = runtime_end - runtime_start
@@ -59,7 +54,8 @@ def loop_track(filename,
                 track.frames_to_ftime(loop_end),
                 track.frames_to_ftime(loop_start),
                 score if score is not None else 0,
-            ))
+            )
+        )
         print("(press Ctrl+C to exit)")
 
         track.play_looping(loop_start, loop_end)
@@ -71,51 +67,50 @@ def loop_track(filename,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="python -m pymusiclooper",
-        description=
-        "Automatically find loop points in music files and play/export them.",
+        description="A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.",
     )
     parser.add_argument("path", type=str, help="path to music file.")
 
-    parser.add_argument(
+    play_options = parser.add_argument_group("Play")
+    export_options = parser.add_argument_group("Export")
+    parameter_options = parser.add_argument_group("Parameter adjustment")
+
+    play_options.add_argument(
         "-p",
         "--play",
         action="store_true",
         default=True,
-        help=
-        "play the song on repeat with the best discovered loop point (default).",
+        help="play the song on repeat with the best discovered loop point (default).",
     )
-    parser.add_argument(
+    export_options.add_argument(
         "-e",
         "--export",
         action="store_true",
         default=False,
         help="export the song into intro, loop and outro files (WAV format).",
     )
-    parser.add_argument(
+    export_options.add_argument(
         "-j",
         "--json",
         action="store_true",
         default=False,
-        help=
-        "export the loop points (in samples) to a JSON file in the song's directory.",
+        help="export the loop points (in samples) to a JSON file in the song's directory.",
     )
-    parser.add_argument(
+    export_options.add_argument(
         "-b",
         "--batch",
         action="store_true",
         default=False,
-        help=
-        "batch process all the files within the given path (usage with export args [-e] or [-j] only).",
+        help="batch process all the files within the given path (usage with export args [-e] or [-j] only).",
     )
-    parser.add_argument(
+    export_options.add_argument(
         "-r",
         "--recursive",
         action="store_true",
         default=False,
-        help=
-        "process directories and their contents recursively (usage with [-b/--batch] only).",
+        help="process directories and their contents recursively (usage with [-b/--batch] only).",
     )
-    parser.add_argument(
+    parameter_options.add_argument(
         "-o",
         "--output-dir",
         type=str,
@@ -127,21 +122,20 @@ if __name__ == "__main__":
         try:
             x = float(x)
         except ValueError:
-            raise argparse.ArgumentTypeError(
-                "%r not a floating-point literal" % (x, ))
+            raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
 
         if x <= 0.0 or x >= 1.0:
             raise argparse.ArgumentTypeError(
-                "%r not in range (0.0, 1.0) exclusive" % (x, ))
+                "%r not in range (0.0, 1.0) exclusive" % (x,)
+            )
         return x
 
-    parser.add_argument(
+    parameter_options.add_argument(
         "-m",
         "--min-duration-multiplier",
         type=bounded_float,
         default=0.35,
-        help=
-        "specify minimum loop duration as a multiplier of song duration (default: 0.35)",
+        help="specify minimum loop duration as a multiplier of song duration (default: 0.35)",
     )
 
     args = parser.parse_args()
@@ -165,21 +159,19 @@ if __name__ == "__main__":
         score = loop_pair_list[0]["score"]
 
         if args.json:
-            track.export_json(loop_start,
-                              loop_end,
-                              score,
-                              output_dir=output_dir)
+            track.export_json(loop_start, loop_end, score, output_dir=output_dir)
             print(
-                f"Successfully exported loop points to '{output_path}-loop_points.json'"
+                f"Successfully exported loop points to '{output_path}.loop_points.json'"
             )
         if args.export:
             track.export(loop_start, loop_end, output_dir=output_dir)
-            print(
-                f"Successfully exported intro/loop/outro sections to '{output_dir}'"
-            )
+            print(f"Successfully exported intro/loop/outro sections to '{output_dir}'")
         print()
 
     if args.batch:
+        if not args.export or not args.json:
+            raise parser.error("Export mode not specified. -e or -j required.")
+
         if args.recursive:
             files = []
             for directory, sub_dir_list, file_list in os.walk(args.path):
@@ -187,7 +179,8 @@ if __name__ == "__main__":
                     files.append(os.path.join(directory, filename))
         else:
             files = [
-                f for f in os.listdir(args.path)
+                f
+                for f in os.listdir(args.path)
                 if os.path.isfile(os.path.join(args.path, f))
             ]
 

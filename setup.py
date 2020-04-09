@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 
 def get_requirements():
-    with open('requirements.txt', 'r') as f:
+    with open("requirements.txt", "r") as f:
         requirements = f.read().splitlines()
     return requirements
 
@@ -15,8 +15,7 @@ setuptools.setup(
     version="1.2.1",
     author="arkrow",
     author_email="arkrow@protonmail.com",
-    description=
-    "Automatically find loop points of any song and play endlessly or export into intro/loop/outro sections or loop points.",
+    description="Automatically find loop points of any song and play endlessly or export into intro/loop/outro sections or loop points.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/arkrow/PyMusicLooper",
@@ -26,7 +25,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
-        "Topic :: Multimedia :: Sound/Audio"
+        "Topic :: Multimedia :: Sound/Audio",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
 )

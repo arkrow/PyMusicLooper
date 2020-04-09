@@ -19,7 +19,6 @@
 import json
 import os
 import time
-from multiprocessing import Manager, Process
 
 import librosa
 import numpy as np
@@ -48,13 +47,7 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
 
     def _loop_finding_routine(
-        self,
-        beats,
-        i_start,
-        i_stop,
-        chroma,
-        power_db,
-        min_duration,
+        self, beats, i_start, i_stop, chroma, power_db, min_duration, candidate_pairs
     ):
         for i in range(i_start, i_stop):
             deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
@@ -63,17 +56,19 @@ class MusicLooper:
                 # any j >= current_j will only decrease in duration
                 if beats[i] - beats[j] < min_duration:
                     break
-                dist = np.linalg.norm(chroma[..., beats[i]] -
-                                      chroma[..., beats[j]])
+                dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
                 if dist <= deviation:
-                    avg_db_diff = self.db_diff(power_db[..., beats[i]],
-                                               power_db[..., beats[j]])
+                    avg_db_diff = self.db_diff(
+                        power_db[..., beats[i]], power_db[..., beats[j]]
+                    )
                     if avg_db_diff <= 10:
-                        self._candidate_pairs_q.put({
-                            "loop_start": beats[j],
-                            "loop_end": beats[i],
-                            "dB_diff": avg_db_diff
-                        })
+                        candidate_pairs.append(
+                            {
+                                "loop_start": beats[j],
+                                "loop_end": beats[i],
+                                "dB_diff": avg_db_diff,
+                            }
+                        )
 
     def db_diff(self, power_db_f1, power_db_f2):
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
@@ -83,9 +78,10 @@ class MusicLooper:
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
-        S_power = np.abs(S)**2
+        S_power = np.abs(S) ** 2
         S_weighed = librosa.core.perceptual_weighting(
-            S=S_power, frequencies=librosa.fft_frequencies(sr=self.rate))
+            S=S_power, frequencies=librosa.fft_frequencies(sr=self.rate)
+        )
         mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed)
         onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
         bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
@@ -98,75 +94,34 @@ class MusicLooper:
         power_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
         min_duration = int(chroma.shape[-1] * self.min_duration_multiplier)
 
-        self._candidate_pairs_q = Manager().Queue()
-
         runtime_end = time.time()
         prep_time = runtime_end - runtime_start
         print("Finished initial prep in {:.3}s".format(prep_time))
 
-        def loop_subroutine(combine_beat_plp=combine_beat_plp,
-                            beats=beats,
-                            avg_dB_diff_threshold=10):
+        def loop_subroutine(combine_beat_plp=combine_beat_plp, beats=beats):
             if combine_beat_plp:
                 onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
                 pulse = librosa.beat.plp(onset_envelope=onset_env)
                 beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
                 beats = np.union1d(beats, beats_plp)
                 print(
-                    "Detected {} total points by combining PLP with existing beats"
-                    .format(beats.size))
-
-            if concurrency:
-                processes = []
-                affinity = 16
-                first_half = int(beats.size / 2)
-                step_size = int(beats.size / affinity)
-                i_step = np.concatenate([
-                    [1, first_half],
-                    np.arange(
-                        start=first_half + step_size,
-                        stop=beats.size,
-                        step=step_size,
-                        dtype=np.intp,
-                    ),
-                ])
-                i_step[-1] = int(beats.size)
-                for i in range(i_step.size - 1):
-                    p = Process(
-                        target=self._loop_finding_routine,
-                        args=(
-                            beats,
-                            i_step[i],
-                            i_step[i + 1],
-                            chroma,
-                            power_db,
-                            min_duration,
-                        ),
+                    "Detected {} total points by combining PLP with existing beats".format(
+                        beats.size
                     )
-                    processes.append(p)
-                    p.daemon = True
-                    p.start()
-            else:
-                self._loop_finding_routine(beats, 1, beats.size, chroma,
-                                           power_db, min_duration)
-
-            if concurrency:
-                for process in processes:
-                    process.join()
-
+                )
             candidate_pairs = []
 
-            while not self._candidate_pairs_q.empty():
-                candidate_pairs.append(self._candidate_pairs_q.get())
+            self._loop_finding_routine(
+                beats, 1, beats.size, chroma, power_db, min_duration, candidate_pairs
+            )
 
-            candidate_pairs = sorted(candidate_pairs,
-                                     reverse=False,
-                                     key=lambda x: x["dB_diff"])
+            candidate_pairs = sorted(
+                candidate_pairs, reverse=False, key=lambda x: x["dB_diff"]
+            )
 
-            db_diff_array = np.array([
-                candidate_pairs[i]["dB_diff"]
-                for i in range(len(candidate_pairs))
-            ])
+            db_diff_array = np.array(
+                [candidate_pairs[i]["dB_diff"] for i in range(len(candidate_pairs))]
+            )
             db_diff_avg = np.average(db_diff_array)
             db_diff_std = np.std(db_diff_array)
 
@@ -177,10 +132,11 @@ class MusicLooper:
                     break
                 i += 1
 
-            pruned_list = candidate_pairs[:i if i >= 10 else 10]
+            pruned_list = candidate_pairs[: i if i >= 10 else 10]
 
             test_offset = librosa.samples_to_frames(
-                np.amax([int((bpm / 60) * 0.1 * self.rate), self.rate * 1.5]))
+                np.amax([int((bpm / 60) * 0.1 * self.rate), self.rate * 1.5])
+            )
 
             subseq_beat_sim = [
                 self._subseq_beat_similarity(
@@ -188,7 +144,8 @@ class MusicLooper:
                     pruned_list[i]["loop_end"],
                     chroma,
                     test_duration=test_offset,
-                ) for i in range(len(pruned_list))
+                )
+                for i in range(len(pruned_list))
             ]
 
             # Add cosine similarity as score
@@ -196,9 +153,7 @@ class MusicLooper:
                 pruned_list[i]["score"] = subseq_beat_sim[i]
 
             # re-sort based on new score
-            pruned_list = sorted(pruned_list,
-                                 reverse=True,
-                                 key=lambda x: x["score"])
+            pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x["score"])
             return pruned_list
 
         pruned_list = loop_subroutine()
@@ -208,8 +163,7 @@ class MusicLooper:
         # (b) list is empty
         retry = True
         for i in range(len(pruned_list)):
-            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i][
-                    "score"] >= 0.90:
+            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i]["score"] >= 0.90:
                 retry = False
                 break
 
@@ -222,35 +176,40 @@ class MusicLooper:
         if self.trim_offset[0] > 0:
             for i in range(len(pruned_list)):
                 pruned_list[i]["loop_start"] = self.apply_trim_offset(
-                    pruned_list[i]["loop_start"])
+                    pruned_list[i]["loop_start"]
+                )
                 pruned_list[i]["loop_end"] = self.apply_trim_offset(
-                    pruned_list[i]["loop_end"])
+                    pruned_list[i]["loop_end"]
+                )
 
         return pruned_list
 
     def apply_trim_offset(self, frame):
         return librosa.samples_to_frames(
-            librosa.frames_to_samples(frame) + self.trim_offset[0])
+            librosa.frames_to_samples(frame) + self.trim_offset[0]
+        )
 
     def _subseq_beat_similarity(self, b1, b2, chroma, test_duration=None):
         if test_duration is None:
             test_duration = librosa.samples_to_frames(self.rate * 3)
 
-        testable_offset = np.amin([
-            test_duration,
-            chroma[..., b1:b1 + test_duration].shape[1],
-            chroma[..., b2:b2 + test_duration].shape[1],
-        ])
+        testable_offset = np.amin(
+            [
+                test_duration,
+                chroma[..., b1 : b1 + test_duration].shape[1],
+                chroma[..., b2 : b2 + test_duration].shape[1],
+            ]
+        )
 
-        cosim = np.zeros(test_duration)
+        cosine_sim = np.zeros(test_duration)
 
         for i in range(testable_offset):
             dot_prod = np.dot(chroma[..., b1 + i], chroma[..., b2 + i])
             b1_norm = np.linalg.norm(chroma[..., b1 + i])
             b2_norm = np.linalg.norm(chroma[..., b2 + i])
-            cosim[i] = dot_prod / (b1_norm * b2_norm)
+            cosine_sim[i] = dot_prod / (b1_norm * b2_norm)
 
-        return np.average(cosim)
+        return np.average(cosine_sim)
 
     def samples_to_frames(self, samples):
         return librosa.core.samples_to_frames(samples)
@@ -271,8 +230,7 @@ class MusicLooper:
 
         out.start(self.rate, self.channels, encoding)
 
-        playback_frames = librosa.util.frame(
-            self.playback_audio.flatten(order="F"))
+        playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"))
         adjusted_loop_start = loop_start * self.channels
         adjusted_loop_end = loop_end * self.channels
 
