@@ -17,11 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
 import argparse
+import logging
 import os
 import sys
 import warnings
-import logging
 from multiprocessing import Process
+
+from tqdm import tqdm
 
 from .core import MusicLooper
 
@@ -151,7 +153,9 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.INFO)
 
-    def export_handler(file_path, output_dir):
+    output_dir = args.output_dir
+
+    def export_handler(file_path):
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
@@ -167,7 +171,7 @@ if __name__ == "__main__":
 
         loop_pair_list = track.find_loop_pairs()
         if len(loop_pair_list) == 0:
-            logging.error(f"No suitable loop point found for '{filename}'.")
+            logging.error(f"No suitable loop point found for '{file_path}'.")
             return
         loop_start = loop_pair_list[0]["loop_start"]
         loop_end = loop_pair_list[0]["loop_end"]
@@ -210,24 +214,27 @@ if __name__ == "__main__":
         i = 0
         num_files = len(files)
 
-        while i < num_files:
-            for pid in range(affinity):
-                p = Process(
-                    target=export_handler, args=(files[i], args.output_dir), daemon=True
-                )
-                processes.append(p)
-                p.start()
-                i += 1
-                if i >= num_files:
-                    break
-            for process in processes:
-                process.join()
-            processes = []
+        with tqdm(total=num_files) as pbar:
+            while i < num_files:
+                for pid in range(affinity):
+                    p = Process(
+                        target=export_handler, args=(files[i]), daemon=True
+                    )
+                    processes.append(p)
+                    p.start()
+                    i += 1
+                    if i >= num_files:
+                        break
+                for process in processes:
+                    process.join()
+                    pbar.update()
+
+                processes = []
 
         sys.exit(0)
 
     if args.export or args.json:
-        export_handler(args.path, output_dir=args.output_dir)
+        export_handler(args.path)
 
     if args.play and not (args.export or args.json or args.batch):
         loop_track(args.path, args.min_duration_multiplier)
