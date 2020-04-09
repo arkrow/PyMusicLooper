@@ -21,6 +21,7 @@ import os
 import sys
 import time
 import warnings
+from multiprocessing import Process
 
 from .core import MusicLooper
 
@@ -146,7 +147,11 @@ if __name__ == "__main__":
 
         output_path = os.path.join(output_dir, os.path.split(file_path)[1])
 
-        track = MusicLooper(file_path, args.min_duration_multiplier)
+        try:
+            track = MusicLooper(file_path, args.min_duration_multiplier)
+        except TypeError as e:
+            print(f"Skipping '{file_path}'. {e}")
+            return
 
         print("Loaded '{}'".format(file_path))
 
@@ -187,11 +192,23 @@ if __name__ == "__main__":
         if len(files) == 0:
             print(f"No files found in '{args.path}'")
 
-        for file in files:
-            try:
-                export_handler(file, output_dir=args.output_dir)
-            except (TypeError, FileNotFoundError):
-                print("Skipping: {}".format(file))
+        affinity = len(os.sched_getaffinity(0))
+
+        processes = []
+        i = 0
+        num_files = len(files)
+
+        while i < num_files:
+            for pid in range(affinity):
+                p = Process(target=export_handler, args=(files[i], args.output_dir), daemon=True)
+                processes.append(p)
+                p.start()
+                i += 1
+                if i >= num_files:
+                    break
+            for process in processes:
+                process.join()
+            processes = []
 
         sys.exit(0)
 
