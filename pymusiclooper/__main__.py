@@ -19,36 +19,29 @@
 import argparse
 import os
 import sys
-import time
 import warnings
+import logging
 from multiprocessing import Process
 
 from .core import MusicLooper
 
-warnings.filterwarnings("ignore")
-
 
 def loop_track(filename, min_duration_multiplier):
     try:
-        runtime_start = time.time()
         # Load the file
-        print("Loading {}...".format(filename))
+        logging.info("Loading {}...".format(filename))
 
         track = MusicLooper(filename, min_duration_multiplier)
 
         loop_pair_list = track.find_loop_pairs()
 
         if len(loop_pair_list) == 0:
-            print("No suitable loop point found.")
+            logging.error(f"No suitable loop point found for '{filename}'.")
             sys.exit(1)
 
         loop_start = loop_pair_list[0]["loop_start"]
         loop_end = loop_pair_list[0]["loop_end"]
         score = loop_pair_list[0]["score"]
-
-        runtime_end = time.time()
-        total_runtime = runtime_end - runtime_start
-        print("Total elapsed time (s): {:.3}".format(total_runtime))
 
         print(
             "Playing with loop from {} back to {}; similarity: {:.1%}".format(
@@ -62,7 +55,7 @@ def loop_track(filename, min_duration_multiplier):
         track.play_looping(loop_start, loop_end)
 
     except (TypeError, FileNotFoundError) as e:
-        print("Error: {}".format(e))
+        logging.error("Error: {}".format(e))
 
 
 if __name__ == "__main__":
@@ -75,6 +68,14 @@ if __name__ == "__main__":
     play_options = parser.add_argument_group("Play")
     export_options = parser.add_argument_group("Export")
     parameter_options = parser.add_argument_group("Parameter adjustment")
+
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="enable verbose logging output",
+    )
 
     play_options.add_argument(
         "-p",
@@ -141,6 +142,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if args.batch and not args.verbose:
+        warnings.filterwarnings("ignore")
+        logging.basicConfig(level=logging.ERROR)
+    elif args.verbose:
+        warnings.filterwarnings("ignore")
+        logging.basicConfig(level=logging.ERROR)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     def export_handler(file_path, output_dir):
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
@@ -150,14 +160,14 @@ if __name__ == "__main__":
         try:
             track = MusicLooper(file_path, args.min_duration_multiplier)
         except TypeError as e:
-            print(f"Skipping '{file_path}'. {e}")
+            logging.error(f"Skipping '{file_path}'. {e}")
             return
 
-        print("Loaded '{}'".format(file_path))
+        logging.info("Loaded '{}'".format(file_path))
 
         loop_pair_list = track.find_loop_pairs()
         if len(loop_pair_list) == 0:
-            print("No suitable loop point found.")
+            logging.error(f"No suitable loop point found for '{filename}'.")
             return
         loop_start = loop_pair_list[0]["loop_start"]
         loop_end = loop_pair_list[0]["loop_end"]
@@ -165,13 +175,15 @@ if __name__ == "__main__":
 
         if args.json:
             track.export_json(loop_start, loop_end, score, output_dir=output_dir)
-            print(
+            logging.info(
                 f"Successfully exported loop points to '{output_path}.loop_points.json'"
             )
         if args.export:
             track.export(loop_start, loop_end, output_dir=output_dir)
-            print(f"Successfully exported intro/loop/outro sections to '{output_dir}'")
-        print()
+            logging.info(
+                f"Successfully exported intro/loop/outro sections to '{output_dir}'"
+            )
+        logging.info("")
 
     if args.batch:
         if not args.export or not args.json:
@@ -190,7 +202,7 @@ if __name__ == "__main__":
             ]
 
         if len(files) == 0:
-            print(f"No files found in '{args.path}'")
+            logging.error(f"No files found in '{args.path}'")
 
         affinity = len(os.sched_getaffinity(0))
 
@@ -200,7 +212,9 @@ if __name__ == "__main__":
 
         while i < num_files:
             for pid in range(affinity):
-                p = Process(target=export_handler, args=(files[i], args.output_dir), daemon=True)
+                p = Process(
+                    target=export_handler, args=(files[i], args.output_dir), daemon=True
+                )
                 processes.append(p)
                 p.start()
                 i += 1
