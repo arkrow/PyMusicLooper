@@ -139,6 +139,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.3.1 Fixed batch processing mode selection
 - v1.3.0 Added multiprocessing support and progress bar for batch export
 - v1.2.1 Save export output to a "looper_output" folder in the current working directory by default
 - v1.2.0 Removed unreliable cache implementation

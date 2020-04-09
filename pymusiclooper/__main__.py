@@ -197,7 +197,7 @@ if __name__ == "__main__":
         logging.info("")
 
     if args.batch:
-        if not args.export or not args.json:
+        if not args.export and not args.json:
             raise parser.error("Export mode not specified. -e or -j required.")
 
         if args.n_jobs < -1 or args.n_jobs == 0:
