@@ -160,12 +160,20 @@ if __name__ == "__main__":
 
     if args.batch and not args.verbose:
         warnings.filterwarnings("ignore")
-        logging.basicConfig(level=logging.ERROR)
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
     elif args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
     else:
         warnings.filterwarnings("ignore")
-        logging.basicConfig(level=logging.ERROR)
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
+
+    if not args.batch or args.verbose:
+        def vprint(*args):
+            for arg in args:
+                print(arg,)
+    else:
+        vprint = lambda *args: None
+
 
     def export_handler(file_path):
         if not os.path.exists(args.output_dir):
@@ -179,7 +187,7 @@ if __name__ == "__main__":
             logging.warning(f"Skipping '{file_path}'. {e}")
             return
 
-        logging.info("Loaded '{}'".format(file_path))
+        vprint("Loaded '{}'".format(file_path))
 
         loop_pair_list = track.find_loop_pairs()
         if len(loop_pair_list) == 0:
@@ -191,7 +199,7 @@ if __name__ == "__main__":
 
         if args.json:
             track.export_json(loop_start, loop_end, score, output_dir=args.output_dir)
-            logging.info(
+            vprint(
                 f"Successfully exported loop points to '{output_path}.loop_points.json'"
             )
         if args.export:
@@ -201,10 +209,10 @@ if __name__ == "__main__":
                 output_dir=args.output_dir,
                 keep_tags=args.keep_tags,
             )
-            logging.info(
+            vprint(
                 f"Successfully exported intro/loop/outro sections to '{args.output_dir}'"
             )
-        logging.info("")
+        vprint("")
 
     if args.batch:
         if not args.export and not args.json:

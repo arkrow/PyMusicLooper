@@ -293,13 +293,14 @@ class MusicLooper:
             loop_file = taglib.File(out_path + "-loop." + format.lower())
             outro_file = taglib.File(out_path + "-outro." + format.lower())
 
-            original_title = (
-                track.tags["TITLE"][0]
-                if track.tags is not None
-                and track.tags["TITLE"] is not None
-                and len(track.tags["TITLE"]) > 0
-                else os.path.split(self.filename)[-1]
-            )
+            try:
+                original_title = (
+                    track.tags["TITLE"][0]
+                    if track.tags is not None and len(track.tags["TITLE"]) > 0
+                    else os.path.split(self.filename)[-1]
+                )
+            except KeyError:
+                original_title = os.path.split(self.filename)[-1]
 
             intro_file.tags = track.tags
             loop_file.tags = track.tags
