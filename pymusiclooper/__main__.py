@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
         track = MusicLooper(file_path, args.min_duration_multiplier)
 
-        print("Loaded {}...".format(file_path))
+        print("Loaded '{}'".format(file_path))
 
         loop_pair_list = track.find_loop_pairs()
         if len(loop_pair_list) == 0:
@@ -180,6 +180,7 @@ if __name__ == "__main__":
             print(
                 f"Successfully exported intro/loop/outro sections to '{output_dir}'"
             )
+        print()
 
     if args.batch:
         if args.recursive:
