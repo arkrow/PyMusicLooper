@@ -18,7 +18,6 @@
 
 import json
 import os
-import sys
 import time
 from multiprocessing import Manager, Process
 
@@ -80,9 +79,7 @@ class MusicLooper:
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
         return average_diff
 
-    def find_loop_pairs(self,
-                        combine_beat_plp=False,
-                        concurrency=False):
+    def find_loop_pairs(self, combine_beat_plp=False, concurrency=False):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
@@ -338,28 +335,5 @@ class MusicLooper:
             "score": float(f"{score:.4}"),
         }
 
-        with open(out_path + "-loop_points.json", "w") as file:
+        with open(out_path + ".loop_points.json", "w") as file:
             json.dump(out, fp=file)
-
-    def cache_loop_points(self, loop_start, loop_end, score):
-        filename = os.path.abspath(self.filename)
-
-        out = {
-            "loop_start": int(loop_start),
-            "loop_end": int(loop_end),
-            "score": float(f"{score:.4}"),
-        }
-
-        dirpath = os.path.dirname(os.path.realpath(__file__))
-        cache_path = os.path.join(dirpath, "cache.json")
-        try:
-            with open(cache_path, "r") as file:
-                cache = json.load(file)
-        except Exception:
-            cache = {}
-        try:
-            with open(cache_path, "w") as file:
-                cache[filename] = out
-                json.dump(cache, fp=file)
-        except Exception as e:
-            sys.stderr(f"Couldn't write to cache. Error: {e}")

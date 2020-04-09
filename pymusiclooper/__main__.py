@@ -17,7 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
 import argparse
-import json
 import os
 import sys
 import time
@@ -26,31 +25,6 @@ import warnings
 from .core import MusicLooper
 
 warnings.filterwarnings("ignore")
-
-dirpath = os.path.dirname(os.path.realpath(__file__))
-cache_path = os.path.join(dirpath, "cache.json")
-
-
-def load_cached_points(filename):
-    cached_loop_start = None
-    cached_loop_end = None
-    cached_score = None
-
-    if os.path.exists(cache_path):
-        try:
-            with open(cache_path, "r") as file:
-                cache = json.load(file)
-                full_path = os.path.abspath(filename)
-                if full_path in cache:
-                    cached_loop_start = cache[full_path]["loop_start"]
-                    cached_loop_end = cache[full_path]["loop_end"]
-                    cached_score = cache[full_path]["score"]
-                    print(
-                        f"Using cached loop points for '{filename}'. Re-run with --skip-cache if undesired."
-                    )
-        except Exception:
-            pass
-    return (cached_loop_start, cached_loop_end, cached_score)
 
 
 def loop_track(filename,
@@ -76,8 +50,6 @@ def loop_track(filename,
             loop_end = loop_pair_list[0]["loop_end"]
             score = loop_pair_list[0]["score"]
 
-            track.cache_loop_points(loop_start, loop_end, score)
-
         runtime_end = time.time()
         total_runtime = runtime_end - runtime_start
         print("Total elapsed time (s): {:.3}".format(total_runtime))
@@ -102,10 +74,7 @@ if __name__ == "__main__":
         description=
         "Automatically find loop points in music files and play/export them.",
     )
-    parser.add_argument("path",
-                        type=str,
-                        nargs="?",
-                        help="path to music file.")
+    parser.add_argument("path", type=str, help="path to music file.")
 
     parser.add_argument(
         "-p",
@@ -173,39 +142,10 @@ if __name__ == "__main__":
         type=bounded_float,
         default=0.35,
         help=
-        "specify minimum loop duration as a multiplier of song duration (default: 0.35); use with --skip-cache.",
-    )
-    parser.add_argument(
-        "--skip-cache",
-        action="store_true",
-        default=False,
-        help="skip loading cached loop points.",
-    )
-    parser.add_argument(
-        "--purge-cache",
-        action="store_true",
-        default=False,
-        help="purges all cached loop points and exits.",
+        "specify minimum loop duration as a multiplier of song duration (default: 0.35)",
     )
 
     args = parser.parse_args()
-
-    cached_loop_start = None
-    cached_loop_end = None
-    cached_score = None
-
-    if args.purge_cache and os.path.exists(cache_path):
-        os.remove(cache_path)
-        print("Cache purged.")
-        sys.exit(0)
-
-    # Remaining options need a path
-    if args.path is None:
-        parser.error("missing argument: path.")
-
-    if not args.skip_cache and os.path.exists(cache_path):
-        cached_loop_start, cached_loop_end, cached_score = load_cached_points(
-            args.path)
 
     def export_handler(file_path, output_dir=None):
         if output_dir is None:
@@ -219,21 +159,13 @@ if __name__ == "__main__":
 
         print("Loaded {}...".format(file_path))
 
-        if cached_loop_start is None and cached_loop_end is None:
-            loop_pair_list = track.find_loop_pairs()
-
-            if len(loop_pair_list) == 0:
-                print("No suitable loop point found.")
-                return
-
-            loop_start = loop_pair_list[0]["loop_start"]
-            loop_end = loop_pair_list[0]["loop_end"]
-            score = loop_pair_list[0]["score"]
-            track.cache_loop_points(loop_start, loop_end, score)
-        else:
-            loop_start = cached_loop_start
-            loop_end = cached_loop_end
-            score = cached_score
+        loop_pair_list = track.find_loop_pairs()
+        if len(loop_pair_list) == 0:
+            print("No suitable loop point found.")
+            return
+        loop_start = loop_pair_list[0]["loop_start"]
+        loop_end = loop_pair_list[0]["loop_end"]
+        score = loop_pair_list[0]["score"]
 
         if args.json:
             track.export_json(loop_start,
@@ -276,12 +208,6 @@ if __name__ == "__main__":
         export_handler(args.path, output_dir=args.output_dir)
 
     if args.play and not (args.export or args.json or args.batch):
-        loop_track(
-            args.path,
-            args.min_duration_multiplier,
-            loop_start=cached_loop_start,
-            loop_end=cached_loop_end,
-            score=cached_score,
-        )
+        loop_track(args.path, args.min_duration_multiplier)
 
     sys.exit(0)
