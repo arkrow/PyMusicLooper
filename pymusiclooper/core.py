@@ -87,7 +87,6 @@ class MusicLooper:
         onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
         bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
 
-        beats = np.sort(beats)
         logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
         chroma = librosa.feature.chroma_stft(S=S_power)
@@ -111,6 +110,8 @@ class MusicLooper:
                     )
                 )
             candidate_pairs = []
+            
+            beats = np.sort(beats)
 
             self._loop_finding_routine(
                 beats, 1, beats.size, chroma, power_db, min_duration, candidate_pairs
