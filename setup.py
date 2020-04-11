@@ -5,8 +5,8 @@ with open("README.md", "r") as fh:
 
 
 def get_requirements():
-    with open("requirements.txt", "r") as f:
-        requirements = f.read().splitlines()
+    with open("requirements.txt", "r") as reqs:
+        requirements = reqs.read().splitlines()
     return requirements
 
 

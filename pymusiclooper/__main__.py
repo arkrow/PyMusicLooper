@@ -94,8 +94,7 @@ if __name__ == "__main__":
         help="export the song into intro, loop and outro files (WAV format).",
     )
     export_options.add_argument(
-        "-k",
-        "--keep-tags",
+        "--preserve-tags",
         action="store_true",
         default=False,
         help="export with the track's original tags.",
@@ -132,7 +131,7 @@ if __name__ == "__main__":
         "-o",
         "--output-dir",
         type=str,
-        default=os.path.join(os.getcwd(), "looper_output"),
+        default="",
         help="specify a different output directory.",
     )
 
@@ -158,6 +157,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    default_out = os.path.join(os.path.dirname(args.output_dir), "looper_output")
+    output_dir = args.output_dir if args.output_dir != "" else default_out
+
     if args.batch and not args.verbose:
         warnings.filterwarnings("ignore")
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
@@ -168,18 +170,19 @@ if __name__ == "__main__":
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
 
     if not args.batch or args.verbose:
+
         def vprint(*args):
             for arg in args:
                 print(arg,)
+
     else:
         vprint = lambda *args: None
 
-
     def export_handler(file_path):
-        if not os.path.exists(args.output_dir):
-            os.mkdir(args.output_dir)
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
 
-        output_path = os.path.join(args.output_dir, os.path.split(file_path)[1])
+        output_path = os.path.join(output_dir, os.path.split(file_path)[1])
 
         try:
             track = MusicLooper(file_path, args.min_duration_multiplier)
@@ -187,10 +190,10 @@ if __name__ == "__main__":
             logging.warning(f"Skipping '{file_path}'. {e}")
             return
 
-        vprint("Loaded '{}'".format(file_path))
+        vprint("Loaded '{}'. Analyzing...".format(file_path))
 
         loop_pair_list = track.find_loop_pairs()
-        if len(loop_pair_list) == 0:
+        if not loop_pair_list:
             logging.error(f"No suitable loop point found for '{file_path}'.")
             return
         loop_start = loop_pair_list[0]["loop_start"]
@@ -198,7 +201,7 @@ if __name__ == "__main__":
         score = loop_pair_list[0]["score"]
 
         if args.json:
-            track.export_json(loop_start, loop_end, score, output_dir=args.output_dir)
+            track.export_json(loop_start, loop_end, score, output_dir=output_dir)
             vprint(
                 f"Successfully exported loop points to '{output_path}.loop_points.json'"
             )
@@ -206,12 +209,10 @@ if __name__ == "__main__":
             track.export(
                 loop_start,
                 loop_end,
-                output_dir=args.output_dir,
-                keep_tags=args.keep_tags,
+                output_dir=output_dir,
+                preserve_tags=args.preserve_tags,
             )
-            vprint(
-                f"Successfully exported intro/loop/outro sections to '{args.output_dir}'"
-            )
+            vprint(f"Successfully exported intro/loop/outro sections to '{output_dir}'")
         vprint("")
 
     if args.batch:

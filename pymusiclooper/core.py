@@ -27,11 +27,11 @@ import soundfile
 
 
 class MusicLooper:
-    def __init__(self, filename, min_duration_multiplier=0.35):
+    def __init__(self, filename, min_duration_multiplier=0.35, trim=True):
         # Load the file if it exists
         if os.path.exists(filename) and os.path.isfile(filename):
             try:
-                audio, sr = librosa.load(filename, sr=None, mono=False)
+                audio, sampling_rate = librosa.load(filename, sr=None, mono=False)
             except Exception:
                 raise TypeError("Unsupported file type.")
         else:
@@ -39,8 +39,10 @@ class MusicLooper:
 
         self.filename = filename
         mono_signal = librosa.core.to_mono(audio)
-        self.audio, self.trim_offset = librosa.effects.trim(mono_signal)
-        self.rate = sr
+        self.audio, self.trim_offset = (
+            librosa.effects.trim(mono_signal) if trim else (mono_signal, [0, 0])
+        )
+        self.rate = sampling_rate
         self.playback_audio = audio
         self.min_duration_multiplier = min_duration_multiplier
 
@@ -51,7 +53,7 @@ class MusicLooper:
         self, beats, i_start, i_stop, chroma, power_db, min_duration, candidate_pairs
     ):
         for i in range(i_start, i_stop):
-            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.1)
+            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.10)
             for j in range(i):
                 # Since the beats array is sorted
                 # any j >= current_j will only decrease in duration
@@ -75,7 +77,7 @@ class MusicLooper:
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
         return average_diff
 
-    def find_loop_pairs(self, combine_beat_plp=False, concurrency=False):
+    def find_loop_pairs(self, combine_beat_plp=False):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
@@ -124,27 +126,29 @@ class MusicLooper:
             db_diff_array = np.array(
                 [candidate_pairs[i]["dB_diff"] for i in range(len(candidate_pairs))]
             )
+
             db_diff_avg = np.average(db_diff_array)
             db_diff_std = np.std(db_diff_array)
+            dev_threshold = db_diff_avg - (1 * db_diff_std)
 
             i = 0
-            one_stddev = db_diff_avg - db_diff_std
             while i < len(candidate_pairs):
-                if candidate_pairs[i]["dB_diff"] > one_stddev:
+                if candidate_pairs[i]["dB_diff"] > dev_threshold:
                     break
                 i += 1
 
-            pruned_list = candidate_pairs[: i if i >= 10 else 10]
+            pruned_list = candidate_pairs[: i if i > 4 else 4]
 
-            test_offset = librosa.samples_to_frames(
-                np.amax([int((bpm / 60) * 0.1 * self.rate), self.rate * 1.5])
-            )
+            beats_per_second = bpm / 60
+            num_test_beats = 4
+            seconds_to_test = num_test_beats / beats_per_second
+            test_offset = librosa.samples_to_frames(int(seconds_to_test * self.rate))
 
-            subseq_beat_sim = [
-                self._subseq_beat_similarity(
+            pair_score_list = [
+                self._pair_score(
                     pruned_list[i]["loop_start"],
                     pruned_list[i]["loop_end"],
-                    chroma,
+                    mel_spectrogram,
                     test_duration=test_offset,
                 )
                 for i in range(len(pruned_list))
@@ -152,7 +156,7 @@ class MusicLooper:
 
             # Add cosine similarity as score
             for i in range(len(pruned_list)):
-                pruned_list[i]["score"] = subseq_beat_sim[i]
+                pruned_list[i]["score"] = pair_score_list[i]
 
             # re-sort based on new score
             pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x["score"])
@@ -161,11 +165,11 @@ class MusicLooper:
         pruned_list = loop_subroutine()
 
         # Retry will trigger when:
-        # (a) there is no beat sequence with <5dB difference and >90% similarity
+        # (a) there is no beat sequence with <5dB difference and >95% similarity
         # (b) list is empty
         retry = True
         for i in range(len(pruned_list)):
-            if pruned_list[i]["dB_diff"] <= 5.0 and pruned_list[i]["score"] >= 0.90:
+            if pruned_list[i]["dB_diff"] < 5.0 and pruned_list[i]["score"] > 0.95:
                 retry = False
                 break
 
@@ -186,31 +190,70 @@ class MusicLooper:
 
         logging.info(f"Found {len(pruned_list)} possible loop points")
 
+        for point in pruned_list:
+            logging.info(
+                "Found from {} to {}, dB_diff:{}, similarity:{}".format(
+                    point["loop_start"],
+                    point["loop_end"],
+                    point["dB_diff"],
+                    point["score"],
+                )
+            )
+
         return pruned_list
 
     def apply_trim_offset(self, frame):
-        return librosa.samples_to_frames(
-            librosa.frames_to_samples(frame) + self.trim_offset[0]
+        return (
+            librosa.samples_to_frames(
+                librosa.frames_to_samples(frame) + self.trim_offset[0]
+            )
+            if self.trim_offset[0] != 0
+            else frame
         )
 
-    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration=None):
-        if test_duration is None:
-            test_duration = librosa.samples_to_frames(self.rate * 3)
+    def _pair_score(self, b1, b2, chroma, test_duration):
+        look_ahead_score = self._subseq_beat_similarity(b1, b2, chroma, test_duration)
+        look_back_score = self._subseq_beat_similarity(b1, b2, chroma, -test_duration)
+
+        # return highest value
+        return (
+            look_ahead_score if look_ahead_score > look_back_score else look_back_score
+        )
+
+    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration):
+        if test_duration < 0:
+            b1_test_from = b1 + test_duration
+            b1_test_to = b1
+            b2_test_from = b2 + test_duration
+            b2_test_to = b2
+
+            # make sure starting index starts at 0
+            if b1_test_from < 0:
+                b1_test_from = 0
+            if b2_test_from < 0:
+                b2_test_from = 0
+        else:
+            b1_test_from = b1
+            b1_test_to = b1 + test_duration
+            b2_test_from = b2
+            b2_test_to = b2 + test_duration
 
         testable_offset = np.amin(
             [
-                test_duration,
-                chroma[..., b1 : b1 + test_duration].shape[1],
-                chroma[..., b2 : b2 + test_duration].shape[1],
+                np.abs(test_duration),
+                chroma[..., b1_test_from:b1_test_to].shape[1],
+                chroma[..., b2_test_from:b2_test_to].shape[1],
             ]
         )
 
-        cosine_sim = np.zeros(test_duration)
+        cosine_sim = np.zeros(np.abs(test_duration))
 
         for i in range(testable_offset):
-            dot_prod = np.dot(chroma[..., b1 + i], chroma[..., b2 + i])
-            b1_norm = np.linalg.norm(chroma[..., b1 + i])
-            b2_norm = np.linalg.norm(chroma[..., b2 + i])
+            dot_prod = np.dot(
+                chroma[..., b1_test_from + i], chroma[..., b2_test_from + i]
+            )
+            b1_norm = np.linalg.norm(chroma[..., b1_test_from + i])
+            b2_norm = np.linalg.norm(chroma[..., b2_test_from + i])
             cosine_sim[i] = dot_prod / (b1_norm * b2_norm)
 
         return np.average(cosine_sim)
@@ -253,7 +296,7 @@ class MusicLooper:
             print()  # so that the program ends on a newline
 
     def export(
-        self, loop_start, loop_end, format="WAV", output_dir=None, keep_tags=False
+        self, loop_start, loop_end, format="WAV", output_dir=None, preserve_tags=False
     ):
 
         if output_dir is not None:
@@ -284,7 +327,7 @@ class MusicLooper:
             format=format,
         )
 
-        if keep_tags:
+        if preserve_tags:
             import taglib
 
             track = taglib.File(self.filename)
