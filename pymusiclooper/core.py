@@ -102,7 +102,6 @@ class MusicLooper:
 
         def loop_subroutine(combine_beat_plp=combine_beat_plp, beats=beats):
             if combine_beat_plp:
-                onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
                 pulse = librosa.beat.plp(onset_envelope=onset_env)
                 beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
                 beats = np.union1d(beats, beats_plp)
@@ -119,37 +118,30 @@ class MusicLooper:
                 beats, 1, beats.size, chroma, power_db, min_duration, candidate_pairs
             )
 
-            candidate_pairs = sorted(
-                candidate_pairs, reverse=False, key=lambda x: x["dB_diff"]
-            )
+            if len(candidate_pairs) == 0:
+                return candidate_pairs
 
-            db_diff_array = np.array(
-                [candidate_pairs[i]["dB_diff"] for i in range(len(candidate_pairs))]
-            )
-
-            db_diff_avg = np.average(db_diff_array)
-            db_diff_std = np.std(db_diff_array)
-            dev_threshold = db_diff_avg - (1 * db_diff_std)
-
-            i = 0
-            while i < len(candidate_pairs):
-                if candidate_pairs[i]["dB_diff"] > dev_threshold:
-                    break
-                i += 1
-
-            pruned_list = candidate_pairs[: i if i > 4 else 4]
+            pruned_list = self._dB_prune(candidate_pairs)
 
             beats_per_second = bpm / 60
-            num_test_beats = 4
+            num_test_beats = 8
             seconds_to_test = num_test_beats / beats_per_second
             test_offset = librosa.samples_to_frames(int(seconds_to_test * self.rate))
 
+            # adjust offset for very short tracks to half its length
+            if test_offset > chroma.shape[-1]:
+                test_offset = int(chroma.shape[-1] / 2)
+
+            weights = _weights(test_offset, expo_step=int(test_offset / num_test_beats))
+            norm_weights = weights / np.linalg.norm(weights)
+
             pair_score_list = [
-                self._pair_score(
+                self.pair_score(
                     pruned_list[i]["loop_start"],
                     pruned_list[i]["loop_end"],
-                    mel_spectrogram,
+                    chroma,
                     test_duration=test_offset,
+                    weights=norm_weights,
                 )
                 for i in range(len(pruned_list))
             ]
@@ -160,7 +152,12 @@ class MusicLooper:
 
             # re-sort based on new score
             pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x["score"])
-            return pruned_list
+
+            # prefer longer loops for highly similar sequences
+            self._prioritize_duration(pruned_list)
+
+            # return top 10 scores
+            return pruned_list[:10]
 
         pruned_list = loop_subroutine()
 
@@ -169,7 +166,7 @@ class MusicLooper:
         # (b) list is empty
         retry = True
         for i in range(len(pruned_list)):
-            if pruned_list[i]["dB_diff"] < 5.0 and pruned_list[i]["score"] > 0.95:
+            if pruned_list[i]["dB_diff"] < 5.0 and pruned_list[i]["score"] > 0.975:
                 retry = False
                 break
 
@@ -202,6 +199,126 @@ class MusicLooper:
 
         return pruned_list
 
+    def _dB_prune(self, candidate_pairs):
+        candidate_pairs = sorted(
+            candidate_pairs, reverse=False, key=lambda x: x["dB_diff"]
+        )
+        db_diff_array = np.array(
+            [candidate_pairs[i]["dB_diff"] for i in range(len(candidate_pairs))]
+        )
+
+        db_diff_avg = np.average(db_diff_array)
+        db_diff_std = np.std(db_diff_array)
+        dev_threshold = db_diff_avg - (1 * db_diff_std)
+        acceptable_dB_diff = 5
+
+        max_acceptable_idx = np.searchsorted(
+            db_diff_array, acceptable_dB_diff, side="right"
+        )
+        dev_idx = np.searchsorted(db_diff_array, dev_threshold, side="right")
+        avg_idx = np.searchsorted(db_diff_array, db_diff_avg, side="right")
+
+        if max_acceptable_idx >= dev_idx:
+            return candidate_pairs[:max_acceptable_idx]
+        else:
+            return candidate_pairs[: dev_idx if dev_idx > 4 else avg_idx]
+
+    def _prioritize_duration(self, pruned_list):
+        db_diff_array = np.array(
+            [pruned_list[i]["dB_diff"] for i in range(len(pruned_list))]
+        )
+        db_diff_avg = np.average(db_diff_array)
+        db_diff_std = np.std(db_diff_array)
+        dev_threshold = db_diff_avg - (1 * db_diff_std)
+
+        duration_argmax = 0
+        current_max = 0
+
+        for i in range(len(pruned_list)):
+            if pruned_list[i]["score"] < 0.99:
+                break
+            duration = pruned_list[i]["loop_end"] - pruned_list[i]["loop_start"]
+            if duration > current_max and pruned_list[i]["dB_diff"] < dev_threshold:
+                current_max = duration
+                duration_argmax = i
+
+        best_longest_loop = pruned_list[duration_argmax]
+        pruned_list[duration_argmax] = pruned_list[0]
+        pruned_list[0] = best_longest_loop
+
+    def pair_score(self, b1, b2, chroma, test_duration, weights=None):
+        look_ahead_score = self._subseq_beat_similarity(
+            b1, b2, chroma, test_duration, weights=weights
+        )
+        look_back_score = self._subseq_beat_similarity(
+            b1, b2, chroma, -test_duration, weights=weights
+        )
+
+        # return highest value
+        return (
+            look_ahead_score if look_ahead_score > look_back_score else look_back_score
+        )
+
+    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration, weights=None):
+        if test_duration < 0:
+            b1_test_from = b1 + test_duration
+            b1_test_to = b1
+            b2_test_from = b2 + test_duration
+            b2_test_to = b2
+
+            # reflect weights array
+            # testing view corresponds to: x.. b
+            # weights view corresponds to: b.. x
+            if weights is not None:
+                weights = weights[::-1]
+
+        else:
+            b1_test_from = b1
+            b1_test_to = b1 + test_duration
+            b2_test_from = b2
+            b2_test_to = b2 + test_duration
+
+        # treat the chroma/music array as circular
+        # to account for loops that start near the end back to the beginning
+        shift = 0
+        max_offset = chroma.shape[-1]
+
+        if b1_test_from < 0 or b2_test_from < 0:
+            # double negative = positive
+            # shift array clockwise
+            if b1_test_from < 0:
+                shift = -b1_test_from
+            else:
+                shift = -b2_test_from
+
+        if b1_test_to > max_offset or b2_test_to > max_offset:
+            # shift will be positive
+            # shift array anti-clockwise
+            if b1_test_to > max_offset:
+                shift = -(b1_test_to - max_offset)
+            else:
+                shift = -(b2_test_to - max_offset)
+
+        if shift != 0:
+            # apply shift offset
+            b1_test_from = b1_test_from + shift
+            b2_test_from = b2_test_from + shift
+            chroma = np.roll(chroma, shift, axis=1)
+
+        test_offset = np.abs(test_duration)
+
+        cosine_sim = np.zeros(test_offset)
+
+        for i in range(test_offset):
+            dot_prod = np.dot(
+                chroma[..., b1_test_from + i], chroma[..., b2_test_from + i]
+            )
+            b1_norm = np.linalg.norm(chroma[..., b1_test_from + i])
+            b2_norm = np.linalg.norm(chroma[..., b2_test_from + i])
+            cosine_sim[i] = dot_prod / (b1_norm * b2_norm)
+
+        return np.average(cosine_sim, weights=weights)
+
     def apply_trim_offset(self, frame):
         return (
             librosa.samples_to_frames(
@@ -210,53 +327,6 @@ class MusicLooper:
             if self.trim_offset[0] != 0
             else frame
         )
-
-    def _pair_score(self, b1, b2, chroma, test_duration):
-        look_ahead_score = self._subseq_beat_similarity(b1, b2, chroma, test_duration)
-        look_back_score = self._subseq_beat_similarity(b1, b2, chroma, -test_duration)
-
-        # return highest value
-        return (
-            look_ahead_score if look_ahead_score > look_back_score else look_back_score
-        )
-
-    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration):
-        if test_duration < 0:
-            b1_test_from = b1 + test_duration
-            b1_test_to = b1
-            b2_test_from = b2 + test_duration
-            b2_test_to = b2
-
-            # make sure starting index starts at 0
-            if b1_test_from < 0:
-                b1_test_from = 0
-            if b2_test_from < 0:
-                b2_test_from = 0
-        else:
-            b1_test_from = b1
-            b1_test_to = b1 + test_duration
-            b2_test_from = b2
-            b2_test_to = b2 + test_duration
-
-        testable_offset = np.amin(
-            [
-                np.abs(test_duration),
-                chroma[..., b1_test_from:b1_test_to].shape[1],
-                chroma[..., b2_test_from:b2_test_to].shape[1],
-            ]
-        )
-
-        cosine_sim = np.zeros(np.abs(test_duration))
-
-        for i in range(testable_offset):
-            dot_prod = np.dot(
-                chroma[..., b1_test_from + i], chroma[..., b2_test_from + i]
-            )
-            b1_norm = np.linalg.norm(chroma[..., b1_test_from + i])
-            b2_norm = np.linalg.norm(chroma[..., b2_test_from + i])
-            cosine_sim[i] = dot_prod / (b1_norm * b2_norm)
-
-        return np.average(cosine_sim)
 
     def samples_to_frames(self, samples):
         return librosa.core.samples_to_frames(samples)
@@ -376,3 +446,16 @@ class MusicLooper:
 
         with open(out_path + ".loop_points.json", "w") as file:
             json.dump(out, fp=file)
+
+
+def _weights(length, expo_step=1):
+    weights = np.empty(length)
+    weights[0] = length * expo_step
+    i = 1
+    while i < length:
+        if expo_step != 0 and i % expo_step == 0:
+            weights[i] = weights[i - 1] / 2
+        else:
+            weights[i] = weights[i - 1] - 1
+        i += 1
+    return weights
