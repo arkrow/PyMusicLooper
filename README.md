@@ -16,17 +16,26 @@ Requires Python >=3.6 to run.
 This program depends on NumPy (for arrays and mathematical operations) and Librosa (for audio analysis and beat extraction).
 If you don't have these dependencies installed, they'll be automatically downloaded:
 
-```sh
-pip install git+https://github.com/arkrow/PyMusicLooper.git
+For the full program with tag preservation and direct playing support:
+```
+pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[complete]
 ```
 
-To play music endlessly through the terminal, the external library `mpg123` is required. Available through the following link: (https://www.mpg123.de/download.shtml).
+The "complete" version requires:
+- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see their [installation notes](https://github.com/supermihi/pytaglib#installation-notes) for problems with libtag dependency on MacOS/Linux)
+- [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
+
+For just the essentials (exporting intro/loop/outro sections to WAV, or the loop points in samples):
+```
+pip install git+https://github.com/arkrow/PyMusicLooper.git
+```
 
 ## Usage
 
 ```
-usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [-j] [-b] [-r] [-n N_JOBS]
-                               [-o OUTPUT_DIR] [-m MIN_DURATION_MULTIPLIER]
+usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [--preserve-tags] [-j] [-b]
+                               [-r] [-n N_JOBS] [-o OUTPUT_DIR]
+                               [-m MIN_DURATION_MULTIPLIER]
                                path
 
 A script for repeating music seamlessly and endlessly, by automatically
@@ -46,6 +55,7 @@ Play:
 Export:
   -e, --export          export the song into intro, loop and outro files (WAV
                         format).
+  --preserve-tags       export with the track's original tags.
   -j, --json            export the loop points (in samples) to a JSON file in
                         the song's directory.
   -b, --batch           batch process all the files within the given path
@@ -84,10 +94,10 @@ Play the song on repeat with the best discovered loop point.
 python -m pymusiclooper "Song I Could Listen To Forever.mp3"
 ```
 
-Export the song into intro, loop and outro files, as well as the loop points used.
+Export the song into intro, loop and outro files, and carry over the track's original tags.
 
 ```sh
-python -m pymusiclooper -ej "some music track.ogg"
+python -m pymusiclooper -e "some music track.ogg" --preserve-tags
 ```
 
 Export the loop points of all the songs in the current directory.
@@ -97,10 +107,10 @@ python -m pymusiclooper -bj .
 ```
 
 The **I WANT IT ALL** option.
-Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
 
 ```sh
-python -m pymusiclooper -brej . -o "Music Loops" -n 4
+python -m pymusiclooper -brej . -o "Music Loops" -n 4 --preserve-tags
 ```
 
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
@@ -139,6 +149,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.4.0 Major improvements to the loop detection algorithm; added option to preserve tags
 - v1.3.2 Fixed fallback PLP method not working sometimes
 - v1.3.1 Fixed batch processing mode selection
 - v1.3.0 Added multiprocessing support and progress bar for batch export

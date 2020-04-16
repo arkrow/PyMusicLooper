@@ -12,7 +12,7 @@ def get_requirements():
 
 setuptools.setup(
     name="pymusiclooper",
-    version="1.3.2",
+    version="1.4.0",
     author="arkrow",
     author_email="arkrow@protonmail.com",
     description="Automatically find loop points of any song and play endlessly or export into intro/loop/outro sections or loop points.",
@@ -20,7 +20,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/arkrow/PyMusicLooper",
     install_requires=get_requirements(),
-    extras_require={"all": ["pytaglib>=1.4.6", "mpg123>=0.4"]},
+    extras_require={"complete": ["pytaglib>=1.4.6", "mpg123>=0.4"]},
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
