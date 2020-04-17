@@ -22,7 +22,7 @@ pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[co
 ```
 
 The "complete" version requires:
-- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see their [installation notes](https://github.com/supermihi/pytaglib#installation-notes) for problems with libtag dependency on MacOS/Linux)
+- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see their [installation notes](https://github.com/supermihi/pytaglib#installation-notes) for problems with libtag dependency)
 - [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
 - [ffmpeg](https://ffmpeg.org/download.html) for MP3 and other audio format support.
 

@@ -156,8 +156,8 @@ class MusicLooper:
             # prefer longer loops for highly similar sequences
             self._prioritize_duration(pruned_list)
 
-            # return top 10 scores
-            return pruned_list[:10]
+            # return top 20 scores
+            return pruned_list[:20]
 
         pruned_list = loop_subroutine()
 
@@ -262,54 +262,29 @@ class MusicLooper:
     def _subseq_beat_similarity(self, b1, b2, chroma, test_duration, weights=None):
         if test_duration < 0:
             b1_test_from = b1 + test_duration
-            b1_test_to = b1
             b2_test_from = b2 + test_duration
-            b2_test_to = b2
 
             # reflect weights array
             # testing view corresponds to: x.. b
             # weights view corresponds to: b.. x
             if weights is not None:
                 weights = weights[::-1]
-
         else:
             b1_test_from = b1
-            b1_test_to = b1 + test_duration
             b2_test_from = b2
-            b2_test_to = b2 + test_duration
 
-        # treat the chroma/music array as circular
-        # to account for loops that start near the end back to the beginning
-        shift = 0
         max_offset = chroma.shape[-1]
-
-        if b1_test_from < 0 or b2_test_from < 0:
-            # double negative = positive
-            # shift array clockwise
-            if b1_test_from < 0:
-                shift = -b1_test_from
-            else:
-                shift = -b2_test_from
-
-        if b1_test_to > max_offset or b2_test_to > max_offset:
-            # shift will be negative
-            # shift array anti-clockwise
-            if b1_test_to > max_offset:
-                shift = -(b1_test_to - max_offset)
-            else:
-                shift = -(b2_test_to - max_offset)
-
-        if shift != 0:
-            # apply shift offset
-            b1_test_from = b1_test_from + shift
-            b2_test_from = b2_test_from + shift
-            chroma = np.roll(chroma, shift, axis=1)
-
         test_offset = np.abs(test_duration)
-
         cosine_sim = np.zeros(test_offset)
 
         for i in range(test_offset):
+            # treat the chroma/music array as circular
+            # to account for loops that start near the end back to the beginning
+            if b1_test_from + i == max_offset:
+                b1_test_from = -i
+            if b2_test_from + i == max_offset:
+                b2_test_from = -i
+
             dot_prod = np.dot(
                 chroma[..., b1_test_from + i], chroma[..., b2_test_from + i]
             )
