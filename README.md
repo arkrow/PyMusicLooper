@@ -16,7 +16,7 @@ Requires Python >=3.6 to run.
 This program depends on NumPy (for arrays and mathematical operations) and Librosa (for audio analysis and beat extraction).
 If you don't have these dependencies installed, they'll be automatically downloaded:
 
-For the full program with tag preservation and direct playing support:
+For the complete program with tag preservation and direct playing support:
 ```
 pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[complete]
 ```
@@ -24,11 +24,15 @@ pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[co
 The "complete" version requires:
 - [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see their [installation notes](https://github.com/supermihi/pytaglib#installation-notes) for problems with libtag dependency on MacOS/Linux)
 - [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
+- [ffmpeg](https://ffmpeg.org/download.html) for MP3 and other audio format support.
 
 For just the essentials (exporting intro/loop/outro sections to WAV, or the loop points in samples):
 ```
 pip install git+https://github.com/arkrow/PyMusicLooper.git
 ```
+
+The "essential" version requires:
+- [ffmpeg](https://ffmpeg.org/download.html) for MP3 and other audio format support.
 
 ## Usage
 

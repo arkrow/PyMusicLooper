@@ -292,7 +292,7 @@ class MusicLooper:
                 shift = -b2_test_from
 
         if b1_test_to > max_offset or b2_test_to > max_offset:
-            # shift will be positive
+            # shift will be negative
             # shift array anti-clockwise
             if b1_test_to > max_offset:
                 shift = -(b1_test_to - max_offset)
