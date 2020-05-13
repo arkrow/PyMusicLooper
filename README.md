@@ -8,31 +8,36 @@ Features:
 - Supports a large set of different audio formats, and all the popular ones (MP3, OGG, M4A, FLAC, WAV, etc).
 - Play the music file endlessly and seamlessly with the best discovered loop.
 - Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
-- Export loop points in samples (e.g. for use in creating custom themes with seamlessly looping audio).
+- Export loop points in samples to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
 
 ## Installation
 
-Requires Python >=3.6 to run.
-This program depends on NumPy (for arrays and mathematical operations) and Librosa (for audio analysis and beat extraction).
-If you don't have these dependencies installed, they'll be automatically downloaded:
+### Pre-requisites
+- [Python](https://www.python.org/downloads/) >= 3.6
+- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other propriety audio formats)
 
-For the complete program with tag preservation and direct playing support:
-```
-pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[complete]
-```
+### Installation Options
 
-The "complete" version requires:
-- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see their [installation notes](https://github.com/supermihi/pytaglib#installation-notes) for problems with libtag dependency)
-- [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
-- [ffmpeg](https://ffmpeg.org/download.html) for MP3 and other audio format support.
+#### Base Install
 
-For just the essentials (exporting intro/loop/outro sections to WAV, or the loop points in samples):
-```
+Base installation (can export intro/loop/outro sections to WAV, or the loop points to a text file; easiest to install):
+
+```sh
 pip install git+https://github.com/arkrow/PyMusicLooper.git
 ```
 
-The "essential" version requires:
-- [ffmpeg](https://ffmpeg.org/download.html) for MP3 and other audio format support.
+#### Complete Install
+
+Complete installation adds tag preservation and terminal playback support (requires additional setup):
+
+```sh
+pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[complete]
+```
+
+Additional requirements for "complete" feature set:
+
+- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see [pytaglib's installation notes](https://github.com/supermihi/pytaglib#installation-notes))
+- [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
 
 ## Usage
 
@@ -84,7 +89,7 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (a) play the song on repeat using the best discovered loop point (default, requires [mpg123](https://www.mpg123.de/download.shtml));
 
-(b) export intro/loop/outro sections of the song (currently outputs as WAV-only, although you may convert with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
+(b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
 
 (c) export the loop points (in samples) to a JSON text file, which you can use for audio loops in custom theme creation, etc.
 
@@ -127,7 +132,7 @@ python -m pymusiclooper "super long track.flac" -m 0.85
 
 ## Building from source
 
-Requried python packages: `pip` and `setuptools`.
+Required python packages: `pip` and `setuptools`.
 
 Clone the git repository to a directory of your choice and cd to inside the repo.
 
@@ -149,7 +154,7 @@ If there is a song that you think PyMusicLooper should be able to loop but doesn
 
 ## Acknowledgement
 
-This project started out as a fork of [Nolan Nicholson](https://github.com/NolanNicholson)'s project [Looper](https://github.com/NolanNicholson/Looper/). Although at this point only a few lines of code remain from that project due to adopting a completely different approach and implementation, without their contributions this project would not have been possible.
+This project started out as a fork of [Nolan Nicholson](https://github.com/NolanNicholson)'s project [Looper](https://github.com/NolanNicholson/Looper/). Although at this point only a few lines of code remain from that project due to adopting a completely different approach and implementation; this project would not have been possible without their initial contribution.
 
 ## Version History
 
