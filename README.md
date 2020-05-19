@@ -13,6 +13,7 @@ Features:
 ## Installation
 
 ### Pre-requisites
+
 - [Python](https://www.python.org/downloads/) >= 3.6
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other propriety audio formats)
 

@@ -26,6 +26,7 @@ from multiprocessing import Process
 from tqdm import tqdm
 
 from .core import MusicLooper
+from .argparser import ArgParser
 
 
 def loop_track(filename, min_duration_multiplier):
@@ -61,103 +62,14 @@ def loop_track(filename, min_duration_multiplier):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
+    parser = ArgParser(
         prog="python -m pymusiclooper",
-        description="A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.",
-    )
-    parser.add_argument("path", type=str, help="path to music file.")
-
-    play_options = parser.add_argument_group("Play")
-    export_options = parser.add_argument_group("Export")
-    parameter_options = parser.add_argument_group("Parameter adjustment")
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        default=False,
-        help="enable verbose logging output",
-    )
-
-    play_options.add_argument(
-        "-p",
-        "--play",
-        action="store_true",
-        default=True,
-        help="play the song on repeat with the best discovered loop point (default).",
-    )
-    export_options.add_argument(
-        "-e",
-        "--export",
-        action="store_true",
-        default=False,
-        help="export the song into intro, loop and outro files (WAV format).",
-    )
-    export_options.add_argument(
-        "--preserve-tags",
-        action="store_true",
-        default=False,
-        help="export with the track's original tags.",
-    )
-    export_options.add_argument(
-        "-j",
-        "--json",
-        action="store_true",
-        default=False,
-        help="export the loop points (in samples) to a JSON file in the song's directory.",
-    )
-    export_options.add_argument(
-        "-b",
-        "--batch",
-        action="store_true",
-        default=False,
-        help="batch process all the files within the given path (usage with export args [-e] or [-j] only).",
-    )
-    export_options.add_argument(
-        "-r",
-        "--recursive",
-        action="store_true",
-        default=False,
-        help="process directories and their contents recursively (usage with [-b/--batch] only).",
-    )
-    export_options.add_argument(
-        "-n",
-        "--n-jobs",
-        type=int,
-        default=1,
-        help="number of parallel jobs to use for batch processing; specify -1 to use all cores (default: 1). WARNING: changing the value will also result in higher memory consumption.",
-    )
-    parameter_options.add_argument(
-        "-o",
-        "--output-dir",
-        type=str,
-        default="",
-        help="specify a different output directory.",
-    )
-
-    def bounded_float(x):
-        try:
-            x = float(x)
-        except ValueError:
-            raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
-
-        if x <= 0.0 or x >= 1.0:
-            raise argparse.ArgumentTypeError(
-                "%r not in range (0.0, 1.0) exclusive" % (x,)
-            )
-        return x
-
-    parameter_options.add_argument(
-        "-m",
-        "--min-duration-multiplier",
-        type=bounded_float,
-        default=0.35,
-        help="specify minimum loop duration as a multiplier of song duration (default: 0.35)",
-    )
+        description="A script for repeating music seamlessly and endlessly, by automatically finding the best loop points."
+        )
 
     args = parser.parse_args()
 
-    default_out = os.path.join(os.path.dirname(args.output_dir), "looper_output")
+    default_out = os.path.join(os.path.dirname(args.path), "looper_output")
     output_dir = args.output_dir if args.output_dir != "" else default_out
 
     if args.batch and not args.verbose:
@@ -169,18 +81,17 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore")
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
 
-    if not args.batch or args.verbose:
-
+    if not os.path.isdir(args.path) or args.verbose:
         def vprint(*args):
             for arg in args:
                 print(arg,)
-
     else:
         vprint = lambda *args: None
 
     def export_handler(file_path):
-        if not os.path.exists(output_dir):
-            os.mkdir(output_dir)
+        if not os.path.exists(file_path):
+            raise parser.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
+            return
 
         output_path = os.path.join(output_dir, os.path.split(file_path)[1])
 
@@ -215,13 +126,10 @@ if __name__ == "__main__":
             vprint(f"Successfully exported intro/loop/outro sections to '{output_dir}'")
         vprint("")
 
-    if args.batch:
-        if not args.export and not args.json:
-            raise parser.error("Export mode not specified. -e or -j required.")
-
-        if args.n_jobs < -1 or args.n_jobs == 0:
+    def batch_handler(dir_path):
+        if args.n_jobs <= 0:
             raise parser.error(
-                f"n_jobs can either be -1 (for all cores), or any positive integer; n_jobs provided: {args.n_jobs}"
+                f"n_jobs must be a non-zero positive integer; n_jobs provided: {args.n_jobs}"
             )
 
         if args.recursive:
@@ -246,39 +154,40 @@ if __name__ == "__main__":
             for file in tqdm_files:
                 tqdm_files.set_description(f"Processing '{file}'")
                 export_handler(file)
-            sys.exit(0)
+        else:
+            processes = []
+            file_idx = 0
 
-        affinity = len(os.sched_getaffinity(0)) if args.n_jobs == -1 else args.n_jobs
+            with tqdm(total=num_files) as pbar:
+                while file_idx < num_files:
+                    for pid in range(args.n_jobs):
+                        p = Process(
+                            target=export_handler,
+                            kwargs={"file_path": files[file_idx]},
+                            daemon=True,
+                        )
+                        processes.append(p)
+                        p.start()
+                        file_idx += 1
+                        if file_idx >= num_files:
+                            break
 
-        processes = []
-        file_idx = 0
+                    # Wait till current batch finishes
+                    for process in processes:
+                        process.join()
+                        process.terminate()
+                        pbar.update()
 
-        with tqdm(total=num_files) as pbar:
-            while file_idx < num_files:
-                for pid in range(affinity):
-                    p = Process(
-                        target=export_handler,
-                        kwargs={"file_path": files[file_idx]},
-                        daemon=True,
-                    )
-                    processes.append(p)
-                    p.start()
-                    file_idx += 1
-                    if file_idx >= num_files:
-                        break
-
-                # Wait till current batch finishes
-                for process in processes:
-                    process.join()
-                    process.terminate()
-                    pbar.update()
-
-                processes = []
-
-        sys.exit(0)
+                    processes = []
 
     if args.export or args.json:
-        export_handler(args.path)
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+
+        if os.path.isfile(args.path):
+            export_handler(args.path)
+        else:
+            batch_handler(args.path)
 
     if args.play and not (args.export or args.json or args.batch):
         loop_track(args.path, args.min_duration_multiplier)
