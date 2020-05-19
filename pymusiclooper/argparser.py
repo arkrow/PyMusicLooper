@@ -2,11 +2,11 @@ from argparse import ArgumentParser
 class ArgParser(ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_argument("path", type=str, help="path to music file.")
+        self.add_argument("path", type=str, help="path to file or directory")
 
         play_options = self.add_argument_group("Play")
         export_options = self.add_argument_group("Export")
-        parameter_options = self.add_argument_group("Parameter adjustment")
+        general_options = self.add_argument_group("General Options")
 
         self.add_argument(
             "-v",
@@ -41,23 +41,23 @@ class ArgParser(ArgumentParser):
             "--json",
             action="store_true",
             default=False,
-            help="export the loop points (in samples) to a JSON file in the song's directory.",
+            help="export the loop points (in samples) to a JSON text file in the song's directory.",
         )
         export_options.add_argument(
             "-r",
             "--recursive",
             action="store_true",
             default=False,
-            help="process directories and their contents recursively (usage with [-b/--batch] only).",
+            help="process directories and their contents recursively (has an effect only if the given path is a directory).",
         )
         export_options.add_argument(
             "-n",
             "--n-jobs",
             type=int,
             default=1,
-            help="number of parallel jobs to use for batch processing; specify -1 to use all cores (default: 1). WARNING: changing the value will also result in higher memory consumption.",
+            help="number of files to batch process at a time (default: 1). WARNING: greater values result in higher memory consumption.",
         )
-        parameter_options.add_argument(
+        general_options.add_argument(
             "-o",
             "--output-dir",
             type=str,
@@ -77,7 +77,7 @@ class ArgParser(ArgumentParser):
                 )
             return x
 
-        parameter_options.add_argument(
+        general_options.add_argument(
             "-m",
             "--min-duration-multiplier",
             type=bounded_float,

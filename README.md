@@ -43,8 +43,8 @@ Additional requirements for "complete" feature set:
 ## Usage
 
 ```
-usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [--preserve-tags] [-j] [-b]
-                               [-r] [-n N_JOBS] [-o OUTPUT_DIR]
+usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [--preserve-tags] [-j] [-r]
+                               [-n N_JOBS] [-o OUTPUT_DIR]
                                [-m MIN_DURATION_MULTIPLIER]
                                path
 
@@ -52,7 +52,7 @@ A script for repeating music seamlessly and endlessly, by automatically
 finding the best loop points.
 
 positional arguments:
-  path                  path to music file.
+  path                  path to file or directory.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -66,19 +66,16 @@ Export:
   -e, --export          export the song into intro, loop and outro files (WAV
                         format).
   --preserve-tags       export with the track's original tags.
-  -j, --json            export the loop points (in samples) to a JSON file in
-                        the song's directory.
-  -b, --batch           batch process all the files within the given path
-                        (usage with export args [-e] or [-j] only).
+  -j, --json            export the loop points (in samples) to a JSON text
+                        file in the song's directory.
   -r, --recursive       process directories and their contents recursively
-                        (usage with [-b/--batch] only).
+                        (has an effect only if the given path is a directory).
   -n N_JOBS, --n-jobs N_JOBS
-                        number of parallel jobs to use for batch processing;
-                        specify -1 to use all cores (default: 1). WARNING:
-                        changing the value will also result in higher memory
+                        number of files to batch process at a time (default:
+                        1). WARNING: greater values result in higher memory
                         consumption.
 
-Parameter adjustment:
+General Options:
   -o OUTPUT_DIR, --output-dir OUTPUT_DIR
                         specify a different output directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
@@ -92,7 +89,7 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
 
-(c) export the loop points (in samples) to a JSON text file, which you can use for audio loops in custom theme creation, etc.
+(c) export the loop points (in samples) to a JSON text file, which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
 ## Example Usage
 
@@ -110,17 +107,14 @@ Export the song into intro, loop and outro files, and carry over the track's ori
 python -m pymusiclooper -e "some music track.ogg" --preserve-tags
 ```
 
-Export the loop points of all the songs in the current directory.
+Export the loop points of all the songs in the current directory to a json text file.
 
 ```sh
-python -m pymusiclooper -bj .
+python -m pymusiclooper -j .
 ```
 
-The **I WANT IT ALL** option.
-Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
-
 ```sh
-python -m pymusiclooper -brej . -o "Music Loops" -n 4 --preserve-tags
+python -m pymusiclooper -rej . -o "Music Loops" -n 4 --preserve-tags
 ```
 
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
@@ -130,6 +124,10 @@ Here `-m 0.85` means that, excluding silence, the loop section is at least 85% o
 ```sh
 python -m pymusiclooper "super long track.flac" -m 0.85
 ```
+
+### Example of all functionalities in action
+
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
 
 ## Building from source
 
@@ -159,6 +157,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.5.0 Batch mode now implicitly enabled based on given path
 - v1.4.0 Major improvements to the loop detection algorithm; added option to preserve tags
 - v1.3.2 Fixed fallback PLP method not working sometimes
 - v1.3.1 Fixed batch processing mode selection
