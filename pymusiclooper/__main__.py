@@ -71,11 +71,8 @@ if __name__ == "__main__":
 
     default_out = os.path.join(os.path.dirname(args.path), "looper_output")
     output_dir = args.output_dir if args.output_dir != "" else default_out
-
-    if args.batch and not args.verbose:
-        warnings.filterwarnings("ignore")
-        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
-    elif args.verbose:
+    
+    if args.verbose:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
     else:
         warnings.filterwarnings("ignore")
@@ -189,5 +186,5 @@ if __name__ == "__main__":
         else:
             batch_handler(args.path)
 
-    if args.play and not (args.export or args.json or args.batch):
-        loop_track(args.path, args.min_duration_multiplier)
+    if args.play and not (args.export or args.json):
+        loop_track(args.path, args.min_duration_multiplier) 
