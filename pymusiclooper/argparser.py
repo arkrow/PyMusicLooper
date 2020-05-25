@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 class ArgParser(ArgumentParser):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(ArgParser, self).__init__(*args, **kwargs)
         self.add_argument("path", type=str, help="path to file or directory")
 
         play_options = self.add_argument_group("Play")

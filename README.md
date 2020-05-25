@@ -157,6 +157,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.5.1 Fixed issues caused by previous release's refactoring
 - v1.5.0 Batch mode now implicitly enabled based on given path
 - v1.4.0 Major improvements to the loop detection algorithm; added option to preserve tags
 - v1.3.2 Fixed fallback PLP method not working sometimes

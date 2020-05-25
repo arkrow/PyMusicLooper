@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     def export_handler(file_path):
         if not os.path.exists(file_path):
-            raise parser.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
+            logging.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
             return
 
         output_path = os.path.join(output_dir, os.path.split(file_path)[1])
@@ -125,9 +125,10 @@ if __name__ == "__main__":
 
     def batch_handler(dir_path):
         if args.n_jobs <= 0:
-            raise parser.error(
+            logging.error(
                 f"n_jobs must be a non-zero positive integer; n_jobs provided: {args.n_jobs}"
             )
+            return
 
         if args.recursive:
             files = []
