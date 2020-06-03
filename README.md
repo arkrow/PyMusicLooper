@@ -43,8 +43,8 @@ Additional requirements for "complete" feature set:
 ## Usage
 
 ```
-usage: python -m pymusiclooper [-h] [-v] [-p] [-e] [--preserve-tags] [-j] [-r]
-                               [-n N_JOBS] [-o OUTPUT_DIR]
+usage: python -m pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-j]
+                               [-r] [-n N_JOBS] [-o OUTPUT_DIR]
                                [-m MIN_DURATION_MULTIPLIER]
                                path
 
@@ -52,11 +52,13 @@ A script for repeating music seamlessly and endlessly, by automatically
 finding the best loop points.
 
 positional arguments:
-  path                  path to file or directory.
+  path                  path to file or directory
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         enable verbose logging output
+  -i, --interactive     manually preview/choose which loop to use out of the
+                        discovered loop points
 
 Play:
   -p, --play            play the song on repeat with the best discovered loop
@@ -157,6 +159,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.6.0 Added interactive option for user loop selection
 - v1.5.1 Fixed issues caused by previous release's refactoring
 - v1.5.0 Batch mode now implicitly enabled based on given path
 - v1.4.0 Major improvements to the loop detection algorithm; added option to preserve tags

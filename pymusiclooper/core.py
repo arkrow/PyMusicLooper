@@ -31,19 +31,19 @@ class MusicLooper:
         # Load the file if it exists
         if os.path.exists(filename) and os.path.isfile(filename):
             try:
-                audio, sampling_rate = librosa.load(filename, sr=None, mono=False)
+                raw_audio, sampling_rate = librosa.load(filename, sr=None, mono=False)
             except Exception:
                 raise TypeError("Unsupported file type.")
         else:
             raise FileNotFoundError("Specified file not found.")
 
         self.filename = filename
-        mono_signal = librosa.core.to_mono(audio)
+        mono_signal = librosa.core.to_mono(raw_audio)
         self.audio, self.trim_offset = (
             librosa.effects.trim(mono_signal) if trim else (mono_signal, [0, 0])
         )
         self.rate = sampling_rate
-        self.playback_audio = audio
+        self.playback_audio = raw_audio
         self.min_duration_multiplier = min_duration_multiplier
 
         # Initialize parameters for playback
@@ -154,7 +154,8 @@ class MusicLooper:
             pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x["score"])
 
             # prefer longer loops for highly similar sequences
-            self._prioritize_duration(pruned_list)
+            if len(pruned_list) > 1:
+                self._prioritize_duration(pruned_list)
 
             # return top 20 scores
             return pruned_list[:20]
@@ -309,11 +310,14 @@ class MusicLooper:
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
+    def seconds_to_frames(self, seconds):
+        return librosa.core.time_to_frames(seconds, sr=self.rate)
+
     def frames_to_ftime(self, frame):
         time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
-    def play_looping(self, loop_start, loop_end):
+    def play_looping(self, loop_start, loop_end, start_from=0, adjust_for_playback=False):
         from mpg123 import ENC_FLOAT_32
         from mpg123 import Out123
 
@@ -326,7 +330,12 @@ class MusicLooper:
         adjusted_loop_start = loop_start * self.channels
         adjusted_loop_end = loop_end * self.channels
 
-        i = 0
+        if adjust_for_playback:
+            loop_start = loop_start * self.channels
+            loop_end = loop_end * self.channels
+            start_from = start_from * self.channels
+
+        i = start_from
         loop_count = 0
         try:
             while True:

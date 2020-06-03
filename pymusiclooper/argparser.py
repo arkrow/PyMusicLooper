@@ -1,4 +1,6 @@
 from argparse import ArgumentParser
+
+
 class ArgParser(ArgumentParser):
     def __init__(self, *args, **kwargs):
         super(ArgParser, self).__init__(*args, **kwargs)
@@ -14,6 +16,13 @@ class ArgParser(ArgumentParser):
             action="store_true",
             default=False,
             help="enable verbose logging output",
+        )
+        self.add_argument(
+            "-i",
+            "--interactive",
+            action="store_true",
+            default=False,
+            help="manually preview/choose which loop to use out of the discovered loop points",
         )
 
         play_options.add_argument(
@@ -69,7 +78,9 @@ class ArgParser(ArgumentParser):
             try:
                 x = float(x)
             except ValueError:
-                raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+                raise argparse.ArgumentTypeError(
+                    "%r not a floating-point literal" % (x,)
+                )
 
             if x <= 0.0 or x >= 1.0:
                 raise argparse.ArgumentTypeError(
