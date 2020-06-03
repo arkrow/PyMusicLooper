@@ -142,7 +142,7 @@ if __name__ == "__main__":
     def export_handler(file_path):
         loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
 
-        loop_end, loop_start, score = choose_loop_pair(loop_pair_list, file_path)
+        loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
 
         track = MusicLooper(file_path, min_duration_multiplier=args.min_duration_multiplier)
 
