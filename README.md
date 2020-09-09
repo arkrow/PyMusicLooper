@@ -97,16 +97,20 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 Note: If on Windows, you can Shift+Right-Click in an empty spot in the song's folder and choose command-line/powershell from the context menu. Otherwise, cd/dir to the folder.
 
+### Play
+
 Play the song on repeat with the best discovered loop point.
 
 ```sh
-python -m pymusiclooper "Song I Could Listen To Forever.mp3"
+python -m pymusiclooper "TRACK_NAME.mp3"
 ```
+
+### Export
 
 Export the song into intro, loop and outro files, and carry over the track's original tags.
 
 ```sh
-python -m pymusiclooper -e "some music track.ogg" --preserve-tags
+python -m pymusiclooper -e "TRACK_NAME.ogg" --preserve-tags
 ```
 
 Export the loop points of all the songs in the current directory to a json text file.
@@ -115,21 +119,29 @@ Export the loop points of all the songs in the current directory to a json text 
 python -m pymusiclooper -j .
 ```
 
-```sh
-python -m pymusiclooper -rej . -o "Music Loops" -n 4 --preserve-tags
-```
+### Misc.
 
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
 If the most of the track is the loop section, specifying a higher multiplier will also speed the algorithm up.
 Here `-m 0.85` means that, excluding silence, the loop section is at least 85% of the music track.
 
 ```sh
-python -m pymusiclooper "super long track.flac" -m 0.85
+python -m pymusiclooper "TRACK_NAME.flac" -m 0.85
+```
+
+Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
+
+```sh
+python -m pymusiclooper "TRACK_NAME.wav" -e -i
 ```
 
 ### Example of all functionalities in action
 
 Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
+
+```sh
+python -m pymusiclooper -rej . -o "Music Loops" -n 4 --preserve-tags
+```
 
 ## Building from source
 
