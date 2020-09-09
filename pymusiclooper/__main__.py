@@ -84,7 +84,7 @@ if __name__ == "__main__":
     def interactive_handler(loop_pair_list, file_path):
         preview_looper = MusicLooper(file_path, args.min_duration_multiplier)
         print("Discovered loop points:")
-        for idx, pair in zip(range(len(loop_pair_list)), loop_pair_list):
+        for idx, pair in enumerate(loop_pair_list):
             # import pdb; pdb.set_trace()
             start_time = preview_looper.frames_to_ftime(pair['loop_start'])
             end_time = preview_looper.frames_to_ftime(pair['loop_end'])

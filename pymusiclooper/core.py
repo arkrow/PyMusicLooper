@@ -49,30 +49,6 @@ class MusicLooper:
         # Initialize parameters for playback
         self.channels = self.playback_audio.shape[0]
 
-    def _loop_finding_routine(
-        self, beats, i_start, i_stop, chroma, power_db, min_duration, candidate_pairs
-    ):
-        for i in range(i_start, i_stop):
-            deviation = np.linalg.norm(chroma[..., beats[i]] * 0.10)
-            for j in range(i):
-                # Since the beats array is sorted
-                # any j >= current_j will only decrease in duration
-                if beats[i] - beats[j] < min_duration:
-                    break
-                dist = np.linalg.norm(chroma[..., beats[i]] - chroma[..., beats[j]])
-                if dist <= deviation:
-                    avg_db_diff = self.db_diff(
-                        power_db[..., beats[i]], power_db[..., beats[j]]
-                    )
-                    if avg_db_diff <= 10:
-                        candidate_pairs.append(
-                            {
-                                "loop_start": beats[j],
-                                "loop_end": beats[i],
-                                "dB_diff": avg_db_diff,
-                            }
-                        )
-
     def db_diff(self, power_db_f1, power_db_f2):
         average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
         return average_diff
@@ -114,9 +90,26 @@ class MusicLooper:
 
             beats = np.sort(beats)
 
-            self._loop_finding_routine(
-                beats, 1, beats.size, chroma, power_db, min_duration, candidate_pairs
-            )
+            for idx_end, loop_end in enumerate(beats):
+                deviation = np.linalg.norm(chroma[..., loop_end] * 0.10) # +/- 10% is a magic number based on experimentation
+                for idx_start, loop_start in enumerate(beats):
+                    # Since the beats array is sorted
+                    # any j >= current_j will only decrease in duration
+                    if loop_end - loop_start < min_duration:
+                        break
+                    dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
+                    if dist <= deviation:
+                        avg_db_diff = self.db_diff(
+                            power_db[..., loop_end], power_db[..., loop_start]
+                        )
+                        if avg_db_diff <= 10:
+                            candidate_pairs.append(
+                                {
+                                    "loop_start": loop_start,
+                                    "loop_end": loop_end,
+                                    "dB_diff": avg_db_diff,
+                                }
+                            )
 
             if len(candidate_pairs) == 0:
                 return candidate_pairs
@@ -137,18 +130,18 @@ class MusicLooper:
 
             pair_score_list = [
                 self.pair_score(
-                    pruned_list[i]["loop_start"],
-                    pruned_list[i]["loop_end"],
+                    pair["loop_start"],
+                    pair["loop_end"],
                     chroma,
                     test_duration=test_offset,
                     weights=norm_weights,
                 )
-                for i in range(len(pruned_list))
+                for pair in pruned_list
             ]
 
             # Add cosine similarity as score
-            for i in range(len(pruned_list)):
-                pruned_list[i]["score"] = pair_score_list[i]
+            for pair, score in zip(pruned_list, pair_score_list):
+                pair["score"] = score
 
             # re-sort based on new score
             pruned_list = sorted(pruned_list, reverse=True, key=lambda x: x["score"])
@@ -166,8 +159,8 @@ class MusicLooper:
         # (a) there is no beat sequence with <5dB difference and >95% similarity
         # (b) list is empty
         retry = True
-        for i in range(len(pruned_list)):
-            if pruned_list[i]["dB_diff"] < 5.0 and pruned_list[i]["score"] > 0.975:
+        for pair in pruned_list:
+            if pair["dB_diff"] < 5.0 and pair["score"] > 0.975:
                 retry = False
                 break
 
@@ -178,12 +171,12 @@ class MusicLooper:
             pruned_list = loop_subroutine(combine_beat_plp=True)
 
         if self.trim_offset[0] > 0:
-            for i in range(len(pruned_list)):
-                pruned_list[i]["loop_start"] = self.apply_trim_offset(
-                    pruned_list[i]["loop_start"]
+            for pair in pruned_list:
+                pair["loop_start"] = self.apply_trim_offset(
+                    pair["loop_start"]
                 )
-                pruned_list[i]["loop_end"] = self.apply_trim_offset(
-                    pruned_list[i]["loop_end"]
+                pair["loop_end"] = self.apply_trim_offset(
+                    pair["loop_end"]
                 )
 
         logging.info(f"Found {len(pruned_list)} possible loop points")
@@ -226,7 +219,7 @@ class MusicLooper:
 
     def _prioritize_duration(self, pruned_list):
         db_diff_array = np.array(
-            [pruned_list[i]["dB_diff"] for i in range(len(pruned_list))]
+            [pair["dB_diff"] for pair in pruned_list]
         )
         db_diff_avg = np.average(db_diff_array)
         db_diff_std = np.std(db_diff_array)
@@ -235,17 +228,17 @@ class MusicLooper:
         duration_argmax = 0
         current_max = 0
 
-        for i in range(len(pruned_list)):
-            if pruned_list[i]["score"] < 0.99:
+        for i, pair in enumerate(pruned_list):
+            if pair["score"] < 0.99:
                 break
-            duration = pruned_list[i]["loop_end"] - pruned_list[i]["loop_start"]
-            if duration > current_max and pruned_list[i]["dB_diff"] < dev_threshold:
+            duration = pair["loop_end"] - pair["loop_start"]
+            if duration > current_max and pair["dB_diff"] < dev_threshold:
                 current_max = duration
                 duration_argmax = i
 
-        best_longest_loop = pruned_list[duration_argmax]
-        pruned_list[duration_argmax] = pruned_list[0]
-        pruned_list[0] = best_longest_loop
+        # swap position with the top
+        pruned_list[0], pruned_list[duration_argmax] = pruned_list[duration_argmax], pruned_list[0]
+
 
     def pair_score(self, b1, b2, chroma, test_duration, weights=None):
         look_ahead_score = self._subseq_beat_similarity(
