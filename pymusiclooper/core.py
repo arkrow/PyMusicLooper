@@ -86,12 +86,13 @@ class MusicLooper:
                         beats.size
                     )
                 )
+
             candidate_pairs = []
 
             beats = np.sort(beats)
 
             for idx_end, loop_end in enumerate(beats):
-                deviation = np.linalg.norm(chroma[..., loop_end] * 0.10) # +/- 10% is a magic number based on experimentation
+                deviation = np.linalg.norm(chroma[..., loop_end] * 0.08) # +/- 8% works well for most tracks based on experimentation
                 for idx_start, loop_start in enumerate(beats):
                     # Since the beats array is sorted
                     # any j >= current_j will only decrease in duration
@@ -121,9 +122,9 @@ class MusicLooper:
             seconds_to_test = num_test_beats / beats_per_second
             test_offset = librosa.samples_to_frames(int(seconds_to_test * self.rate))
 
-            # adjust offset for very short tracks to half its length
+            # adjust offset for very short tracks to 25% of its length
             if test_offset > chroma.shape[-1]:
-                test_offset = int(chroma.shape[-1] / 2)
+                test_offset = int(chroma.shape[-1] / 4)
 
             weights = _weights(test_offset, expo_step=int(test_offset / num_test_beats))
             norm_weights = weights / np.linalg.norm(weights)

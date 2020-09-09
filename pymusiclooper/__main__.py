@@ -110,7 +110,7 @@ if __name__ == "__main__":
                     print(f"Previewing loop #{idx} (Press Ctrl+C to stop):")
                     loop_start = loop_pair_list[idx]["loop_start"]
                     loop_end = loop_pair_list[idx]["loop_end"]
-                    offset = preview_looper.seconds_to_frames(10)
+                    offset = preview_looper.seconds_to_frames(5)
                     preview_offset = loop_end - offset if loop_end - offset > 0 else 0
                     preview_looper.play_looping(
                         loop_start, loop_end, start_from=preview_offset, adjust_for_playback=True
