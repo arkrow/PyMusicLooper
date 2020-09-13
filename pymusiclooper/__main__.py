@@ -64,7 +64,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     default_out = os.path.join(os.path.dirname(args.path), "looper_output")
-    output_dir = args.output_dir if args.output_dir != "" else default_out
+    output_dir = args.output_dir if args.output_dir else default_out
 
     if args.verbose:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -73,11 +73,9 @@ if __name__ == "__main__":
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
 
     if not os.path.isdir(args.path) or args.verbose:
-
         def vprint(*args):
             for arg in args:
                 print(arg,)
-
     else:
         vprint = lambda *args: None
 
@@ -139,8 +137,12 @@ if __name__ == "__main__":
         score = loop_pair_list[index]["score"]
         return loop_start, loop_end, score
 
-    def export_handler(file_path):
+    def export_handler(file_path, output_dir=output_dir):
         loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
+
+        if not loop_pair_list:
+            logging.error(f"No suitable loop point found for '{file_path}'.")
+            return
 
         loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
 
@@ -149,7 +151,7 @@ if __name__ == "__main__":
         if args.json:
             track.export_json(loop_start, loop_end, score, output_dir=output_dir)
             vprint(
-                f"Successfully exported loop points to '{output_path}.loop_points.json'"
+                f"Successfully exported loop points to '{output_dir}.loop_points.json'"
             )
         if args.export:
             track.export(

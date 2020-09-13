@@ -91,9 +91,9 @@ class MusicLooper:
 
             beats = np.sort(beats)
 
-            for idx_end, loop_end in enumerate(beats):
+            for loop_end in beats:
                 deviation = np.linalg.norm(chroma[..., loop_end] * 0.08) # +/- 8% works well for most tracks based on experimentation
-                for idx_start, loop_start in enumerate(beats):
+                for loop_start in beats:
                     # Since the beats array is sorted
                     # any j >= current_j will only decrease in duration
                     if loop_end - loop_start < min_duration:
@@ -237,21 +237,20 @@ class MusicLooper:
                 current_max = duration
                 duration_argmax = i
 
-        # swap position with the top
+        # swap prioritized pair with the top pair
         pruned_list[0], pruned_list[duration_argmax] = pruned_list[duration_argmax], pruned_list[0]
 
-
     def pair_score(self, b1, b2, chroma, test_duration, weights=None):
-        look_ahead_score = self._subseq_beat_similarity(
+        lookahead_score = self._subseq_beat_similarity(
             b1, b2, chroma, test_duration, weights=weights
         )
-        look_back_score = self._subseq_beat_similarity(
+        lookbehind_score = self._subseq_beat_similarity(
             b1, b2, chroma, -test_duration, weights=weights
         )
 
         # return highest value
         return (
-            look_ahead_score if look_ahead_score > look_back_score else look_back_score
+            lookahead_score if lookahead_score > lookbehind_score else lookbehind_score
         )
 
     def _subseq_beat_similarity(self, b1, b2, chroma, test_duration, weights=None):
