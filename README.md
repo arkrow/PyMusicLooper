@@ -171,6 +171,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v1.6.2 Preserve source directory tree structure in batch output directory (and json export bug fix)
 - v1.6.1 Lowered note similarity threshold to improve loop point quality
 - v1.6.0 Added interactive option for user loop selection
 - v1.5.1 Fixed issues caused by previous release's refactoring
