@@ -50,7 +50,14 @@ class ArgParser(ArgumentParser):
             "--json",
             action="store_true",
             default=False,
-            help="export the loop points (in samples) to a JSON text file in the song's directory.",
+            help="export the loop points (in samples) to a JSON file in the song's directory.",
+        )
+        export_options.add_argument(
+            "-t",
+            "--txt",
+            action="store_true",
+            default=False,
+            help="export the loop points in samples to a loop.txt file (compatible with LoopingAudioConverter).",
         )
         export_options.add_argument(
             "-r",
@@ -58,6 +65,13 @@ class ArgParser(ArgumentParser):
             action="store_true",
             default=False,
             help="process directories and their contents recursively (has an effect only if the given path is a directory).",
+        )
+        export_options.add_argument(
+            "-f",
+            "--flatten",
+            action="store_true",
+            default=False,
+            help="flatten the output directory structure instead of preserving it when using the --recursive flag.",
         )
         export_options.add_argument(
             "-n",

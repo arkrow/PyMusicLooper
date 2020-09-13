@@ -27,17 +27,18 @@ import soundfile
 
 
 class MusicLooper:
-    def __init__(self, filename, min_duration_multiplier=0.35, trim=True):
+    def __init__(self, filepath, min_duration_multiplier=0.35, trim=True):
         # Load the file if it exists
-        if os.path.exists(filename) and os.path.isfile(filename):
+        if os.path.exists(filepath) and os.path.isfile(filepath):
             try:
-                raw_audio, sampling_rate = librosa.load(filename, sr=None, mono=False)
+                raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
             except Exception:
                 raise TypeError("Unsupported file type.")
         else:
             raise FileNotFoundError("Specified file not found.")
 
-        self.filename = filename
+        self.filepath = filepath
+        self.filename = os.path.basename(filepath)
         mono_signal = librosa.core.to_mono(raw_audio)
         self.audio, self.trim_offset = (
             librosa.effects.trim(mono_signal) if trim else (mono_signal, [0, 0])
@@ -347,10 +348,9 @@ class MusicLooper:
     ):
 
         if output_dir is not None:
-            filename = os.path.basename(self.filename)
-            out_path = os.path.join(output_dir, filename)
+            out_path = os.path.join(output_dir, self.filename)
         else:
-            out_path = os.path.abspath(self.filename)
+            out_path = os.path.abspath(self.filepath)
 
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
@@ -377,7 +377,7 @@ class MusicLooper:
         if preserve_tags:
             import taglib
 
-            track = taglib.File(self.filename)
+            track = taglib.File(self.filepath)
 
             intro_file = taglib.File(out_path + "-intro." + format.lower())
             loop_file = taglib.File(out_path + "-loop." + format.lower())
@@ -387,10 +387,10 @@ class MusicLooper:
                 original_title = (
                     track.tags["TITLE"][0]
                     if track.tags is not None and len(track.tags["TITLE"]) > 0
-                    else os.path.split(self.filename)[-1]
+                    else os.path.basename(self.filepath)
                 )
             except KeyError:
-                original_title = os.path.split(self.filename)[-1]
+                original_title = os.path.basename(self.filepath)
 
             intro_file.tags = track.tags
             loop_file.tags = track.tags
@@ -407,10 +407,9 @@ class MusicLooper:
 
     def export_json(self, loop_start, loop_end, score, output_dir=None):
         if output_dir is not None:
-            filename = os.path.split(self.filename)[1]
-            out_path = os.path.join(output_dir, filename)
+            out_path = os.path.join(output_dir, self.filename)
         else:
-            out_path = os.path.abspath(self.filename)
+            out_path = os.path.abspath(self.filepath)
 
         loop_start = self.frames_to_samples(loop_start)
         loop_end = self.frames_to_samples(loop_end)
@@ -423,6 +422,18 @@ class MusicLooper:
 
         with open(out_path + ".loop_points.json", "w") as file:
             json.dump(out, fp=file)
+
+    def export_txt(self, loop_start, loop_end, output_dir=None):
+        if output_dir is not None:
+            out_path = os.path.join(output_dir, "loop.txt")
+        else:
+            out_path = os.path.join(os.path.dirname(self.filepath), "loop.txt")
+
+        loop_start = int(self.frames_to_samples(loop_start))
+        loop_end = int(self.frames_to_samples(loop_end))
+
+        with open(out_path, "a") as file:
+            file.write(f"{loop_start} {loop_end} {self.filename}\n")
 
 
 def _weights(length, expo_step=1):

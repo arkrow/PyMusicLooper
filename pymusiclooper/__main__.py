@@ -146,7 +146,13 @@ if __name__ == "__main__":
         if args.json:
             track.export_json(loop_start, loop_end, score, output_dir=output_directory)
             vprint(
-                f"Successfully exported loop points to '{output_directory}.loop_points.json'"
+                f"Successfully exported '{track.filename}' loop points to a json in '{output_directory}'"
+            )
+        if args.txt:
+            track.export_txt(loop_start, loop_end, output_dir=output_directory)
+            out_path =  os.path.join(output_directory, 'loop.txt')
+            vprint(
+                f"Successfully added '{track.filename}' loop points to '{out_path}'"
             )
         if args.export:
             track.export(
@@ -155,7 +161,7 @@ if __name__ == "__main__":
                 output_dir=output_directory,
                 preserve_tags=args.preserve_tags,
             )
-            vprint(f"Successfully exported intro/loop/outro sections to '{output_directory}'")
+            vprint(f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'")
 
     def batch_handler(dir_path):
         dir_path = os.path.abspath(dir_path)
@@ -175,21 +181,21 @@ if __name__ == "__main__":
 
         else:
             files = [
-                f
+                os.path.join(dir_path, f)
                 for f in os.listdir(dir_path)
                 if os.path.isfile(os.path.join(dir_path, f))
             ]
         
-        common_path = os.path.commonpath(files)
-        output_dirs = [
-            os.path.join(
-                os.path.abspath(output_dir),
-                os.path.dirname(os.path.relpath(file, start=common_path))
-                ) for file in files]
-
-        for out_dir in output_dirs:
-            if not os.path.isdir(out_dir):
-                os.makedirs(out_dir, exist_ok=True)
+        if not args.flatten:
+            common_path = os.path.commonpath(files)
+            output_dirs = [
+                os.path.join(
+                    os.path.abspath(output_dir),
+                    os.path.dirname(os.path.relpath(file, start=common_path))
+                    ) for file in files]
+            for out_dir in output_dirs:
+                if not os.path.isdir(out_dir):
+                    os.makedirs(out_dir, exist_ok=True)
 
         if len(files) == 0:
             logging.error(f"No files found in '{dir_path}'")
@@ -210,7 +216,13 @@ if __name__ == "__main__":
                     for pid in range(args.n_jobs):
                         p = Process(
                             target=export_handler,
-                            kwargs={"file_path": files[file_idx], "output_directory": output_dirs[file_idx]},
+                            kwargs={
+                                "file_path": files[file_idx],
+                                "output_directory":
+                                    output_dir
+                                    if args.flatten
+                                    else output_dirs[file_idx]
+                                },
                             daemon=True,
                         )
                         processes.append(p)
@@ -227,7 +239,7 @@ if __name__ == "__main__":
 
                     processes = []
 
-    if args.export or args.json:
+    if args.export or args.json or args.txt:
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
@@ -236,7 +248,7 @@ if __name__ == "__main__":
         else:
             batch_handler(args.path)
 
-    if args.play and not (args.export or args.json):
+    if args.play and not (args.export or args.json or args.txt):
         try:
             # Load the file
             print("Loading {}...".format(args.path))
