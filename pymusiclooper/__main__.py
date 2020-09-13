@@ -37,8 +37,6 @@ def loop_pairs(file_path, min_duration_multiplier):
         logging.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
         return
 
-    output_path = os.path.join(output_dir, os.path.split(file_path)[1])
-
     try:
         track = MusicLooper(file_path, min_duration_multiplier)
     except TypeError as e:
@@ -50,7 +48,6 @@ def loop_pairs(file_path, min_duration_multiplier):
     loop_pair_list = track.find_loop_pairs()
     if not loop_pair_list:
         logging.error(f"No suitable loop point found for '{file_path}'.")
-        return
 
     return loop_pair_list
 
@@ -63,7 +60,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    default_out = os.path.join(os.path.dirname(args.path), "looper_output")
+    default_out = os.path.join(os.path.dirname(args.path), "Loops")
     output_dir = args.output_dir if args.output_dir else default_out
 
     if args.verbose:
@@ -74,8 +71,7 @@ if __name__ == "__main__":
 
     if not os.path.isdir(args.path) or args.verbose:
         def vprint(*args):
-            for arg in args:
-                print(arg,)
+            print(*args)
     else:
         vprint = lambda *args: None
 
@@ -137,11 +133,10 @@ if __name__ == "__main__":
         score = loop_pair_list[index]["score"]
         return loop_start, loop_end, score
 
-    def export_handler(file_path, output_dir=output_dir):
+    def export_handler(file_path, output_directory=output_dir):
         loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
 
         if not loop_pair_list:
-            logging.error(f"No suitable loop point found for '{file_path}'.")
             return
 
         loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
@@ -149,21 +144,22 @@ if __name__ == "__main__":
         track = MusicLooper(file_path, min_duration_multiplier=args.min_duration_multiplier)
 
         if args.json:
-            track.export_json(loop_start, loop_end, score, output_dir=output_dir)
+            track.export_json(loop_start, loop_end, score, output_dir=output_directory)
             vprint(
-                f"Successfully exported loop points to '{output_dir}.loop_points.json'"
+                f"Successfully exported loop points to '{output_directory}.loop_points.json'"
             )
         if args.export:
             track.export(
                 loop_start,
                 loop_end,
-                output_dir=output_dir,
+                output_dir=output_directory,
                 preserve_tags=args.preserve_tags,
             )
-            vprint(f"Successfully exported intro/loop/outro sections to '{output_dir}'")
-        vprint("")
+            vprint(f"Successfully exported intro/loop/outro sections to '{output_directory}'")
 
     def batch_handler(dir_path):
+        dir_path = os.path.abspath(dir_path)
+
         if args.n_jobs <= 0:
             logging.error(
                 f"n_jobs must be a non-zero positive integer; n_jobs provided: {args.n_jobs}"
@@ -171,19 +167,32 @@ if __name__ == "__main__":
             return
 
         if args.recursive:
-            files = []
-            for directory, sub_dir_list, file_list in os.walk(args.path):
-                for filename in file_list:
-                    files.append(os.path.join(directory, filename))
+            files = [
+                os.path.join(directory, filename)
+                for directory, sub_dir_list, file_list in os.walk(dir_path)
+                for filename in file_list
+            ]
+
         else:
             files = [
                 f
-                for f in os.listdir(args.path)
-                if os.path.isfile(os.path.join(args.path, f))
+                for f in os.listdir(dir_path)
+                if os.path.isfile(os.path.join(dir_path, f))
             ]
+        
+        common_path = os.path.commonpath(files)
+        output_dirs = [
+            os.path.join(
+                os.path.abspath(output_dir),
+                os.path.dirname(os.path.relpath(file, start=common_path))
+                ) for file in files]
+
+        for out_dir in output_dirs:
+            if not os.path.isdir(out_dir):
+                os.makedirs(out_dir, exist_ok=True)
 
         if len(files) == 0:
-            logging.error(f"No files found in '{args.path}'")
+            logging.error(f"No files found in '{dir_path}'")
 
         num_files = len(files)
 
@@ -201,7 +210,7 @@ if __name__ == "__main__":
                     for pid in range(args.n_jobs):
                         p = Process(
                             target=export_handler,
-                            kwargs={"file_path": files[file_idx]},
+                            kwargs={"file_path": files[file_idx], "output_directory": output_dirs[file_idx]},
                             daemon=True,
                         )
                         processes.append(p)
@@ -233,6 +242,7 @@ if __name__ == "__main__":
             print("Loading {}...".format(args.path))
 
             loop_pair_list = loop_pairs(args.path, args.min_duration_multiplier)
+
             loop_start, loop_end, score = choose_loop_pair(loop_pair_list, args.path)
 
             track = MusicLooper(args.path, min_duration_multiplier=args.min_duration_multiplier)

@@ -347,7 +347,7 @@ class MusicLooper:
     ):
 
         if output_dir is not None:
-            filename = os.path.split(self.filename)[1]
+            filename = os.path.basename(self.filename)
             out_path = os.path.join(output_dir, filename)
         else:
             out_path = os.path.abspath(self.filename)
