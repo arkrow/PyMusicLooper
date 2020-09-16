@@ -247,7 +247,7 @@ class MusicLooper:
             b1, b2, chroma, test_duration, weights=weights
         )
         lookbehind_score = self._subseq_beat_similarity(
-            b1, b2, chroma, -test_duration, weights=weights
+            b1, b2, chroma, -test_duration, weights=weights[::-1]
         )
 
         # return highest value
@@ -255,40 +255,32 @@ class MusicLooper:
             lookahead_score if lookahead_score > lookbehind_score else lookbehind_score
         )
 
-    def _subseq_beat_similarity(self, b1, b2, chroma, test_duration, weights=None):
+    def _subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
         if test_duration < 0:
-            b1_test_from = b1 + test_duration
-            b2_test_from = b2 + test_duration
+            max_negative_offset = max(test_duration, -b1_start, -b2_start)
+            b1_start = b1_start + max_negative_offset 
+            b2_start = b2_start + max_negative_offset
 
-            # reflect weights array
-            # testing view corresponds to: x.. b
-            # weights view corresponds to: b.. x
-            if weights is not None:
-                weights = weights[::-1]
-        else:
-            b1_test_from = b1
-            b2_test_from = b2
-
-        max_offset = chroma.shape[-1]
+        chroma_len = chroma.shape[-1]
         test_offset = np.abs(test_duration)
-        cosine_sim = np.zeros(test_offset)
 
-        for i in range(test_offset):
-            # treat the chroma/music array as circular
-            # to account for loops that start near the end back to the beginning
-            if b1_test_from + i == max_offset:
-                b1_test_from = -i
-            if b2_test_from + i == max_offset:
-                b2_test_from = -i
+        # clip to chroma len
+        b1_end = min(b1_start + test_offset, chroma_len)
+        b2_end = min(b2_start + test_offset, chroma_len)
 
-            dot_prod = np.dot(
-                chroma[..., b1_test_from + i], chroma[..., b2_test_from + i]
+        # align testing lengths
+        max_offset = min(b1_end - b1_start, b2_end - b2_start)
+        b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
+
+        dot_prod = np.einsum('ij,ij->j', 
+            chroma[..., b1_start : b1_end], chroma[..., b2_start : b2_end]
             )
-            b1_norm = np.linalg.norm(chroma[..., b1_test_from + i])
-            b2_norm = np.linalg.norm(chroma[..., b2_test_from + i])
-            cosine_sim[i] = dot_prod / (b1_norm * b2_norm)
+        
+        b1_norm = np.linalg.norm(chroma[..., b1_start : b1_end], axis=0)
+        b2_norm = np.linalg.norm(chroma[..., b2_start : b2_end], axis=0)
+        cosine_sim = dot_prod / (b1_norm * b2_norm)
 
-        return np.average(cosine_sim, weights=weights)
+        return np.average(cosine_sim, weights=weights[:max_offset])
 
     def apply_trim_offset(self, frame):
         return (
