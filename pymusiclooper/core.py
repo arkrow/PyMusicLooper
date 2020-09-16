@@ -208,17 +208,21 @@ class MusicLooper:
 
         duration_argmax = 0
         current_max = 0
+        score_threshold = round(pair_list[0]["score"], 2) - 0.005
 
-        for i, pair in enumerate(pruned_list):
-            if pair["score"] < 0.99:
+        for idx, pair in enumerate(pair_list):
+            if pair["score"] < score_threshold:
                 break
             duration = pair["loop_end"] - pair["loop_start"]
-            if duration > current_max and pair["dB_diff"] < dev_threshold:
+            if duration > current_max and (pair["dB_diff"] < dev_threshold or pair["dB_diff"] < 5):
                 current_max = duration
-                duration_argmax = i
-
-        # swap prioritized pair with the top pair
-        pruned_list[0], pruned_list[duration_argmax] = pruned_list[duration_argmax], pruned_list[0]
+                duration_argmax = idx
+        
+        current_top_duration = pair_list[0]["loop_end"] - pair_list[0]["loop_start"]
+        proposed_duration = pair_list[duration_argmax]["loop_end"] - pair_list[duration_argmax]["loop_start"]
+        if current_top_duration - proposed_duration > self.seconds_to_frames(5):
+            # swap prioritized pair with the top pair
+            pair_list[0], pair_list[duration_argmax] = pair_list[duration_argmax], pair_list[0]
 
     def pair_score(self, b1, b2, chroma, test_duration, weights=None):
         lookahead_score = self._subseq_beat_similarity(
@@ -249,10 +253,10 @@ class MusicLooper:
         # align testing lengths
         max_offset = min(b1_end - b1_start, b2_end - b2_start)
         b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
-
+        
         dot_prod = np.einsum('ij,ij->j', 
             chroma[..., b1_start : b1_end], chroma[..., b2_start : b2_end]
-            )
+        )
         
         b1_norm = np.linalg.norm(chroma[..., b1_start : b1_end], axis=0)
         b2_norm = np.linalg.norm(chroma[..., b2_start : b2_end], axis=0)
