@@ -436,13 +436,11 @@ class MusicLooper:
 
 
 def _weights(length, expo_step=1):
-    weights = np.empty(length)
-    weights[0] = length * expo_step
-    i = 1
-    while i < length:
-        if expo_step != 0 and i % expo_step == 0:
-            weights[i] = weights[i - 1] / 2
-        else:
-            weights[i] = weights[i - 1] - 1
-        i += 1
+    weights = np.array(
+        [
+            1/(x // expo_step
+            if x >= expo_step
+            else 1
+            ) for x in range(1, length + 1)
+        ])
     return weights
