@@ -83,7 +83,8 @@ if __name__ == "__main__":
             start_time = preview_looper.frames_to_ftime(pair['loop_start'])
             end_time = preview_looper.frames_to_ftime(pair['loop_end'])
             score = pair['score']
-            print(f"  {idx}) from {end_time} back to {start_time}; score: {score:.2%}")
+            dB_diff = pair['dB_diff']
+            print(f"  {idx}) from {end_time} back to {start_time}; dB_diff: {dB_diff:.1f}; score: {score:.2%}")
 
         def get_user_input():
             num_input = input("Enter the number for the loop you'd like to use (append p to preview; e.g. 0p):")
@@ -250,9 +251,6 @@ if __name__ == "__main__":
 
     if args.play and not (args.export or args.json or args.txt):
         try:
-            # Load the file
-            print("Loading {}...".format(args.path))
-
             loop_pair_list = loop_pairs(args.path, args.min_duration_multiplier)
 
             loop_start, loop_end, score = choose_loop_pair(loop_pair_list, args.path)
