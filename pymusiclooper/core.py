@@ -92,15 +92,16 @@ class MusicLooper:
 
             beats = np.sort(beats)
 
-            for loop_end in beats:
-                deviation = np.linalg.norm(chroma[..., loop_end] * 0.08) # +/- 8% works well for most tracks based on experimentation
+            deviation = np.linalg.norm(chroma[..., beats] * 0.085, axis=0) # +/- 8.5% works well for most tracks based on experimentation
+
+            for idx, loop_end in enumerate(beats):
                 for loop_start in beats:
                     # Since the beats array is sorted
                     # any j >= current_j will only decrease in duration
                     if loop_end - loop_start < min_duration:
                         break
                     dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
-                    if dist <= deviation:
+                    if dist <= deviation[idx]:
                         avg_db_diff = self.db_diff(
                             power_db[..., loop_end], power_db[..., loop_start]
                         )
