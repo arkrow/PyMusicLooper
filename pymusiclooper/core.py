@@ -232,10 +232,7 @@ class MusicLooper:
             b1, b2, chroma, -test_duration, weights=weights[::-1]
         )
 
-        # return highest value
-        return (
-            lookahead_score if lookahead_score > lookbehind_score else lookbehind_score
-        )
+        return max(lookahead_score, lookbehind_score)
 
     def _subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
         if test_duration < 0:
@@ -253,7 +250,7 @@ class MusicLooper:
         # align testing lengths
         max_offset = min(b1_end - b1_start, b2_end - b2_start)
         b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
-        
+
         dot_prod = np.einsum('ij,ij->j', 
             chroma[..., b1_start : b1_end], chroma[..., b2_start : b2_end]
         )
