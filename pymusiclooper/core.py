@@ -316,11 +316,10 @@ class MusicLooper:
         from mpg123 import Out123
 
         out = Out123()
-        encoding = ENC_FLOAT_32
 
-        out.start(self.rate, self.channels, encoding)
+        out.start(self.rate, self.channels, ENC_FLOAT_32)
 
-        playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"))
+        playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"), frame_length=2048, hop_length=512)
         adjusted_loop_start = loop_start * self.channels
         adjusted_loop_end = loop_end * self.channels
 
