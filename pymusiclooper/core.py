@@ -39,15 +39,21 @@ class MusicLooper:
 
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
+
         mono_signal = librosa.core.to_mono(raw_audio)
+
         self.audio, self.trim_offset = (
-            librosa.effects.trim(mono_signal, top_db=40) if trim else (mono_signal, [0, 0])
+            librosa.effects.trim(mono_signal, top_db=40)
+            if trim
+            else (mono_signal, (0, 0))
         )
+        self.trim_offset = self.trim_offset[0]
+
         self.rate = sampling_rate
-        self.playback_audio = raw_audio
         self.min_duration_multiplier = min_duration_multiplier
 
         # Initialize parameters for playback
+        self.playback_audio = raw_audio
         self.channels = self.playback_audio.shape[0]
 
     def db_diff(self, power_db_f1, power_db_f2):
@@ -55,7 +61,7 @@ class MusicLooper:
         f2_max = np.max(power_db_f2)
         return max(f1_max, f2_max) - min(f1_max, f2_max)
 
-    def find_loop_pairs(self, combine_beat_plp=False):
+    def find_loop_pairs(self):
         runtime_start = time.time()
 
         S = librosa.core.stft(y=self.audio)
@@ -63,121 +69,94 @@ class MusicLooper:
         S_weighed = librosa.core.perceptual_weighting(
             S=S_power, frequencies=librosa.fft_frequencies(sr=self.rate)
         )
-        mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed)
+        mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed, sr=self.rate, n_mels=128, fmax=8000)
+        chroma = librosa.feature.chroma_stft(S=S_power)
+        power_db = librosa.power_to_db(S_weighed, ref=np.median)
+
         onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
+
+        pulse = librosa.beat.plp(onset_envelope=onset_env)
+        beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
         bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+
+        beats = np.union1d(beats, beats_plp)
+        beats = np.sort(beats)
 
         logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
-        chroma = librosa.feature.chroma_stft(S=S_power)
-
-        power_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
         min_duration = int(chroma.shape[-1] * self.min_duration_multiplier)
 
         runtime_end = time.time()
         prep_time = runtime_end - runtime_start
         logging.info("Finished initial prep in {:.3}s".format(prep_time))
 
-        def loop_subroutine(combine_beat_plp=combine_beat_plp, beats=beats):
-            if combine_beat_plp:
-                pulse = librosa.beat.plp(onset_envelope=onset_env)
-                beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-                beats = np.union1d(beats, beats_plp)
-                logging.info(
-                    "Detected {} total points by combining PLP with existing beats".format(
-                        beats.size
+        candidate_pairs = []
+
+        deviation = np.linalg.norm(chroma[..., beats] * 0.085, axis=0)
+
+        for idx, loop_end in enumerate(beats):
+            for loop_start in beats:
+                if loop_end - loop_start < min_duration:
+                    break
+                dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
+                if dist <= deviation[idx]:
+                    db_diff = self.db_diff(
+                        power_db[..., loop_end], power_db[..., loop_start]
                     )
-                )
-
-            candidate_pairs = []
-
-            beats = np.sort(beats)
-
-            deviation = np.linalg.norm(chroma[..., beats] * 0.085, axis=0) # +/- 8.5% works well for most tracks based on experimentation
-
-            for idx, loop_end in enumerate(beats):
-                for loop_start in beats:
-                    # Since the beats array is sorted
-                    # any j >= current_j will only decrease in duration
-                    if loop_end - loop_start < min_duration:
-                        break
-                    dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
-                    if dist <= deviation[idx]:
-                        avg_db_diff = self.db_diff(
-                            power_db[..., loop_end], power_db[..., loop_start]
+                    if db_diff <= 1.5:
+                        candidate_pairs.append(
+                            {
+                                "loop_start": loop_start,
+                                "loop_end": loop_end,
+                                "dB_diff": db_diff,
+                                "dist": (dist / deviation[idx])
+                            }
                         )
-                        if avg_db_diff <= 10:
-                            candidate_pairs.append(
-                                {
-                                    "loop_start": loop_start,
-                                    "loop_end": loop_end,
-                                    "dB_diff": avg_db_diff,
-                                }
-                            )
 
-            if len(candidate_pairs) == 0:
-                return candidate_pairs
+        logging.info(f"Found {len(candidate_pairs)} possible loop points")
 
-            beats_per_second = bpm / 60
-            num_test_beats = 8
-            seconds_to_test = num_test_beats / beats_per_second
-            test_offset = librosa.samples_to_frames(int(seconds_to_test * self.rate))
+        if not candidate_pairs:
+            return candidate_pairs
 
-            # adjust offset for very short tracks to 25% of its length
-            if test_offset > chroma.shape[-1]:
-                test_offset = int(chroma.shape[-1] / 4)
+        beats_per_second = bpm / 60
+        num_test_beats = 12
+        seconds_to_test = num_test_beats / beats_per_second
+        test_offset = librosa.samples_to_frames(int(seconds_to_test * self.rate))
 
-            weights = _weights(test_offset, expo_step=int(test_offset / num_test_beats))
+        # adjust offset for very short tracks to 25% of its length
+        if test_offset > chroma.shape[-1]:
+            test_offset = chroma.shape[-1] // 4
 
-            pair_score_list = [
-                self.pair_score(
-                    pair["loop_start"],
-                    pair["loop_end"],
-                    chroma,
-                    test_duration=test_offset,
-                    weights=weights,
-                )
-                for pair in candidate_pairs
-            ]
+        # candidate_pairs = self._dist_prune(candidate_pairs)
+        candidate_pairs = self._dB_prune(candidate_pairs)
 
-            # Add cosine similarity as score
-            for pair, score in zip(candidate_pairs, pair_score_list):
-                pair["score"] = score
-
-            # re-sort based on new score
-            candidate_pairs = sorted(candidate_pairs, reverse=True, key=lambda x: x["score"])
-
-            # prefer longer loops for highly similar sequences
-            if len(candidate_pairs) > 1:
-                self._prioritize_duration(candidate_pairs)
-                return candidate_pairs[
-                    :len(candidate_pairs)
-                    if len(candidate_pairs) <= 50
-                    else min(50, len(candidate_pairs) // 4)
-                ]
-            else:
-                return candidate_pairs
-
-
-        loop_pairs = loop_subroutine()
-
-        # Retry will trigger when:
-        # (a) there is no beat sequence with <5dB difference and >95% similarity
-        # (b) list is empty
-        retry = True
-        for pair in loop_pairs:
-            if pair["dB_diff"] < 5.0 and pair["score"] > 0.975:
-                retry = False
-                break
-
-        if retry and not combine_beat_plp:
-            logging.info(
-                "No suitable loop points found with current parameters. Retrying with additional beat points from PLP method."
+        weights = _geometric_weights(test_offset, start=test_offset // num_test_beats)
+        pair_score_list = [
+            self.pair_score(
+                pair["loop_start"],
+                pair["loop_end"],
+                chroma,
+                test_duration=test_offset,
+                weights=weights,
             )
-            loop_pairs = loop_subroutine(combine_beat_plp=True)
+            for pair in candidate_pairs
+        ]
 
-        if self.trim_offset[0] > 0:
-            for pair in loop_pairs:
+        # Add cosine similarity as score
+        for pair, score in zip(candidate_pairs, pair_score_list):
+            pair["score"] = score
+
+        candidate_pairs = self._score_prune(candidate_pairs)
+
+        # re-sort based on new score
+        candidate_pairs = sorted(candidate_pairs, reverse=True, key=lambda x: x["score"])
+
+        # prefer longer loops for highly similar sequences
+        if len(candidate_pairs) > 1:
+            self._prioritize_duration(candidate_pairs)
+
+        if self.trim_offset:
+            for pair in candidate_pairs:
                 pair["loop_start"] = self.apply_trim_offset(
                     pair["loop_start"]
                 )
@@ -185,19 +164,55 @@ class MusicLooper:
                     pair["loop_end"]
                 )
 
-        logging.info(f"Found {len(loop_pairs)} possible loop points")
-
-        for point in loop_pairs:
+        for pair in candidate_pairs:
             logging.info(
                 "Found from {} to {}, dB_diff:{}, similarity:{}".format(
-                    point["loop_start"],
-                    point["loop_end"],
-                    point["dB_diff"],
-                    point["score"],
+                    pair["loop_start"],
+                    pair["loop_end"],
+                    pair["dB_diff"],
+                    pair["score"],
                 )
             )
 
-        return loop_pairs
+        return candidate_pairs
+
+    def _score_prune(self, candidate_pairs, percentile=10, acceptable_score=80):
+        candidate_pairs = sorted(candidate_pairs, key=lambda x: x["score"])
+
+        score_array = np.array(
+            [pair["score"] for pair in candidate_pairs]
+        )
+
+        score_threshold = np.percentile(score_array, percentile, interpolation='lower')
+        percentile_idx = np.searchsorted(score_array, score_threshold, side="left")
+        acceptable_idx = np.searchsorted(score_array, acceptable_score, side="left")
+
+        return candidate_pairs[min(percentile_idx, acceptable_idx):]
+
+    def _dB_prune(self, candidate_pairs, percentile=90, acceptable_db_diff=0.125):
+        candidate_pairs = sorted(candidate_pairs, key=lambda x: x["dB_diff"])
+
+        db_diff_array = np.array(
+            [pair["dB_diff"] for pair in candidate_pairs]
+        )
+
+        db_threshold = np.percentile(db_diff_array, percentile, interpolation='higher')
+        percentile_idx = np.searchsorted(db_diff_array, db_threshold, side="right")
+        acceptable_idx = np.searchsorted(db_diff_array, acceptable_db_diff, side="right")
+
+        return candidate_pairs[:max(percentile_idx, acceptable_idx)]
+
+    def _dist_prune(self, candidate_pairs, percentile=90):
+        candidate_pairs = sorted(candidate_pairs, key=lambda x: x["dist"])
+
+        dist_array = np.array(
+            [pair["dist"] for pair in candidate_pairs]
+        )
+
+        dist_threshold = np.percentile(dist_array, percentile, interpolation='lower')
+        percentile_idx = np.searchsorted(dist_array, dist_threshold, side="right")
+
+        return candidate_pairs[:percentile_idx]
 
     def _prioritize_duration(self, pair_list):
         db_diff_array = np.array(
@@ -223,8 +238,6 @@ class MusicLooper:
                 duration_max, duration_argmax = duration, idx
 
         if duration_argmax:
-            current_top_duration = pair_list[0]["loop_end"] - pair_list[0]["loop_start"]
-            proposed_duration = pair_list[duration_argmax]["loop_end"] - pair_list[duration_argmax]["loop_start"]
             pair_list.insert(0, pair_list.pop(duration_argmax))
 
     def pair_score(self, b1, b2, chroma, test_duration, weights=None):
@@ -240,7 +253,7 @@ class MusicLooper:
     def _subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
         if test_duration < 0:
             max_negative_offset = max(test_duration, -b1_start, -b2_start)
-            b1_start = b1_start + max_negative_offset 
+            b1_start = b1_start + max_negative_offset
             b2_start = b2_start + max_negative_offset
 
         chroma_len = chroma.shape[-1]
@@ -255,11 +268,11 @@ class MusicLooper:
         b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
 
         dot_prod = np.einsum('ij,ij->j', 
-            chroma[..., b1_start : b1_end], chroma[..., b2_start : b2_end]
+            chroma[..., b1_start:b1_end], chroma[..., b2_start:b2_end]
         )
-        
-        b1_norm = np.linalg.norm(chroma[..., b1_start : b1_end], axis=0)
-        b2_norm = np.linalg.norm(chroma[..., b2_start : b2_end], axis=0)
+
+        b1_norm = np.linalg.norm(chroma[..., b1_start:b1_end], axis=0)
+        b2_norm = np.linalg.norm(chroma[..., b2_start:b2_end], axis=0)
         cosine_sim = dot_prod / (b1_norm * b2_norm)
 
         if max_offset < test_offset:
@@ -270,9 +283,9 @@ class MusicLooper:
     def apply_trim_offset(self, frame):
         return (
             librosa.samples_to_frames(
-                librosa.frames_to_samples(frame) + self.trim_offset[0]
+                librosa.frames_to_samples(frame) + self.trim_offset
             )
-            if self.trim_offset[0] != 0
+            if self.trim_offset
             else frame
         )
 
@@ -413,12 +426,5 @@ class MusicLooper:
             file.write(f"{loop_start} {loop_end} {self.filename}\n")
 
 
-def _weights(length, expo_step=1):
-    weights = np.array(
-        [
-            1/(x // expo_step
-            if x >= expo_step
-            else 1
-            ) for x in range(1, length + 1)
-        ])
-    return weights
+def _geometric_weights(length, start=100, stop=1):
+    return np.geomspace(start, stop, num=length)
