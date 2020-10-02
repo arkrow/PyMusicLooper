@@ -262,7 +262,10 @@ class MusicLooper:
         b2_norm = np.linalg.norm(chroma[..., b2_start : b2_end], axis=0)
         cosine_sim = dot_prod / (b1_norm * b2_norm)
 
-        return np.average(cosine_sim, weights=weights[:max_offset])
+        if max_offset < test_offset:
+            return np.average(np.pad(cosine_sim, (0, test_offset - max_offset), 'minimum'), weights=weights)
+        else:
+            return np.average(cosine_sim, weights=weights)
 
     def apply_trim_offset(self, frame):
         return (
