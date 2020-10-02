@@ -41,7 +41,7 @@ class MusicLooper:
         self.filename = os.path.basename(filepath)
         mono_signal = librosa.core.to_mono(raw_audio)
         self.audio, self.trim_offset = (
-            librosa.effects.trim(mono_signal) if trim else (mono_signal, [0, 0])
+            librosa.effects.trim(mono_signal, top_db=40) if trim else (mono_signal, [0, 0])
         )
         self.rate = sampling_rate
         self.playback_audio = raw_audio
