@@ -203,27 +203,29 @@ class MusicLooper:
         db_diff_array = np.array(
             [pair["dB_diff"] for pair in pair_list]
         )
-        db_diff_avg = np.average(db_diff_array)
-        db_diff_std = np.std(db_diff_array)
-        dev_threshold = db_diff_avg - (1 * db_diff_std)
+        db_threshold =np.median(db_diff_array)
 
         duration_argmax = 0
-        current_max = 0
-        score_threshold = round(pair_list[0]["score"], 2) - 0.005
+        duration_max = 0
+
+        score_array = np.array(
+            [pair["score"] for pair in pair_list]
+        )
+        score_threshold = np.percentile(score_array, 90, interpolation="lower")
+
+        score_threshold = max(score_threshold, pair_list[0]["score"] - 0.005)
 
         for idx, pair in enumerate(pair_list):
             if pair["score"] < score_threshold:
                 break
             duration = pair["loop_end"] - pair["loop_start"]
-            if duration > current_max and (pair["dB_diff"] < dev_threshold or pair["dB_diff"] < 5):
-                current_max = duration
-                duration_argmax = idx
-        
-        current_top_duration = pair_list[0]["loop_end"] - pair_list[0]["loop_start"]
-        proposed_duration = pair_list[duration_argmax]["loop_end"] - pair_list[duration_argmax]["loop_start"]
-        if current_top_duration - proposed_duration > self.seconds_to_frames(5):
-            # swap prioritized pair with the top pair
-            pair_list[0], pair_list[duration_argmax] = pair_list[duration_argmax], pair_list[0]
+            if duration > duration_max and pair["dB_diff"] <= db_threshold:
+                duration_max, duration_argmax = duration, idx
+
+        if duration_argmax:
+            current_top_duration = pair_list[0]["loop_end"] - pair_list[0]["loop_start"]
+            proposed_duration = pair_list[duration_argmax]["loop_end"] - pair_list[duration_argmax]["loop_start"]
+            pair_list.insert(0, pair_list.pop(duration_argmax))
 
     def pair_score(self, b1, b2, chroma, test_duration, weights=None):
         lookahead_score = self._subseq_beat_similarity(
