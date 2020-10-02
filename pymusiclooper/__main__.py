@@ -28,6 +28,9 @@ from tqdm import tqdm
 from .core import MusicLooper
 from .argparser import ArgParser
 
+class LoopNotFoundError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 def loop_pairs(file_path, min_duration_multiplier):
     """
@@ -47,7 +50,7 @@ def loop_pairs(file_path, min_duration_multiplier):
 
     loop_pair_list = track.find_loop_pairs()
     if not loop_pair_list:
-        logging.error(f"No suitable loop point found for '{file_path}'.")
+        raise LoopNotFoundError(f"No loop points found for '{file_path}'.")
 
     return loop_pair_list
 
@@ -84,7 +87,8 @@ if __name__ == "__main__":
             end_time = preview_looper.frames_to_ftime(pair['loop_end'])
             score = pair['score']
             dB_diff = pair['dB_diff']
-            print(f"  {idx}) from {end_time} back to {start_time}; dB_diff: {dB_diff:.1f}; score: {score:.2%}")
+            dist = pair['dist']
+            print(f"  {idx}) from {end_time} back to {start_time}; dist: {dist:.4f} ; dB_diff: {dB_diff:.4f}; score: {score:.2%}")
 
         def get_user_input():
             num_input = input("Enter the number for the loop you'd like to use (append p to preview; e.g. 0p):")
@@ -127,7 +131,7 @@ if __name__ == "__main__":
 
     def choose_loop_pair(loop_pair_list, file_path):
         index = 0
-        if args.interactive:
+        if loop_pair_list and args.interactive:
             index = interactive_handler(loop_pair_list, file_path)
         loop_start = loop_pair_list[index]["loop_start"]
         loop_end = loop_pair_list[index]["loop_end"]
@@ -135,9 +139,9 @@ if __name__ == "__main__":
         return loop_start, loop_end, score
 
     def export_handler(file_path, output_directory=output_dir):
-        loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
-
-        if not loop_pair_list:
+        try:
+            loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
+        except LoopNotFoundError:
             return
 
         loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
@@ -268,5 +272,5 @@ if __name__ == "__main__":
 
             track.play_looping(loop_start, loop_end)
 
-        except (TypeError, FileNotFoundError) as e:
-            logging.error("Error: {}".format(e))
+        except (TypeError, FileNotFoundError, LoopNotFoundError) as e:
+            logging.error(e)
