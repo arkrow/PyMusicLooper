@@ -46,18 +46,11 @@ class ArgParser(ArgumentParser):
             help="export with the track's original tags.",
         )
         export_options.add_argument(
-            "-j",
-            "--json",
-            action="store_true",
-            default=False,
-            help="export the loop points (in samples) to a JSON file in the song's directory.",
-        )
-        export_options.add_argument(
             "-t",
             "--txt",
             action="store_true",
             default=False,
-            help="export the loop points in samples to a loop.txt file (compatible with LoopingAudioConverter).",
+            help="export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).",
         )
         export_options.add_argument(
             "-r",

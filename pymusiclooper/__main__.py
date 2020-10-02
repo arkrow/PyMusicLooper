@@ -16,7 +16,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
-import argparse
 import logging
 import os
 import sys
@@ -28,9 +27,11 @@ from tqdm import tqdm
 from .core import MusicLooper
 from .argparser import ArgParser
 
+
 class LoopNotFoundError(Exception):
     def __init__(self, message):
         super().__init__(message)
+
 
 def loop_pairs(file_path, min_duration_multiplier):
     """
@@ -148,11 +149,6 @@ if __name__ == "__main__":
 
         track = MusicLooper(file_path, min_duration_multiplier=args.min_duration_multiplier)
 
-        if args.json:
-            track.export_json(loop_start, loop_end, score, output_dir=output_directory)
-            vprint(
-                f"Successfully exported '{track.filename}' loop points to a json in '{output_directory}'"
-            )
         if args.txt:
             track.export_txt(loop_start, loop_end, output_dir=output_directory)
             out_path =  os.path.join(output_directory, 'loop.txt')
@@ -244,7 +240,7 @@ if __name__ == "__main__":
 
                     processes = []
 
-    if args.export or args.json or args.txt:
+    if args.export or args.txt:
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
@@ -253,7 +249,7 @@ if __name__ == "__main__":
         else:
             batch_handler(args.path)
 
-    if args.play and not (args.export or args.json or args.txt):
+    if args.play and not (args.export or args.txt):
         try:
             loop_pair_list = loop_pairs(args.path, args.min_duration_multiplier)
 

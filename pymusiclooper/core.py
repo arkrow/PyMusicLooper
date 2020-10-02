@@ -16,7 +16,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
-import json
 import os
 import time
 import logging
@@ -394,24 +393,6 @@ class MusicLooper:
 
             outro_file.tags["TITLE"] = [original_title + " - Outro"]
             outro_file.save()
-
-    def export_json(self, loop_start, loop_end, score, output_dir=None):
-        if output_dir is not None:
-            out_path = os.path.join(output_dir, self.filename)
-        else:
-            out_path = os.path.abspath(self.filepath)
-
-        loop_start = self.frames_to_samples(loop_start)
-        loop_end = self.frames_to_samples(loop_end)
-
-        out = {
-            "loop_start": int(loop_start),
-            "loop_end": int(loop_end),
-            "score": float(f"{score:.4}"),
-        }
-
-        with open(out_path + ".loop_points.json", "w") as file:
-            json.dump(out, fp=file)
 
     def export_txt(self, loop_start, loop_end, output_dir=None):
         if output_dir is not None:
