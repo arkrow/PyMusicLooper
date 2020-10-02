@@ -51,8 +51,9 @@ class MusicLooper:
         self.channels = self.playback_audio.shape[0]
 
     def db_diff(self, power_db_f1, power_db_f2):
-        average_diff = np.average(np.abs(power_db_f1 - power_db_f2))
-        return average_diff
+        f1_max = np.max(power_db_f1)
+        f2_max = np.max(power_db_f2)
+        return max(f1_max, f2_max) - min(f1_max, f2_max)
 
     def find_loop_pairs(self, combine_beat_plp=False):
         runtime_start = time.time()
