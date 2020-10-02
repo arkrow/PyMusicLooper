@@ -43,7 +43,7 @@ Additional requirements for "complete" feature set:
 ## Usage
 
 ```raw
-usage: python -m pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-j]
+usage: python -m pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags]
                                [-t] [-r] [-f] [-n N_JOBS] [-o OUTPUT_DIR]
                                [-m MIN_DURATION_MULTIPLIER]
                                path
@@ -68,12 +68,12 @@ Export:
   -e, --export          export the song into intro, loop and outro files (WAV
                         format).
   --preserve-tags       export with the track's original tags.
-  -j, --json            export the loop points (in samples) to a JSON file in
-                        the song's directory.
-  -t, --txt             export the loop points in samples to a loop.txt file
-                        (compatible with LoopingAudioConverter).
+  -t, --txt             export the loop points of a track in samples and
+                        append to a loop.txt file (compatible with
+                        LoopingAudioConverter).
   -r, --recursive       process directories and their contents recursively
-                        (has an effect only if the given path is a directory).
+                        (has an effect only if the given path is a
+                        directory).
   -f, --flatten         flatten the output directory structure instead of
                         preserving it when using the --recursive flag.
   -n N_JOBS, --n-jobs N_JOBS
@@ -87,6 +87,7 @@ General Options:
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
                         specify minimum loop duration as a multiplier of song
                         duration (default: 0.35)
+
 ```
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
@@ -97,9 +98,11 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (c) export the loop points (in samples) to a JSON or text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
+**Note**: using the interactive `-i` option is highly recommended, since the algorithmically chosen "best" loop point may not be perceptually good, due to loudness difference, overall song beat, etc.
+
 ## Example Usage
 
-Note: If on Windows, you can Shift+Right-Click in an empty spot in the song's folder and choose command-line/powershell from the context menu. Otherwise, cd/dir to the folder.
+Side note: Most terminals support file drag-and-drop, which can be utilized instead of manual path navigation/selection.
 
 ### Play
 
@@ -177,6 +180,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.0.0 Rewrite of the core loop finding algorithm with performance optimizations and slightly better loop analysis
 - v1.7.0 Added an option to export a `loop.txt` file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/) and a flatten option if the new directory behavior introduced in v1.6.2 is not desired. Fixed a bug with non-recursive batch export.
 - v1.6.2 Preserve source directory tree structure in batch output directory. Fixed json export bug.
 - v1.6.1 Lowered note similarity threshold to improve loop point quality
