@@ -96,15 +96,15 @@ if __name__ == "__main__":
             try:
                 idx = 0
                 preview = False
+
                 if num_input[-1] == "p":
                     idx = int(num_input[:-1])
                     preview = True
                 else:
                     idx = int(num_input)
 
-                if idx < 0 or idx >= len(loop_pair_list):
-                    print(f"Please enter a number within the range [0,{len(loop_pair_list)-1}].")
-                    return get_user_input()
+                if not 0 <= idx < len(loop_pair_list):
+                    raise IndexError
 
                 if preview:
                     print(f"Previewing loop #{idx} (Press Ctrl+C to stop):")
@@ -119,10 +119,10 @@ if __name__ == "__main__":
                 else:
                     return idx
 
-            except ValueError:
-                print("Please enter a valid number.")
+            except (ValueError, IndexError):
+                print(f"Please enter a number within the range [0,{len(loop_pair_list)-1}].")
                 return get_user_input()
-            
+
             except KeyboardInterrupt:
                 print("\nOperation terminated by user. Exiting.")
                 sys.exit(0)
