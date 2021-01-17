@@ -38,7 +38,7 @@ pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[co
 Additional requirements for "complete" feature set:
 
 - [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see [pytaglib's installation notes](https://github.com/supermihi/pytaglib#installation-notes))
-- [mpg123](https://www.mpg123.de/download.shtml) to play music endlessly through the terminal.
+- [mpg123](https://www.mpg123.de/download.shtml) to play music through the terminal.
 
 ## Usage
 
@@ -146,10 +146,10 @@ python -m pymusiclooper "TRACK_NAME.wav" -e -i
 
 ### Example of multiple functionalities in action
 
-Export intro/loop/outro sections and loop points of all the songs (both json and as loop.txt) in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
 
 ```sh
-python -m pymusiclooper -rejt . -o "Music Loops" -n 4 --preserve-tags
+python -m pymusiclooper -ret . -o "Music Loops" -n 4 --preserve-tags
 ```
 
 ## Building from source
