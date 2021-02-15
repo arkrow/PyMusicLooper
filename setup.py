@@ -12,7 +12,7 @@ def get_requirements():
 
 setuptools.setup(
     name="pymusiclooper",
-    version="2.0.0",
+    version="2.0.1",
     author="arkrow",
     author_email="arkrow@protonmail.com",
     description="Automatically find loop points of any song export into intro/loop/outro sections or loop points, with optional playback through the terminal.",
