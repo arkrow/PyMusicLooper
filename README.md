@@ -24,7 +24,7 @@ Features:
 Base installation (can export intro/loop/outro sections to WAV, or the loop points to a text file; easiest to install):
 
 ```sh
-pip install git+https://github.com/arkrow/PyMusicLooper.git
+pip install pymusiclooper
 ```
 
 #### Complete Install
@@ -32,13 +32,13 @@ pip install git+https://github.com/arkrow/PyMusicLooper.git
 Complete installation adds tag preservation and terminal playback support (requires additional setup):
 
 ```sh
-pip install git+https://github.com/arkrow/PyMusicLooper.git#egg=pymusiclooper[complete]
+pip install pymusiclooper[complete]
 ```
 
 Additional requirements for "complete" feature set:
 
+- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal.
 - [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see [pytaglib's installation notes](https://github.com/supermihi/pytaglib#installation-notes))
-- [mpg123](https://www.mpg123.de/download.shtml) to play music through the terminal.
 
 ## Usage
 
