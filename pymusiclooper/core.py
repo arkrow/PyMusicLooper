@@ -301,7 +301,7 @@ class MusicLooper:
         time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
-    def play_looping(self, loop_start, loop_end, start_from=0, adjust_for_playback=False):
+    def play_looping(self, loop_start, loop_end, start_from=0):
         from mpg123 import ENC_FLOAT_32
         from mpg123 import Out123
 
@@ -310,13 +310,9 @@ class MusicLooper:
         out.start(self.rate, self.channels, ENC_FLOAT_32)
 
         playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"), frame_length=2048, hop_length=512)
-        adjusted_loop_start = loop_start * self.channels
-        adjusted_loop_end = loop_end * self.channels
-
-        if adjust_for_playback:
-            loop_start = loop_start * self.channels
-            loop_end = loop_end * self.channels
-            start_from = start_from * self.channels
+        loop_start = loop_start * self.channels
+        loop_end = loop_end * self.channels
+        start_from = start_from * self.channels
 
         i = start_from
         loop_count = 0
@@ -324,8 +320,8 @@ class MusicLooper:
             while True:
                 out.play(playback_frames[..., i])
                 i += 1
-                if i == adjusted_loop_end:
-                    i = adjusted_loop_start
+                if i == loop_end:
+                    i = loop_start
                     loop_count += 1
                     print("Currently on loop #{}".format(loop_count), end="\r")
 
