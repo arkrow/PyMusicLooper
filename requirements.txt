@@ -3,3 +3,5 @@ numpy>=1.18.2
 librosa>=0.7.2
 tqdm>=4.45.0
 soundfile>=0.10.3.post1
+mpg123>=0.4
+pytaglib>=1.4.6

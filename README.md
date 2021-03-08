@@ -16,29 +16,17 @@ Features:
 
 - [Python](https://www.python.org/downloads/) >= 3.6
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other proprietary audio formats)
+- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal.
 
-### Installation Options
-
-#### Base Install
-
-Base installation (can export intro/loop/outro sections to WAV or the loop points to a text file; easiest to install):
+### Installing using pip
 
 ```sh
 pip install pymusiclooper
 ```
 
-#### Complete Install
+Installation note:
 
-Complete installation adds tag preservation and terminal playback support (requires additional setup):
-
-```sh
-pip install pymusiclooper[complete]
-```
-
-Additional requirements for "complete" feature set:
-
-- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal.
-- [pytaglib](https://github.com/supermihi/pytaglib) for tag preservation (see [pytaglib's installation notes](https://github.com/supermihi/pytaglib#installation-notes))
+- Debian-based GNU/Linux distributions may need to install taglib with development headers for the tag preservation feature: `sudo apt install libtag1-dev`
 
 ## Usage
 
@@ -180,6 +168,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.2.0 Merged the 'complete' installation option with the 'core' installation
 - v2.1.0 CLI can now be launched directly by calling `pymusiclooper` in the terminal
 - v2.0.0 Rewrite of the core loop finding algorithm with performance optimizations and slightly better loop analysis
 - v1.7.0 Added an option to export a `loop.txt` file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/) and a flatten option if the new directory behavior introduced in v1.6.2 is not desired. Fixed a bug with non-recursive batch export.
