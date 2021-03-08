@@ -41,13 +41,9 @@ def loop_pairs(file_path, min_duration_multiplier):
         logging.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
         return
 
-    try:
-        track = MusicLooper(file_path, min_duration_multiplier)
-    except TypeError as e:
-        logging.warning(f"Skipping '{file_path}'. {e}")
-        return
+    track = MusicLooper(file_path, min_duration_multiplier)
 
-    vprint("Loaded '{}'. Analyzing...".format(file_path))
+    logging.info("Loaded '{}'. Analyzing...".format(file_path))
 
     loop_pair_list = track.find_loop_pairs()
     if not loop_pair_list:
@@ -72,12 +68,6 @@ def cli_main():
     else:
         warnings.filterwarnings("ignore")
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
-
-    if not os.path.isdir(args.path) or args.verbose:
-        def vprint(*args):
-            print(*args)
-    else:
-        vprint = lambda *args: None
 
     def interactive_handler(loop_pair_list, file_path):
         preview_looper = MusicLooper(file_path, args.min_duration_multiplier)
@@ -146,6 +136,10 @@ def cli_main():
         try:
             loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
         except LoopNotFoundError:
+            logging.error(f"No suitable loop point found for {file_path}")
+            return
+        except TypeError as e:
+            logging.error(f"Skipping '{file_path}'. {e}")
             return
 
         loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
@@ -154,8 +148,8 @@ def cli_main():
 
         if args.txt:
             track.export_txt(loop_start, loop_end, output_dir=output_directory)
-            out_path =  os.path.join(output_directory, 'loop.txt')
-            vprint(
+            out_path = os.path.join(output_directory, 'loop.txt')
+            logging.info(
                 f"Successfully added '{track.filename}' loop points to '{out_path}'"
             )
         if args.export:
@@ -165,7 +159,7 @@ def cli_main():
                 output_dir=output_directory,
                 preserve_tags=args.preserve_tags,
             )
-            vprint(f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'")
+            logging.info(f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'")
 
     def batch_handler(dir_path):
         dir_path = os.path.abspath(dir_path)

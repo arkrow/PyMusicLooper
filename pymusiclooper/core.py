@@ -87,7 +87,7 @@ class MusicLooper:
 
         runtime_end = time.time()
         prep_time = runtime_end - runtime_start
-        logging.info("Finished initial prep in {:.3}s".format(prep_time))
+        logging.info("Finished initial audio processing in {:.3}s".format(prep_time))
 
         candidate_pairs = []
 
@@ -126,7 +126,6 @@ class MusicLooper:
         if test_offset > chroma.shape[-1]:
             test_offset = chroma.shape[-1] // 4
 
-        # candidate_pairs = self._dist_prune(candidate_pairs)
         candidate_pairs = self._dB_prune(candidate_pairs)
 
         weights = _geometric_weights(test_offset, start=test_offset // num_test_beats)
@@ -201,23 +200,11 @@ class MusicLooper:
 
         return candidate_pairs[:max(percentile_idx, acceptable_idx)]
 
-    def _dist_prune(self, candidate_pairs, percentile=90):
-        candidate_pairs = sorted(candidate_pairs, key=lambda x: x["dist"])
-
-        dist_array = np.array(
-            [pair["dist"] for pair in candidate_pairs]
-        )
-
-        dist_threshold = np.percentile(dist_array, percentile, interpolation='lower')
-        percentile_idx = np.searchsorted(dist_array, dist_threshold, side="right")
-
-        return candidate_pairs[:percentile_idx]
-
     def _prioritize_duration(self, pair_list):
         db_diff_array = np.array(
             [pair["dB_diff"] for pair in pair_list]
         )
-        db_threshold =np.median(db_diff_array)
+        db_threshold = np.median(db_diff_array)
 
         duration_argmax = 0
         duration_max = 0
