@@ -89,7 +89,10 @@ if __name__ == "__main__":
             score = pair['score']
             dB_diff = pair['dB_diff']
             dist = pair['dist']
-            print(f"  {idx}) from {end_time} back to {start_time}; dist: {dist:.4f} ; dB_diff: {dB_diff:.4f}; score: {score:.2%}")
+            if args.verbose:
+                print(f"  {idx}) from {end_time} back to {start_time}; dist: {dist:.4f} ; dB_diff: {dB_diff:.4f}; score: {score:.4%}")
+            else:
+                print(f"  {idx}) from {end_time} back to {start_time}; score: {score:.2%}")
 
         def get_user_input():
             num_input = input("Enter the number for the loop you'd like to use (append p to preview; e.g. 0p):")
