@@ -21,7 +21,7 @@ Features:
 
 #### Base Install
 
-Base installation (can export intro/loop/outro sections to WAV, or the loop points to a text file; easiest to install):
+Base installation (can export intro/loop/outro sections to WAV or the loop points to a text file; easiest to install):
 
 ```sh
 pip install pymusiclooper

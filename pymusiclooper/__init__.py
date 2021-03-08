@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # coding=utf-8
 """ PyMusicLooper
-    Copyright (C) 2020  Hazem Nabil
+    Copyright (C) 2021  Hazem Nabil
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
