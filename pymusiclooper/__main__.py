@@ -107,7 +107,7 @@ if __name__ == "__main__":
                     raise IndexError
 
                 if preview:
-                    print(f"Previewing loop #{idx} (Press Ctrl+C to stop):")
+                    print(f"Previewing loop #{idx} (Press Ctrl+C to stop looping):")
                     loop_start = loop_pair_list[idx]["loop_start"]
                     loop_end = loop_pair_list[idx]["loop_end"]
                     offset = preview_looper.seconds_to_frames(5)
@@ -264,7 +264,7 @@ if __name__ == "__main__":
                     score if score is not None else 0,
                 )
             )
-            print("(press Ctrl+C to exit)")
+            print("(press Ctrl+C to stop looping.)")
 
             track.play_looping(loop_start, loop_end)
 

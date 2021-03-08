@@ -315,18 +315,24 @@ class MusicLooper:
         start_from = start_from * self.channels
 
         i = start_from
+        idx_end = playback_frames.shape[-1]
         loop_count = 0
         try:
             while True:
                 out.play(playback_frames[..., i])
                 i += 1
-                if i == loop_end:
+                if i >= loop_end or i >= idx_end:
                     i = loop_start
                     loop_count += 1
                     print("Currently on loop #{}".format(loop_count), end="\r")
 
         except KeyboardInterrupt:
-            print()  # so that the program ends on a newline
+            print("\rPlayer will not loop. Ctrl+C again to stop playback.")
+            try:
+                for i in range(i, idx_end):
+                    out.play(playback_frames[..., i])
+            except KeyboardInterrupt:
+                print()
 
     def export(
         self, loop_start, loop_end, format="WAV", output_dir=None, preserve_tags=False
