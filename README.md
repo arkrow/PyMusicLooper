@@ -43,7 +43,7 @@ Additional requirements for "complete" feature set:
 ## Usage
 
 ```raw
-usage: python -m pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags]
+usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags]
                                [-t] [-r] [-f] [-n N_JOBS] [-o OUTPUT_DIR]
                                [-m MIN_DURATION_MULTIPLIER]
                                path
@@ -109,7 +109,7 @@ Side note: Most terminals support file drag-and-drop, which can be utilized inst
 Play the song on repeat with the best discovered loop point.
 
 ```sh
-python -m pymusiclooper "TRACK_NAME.mp3"
+pymusiclooper "TRACK_NAME.mp3"
 ```
 
 ### Export
@@ -117,13 +117,13 @@ python -m pymusiclooper "TRACK_NAME.mp3"
 Export the song into intro, loop and outro files, and carry over the track's original tags.
 
 ```sh
-python -m pymusiclooper -e "TRACK_NAME.ogg" --preserve-tags
+pymusiclooper -e "TRACK_NAME.ogg" --preserve-tags
 ```
 
 Export the loop points of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
 
 ```sh
-python -m pymusiclooper -t "/path/to/dir/"
+pymusiclooper -t "/path/to/dir/"
 ```
 
 Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
@@ -135,13 +135,13 @@ If the most of the track is the loop section, specifying a higher multiplier wil
 Here `-m 0.85` means that, excluding silence, the loop section is at least 85% of the music track.
 
 ```sh
-python -m pymusiclooper "TRACK_NAME.flac" -m 0.85
+pymusiclooper "TRACK_NAME.flac" -m 0.85
 ```
 
 Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
 
 ```sh
-python -m pymusiclooper "TRACK_NAME.wav" -e -i
+pymusiclooper "TRACK_NAME.wav" -e -i
 ```
 
 ### Example of multiple functionalities in action
@@ -149,7 +149,7 @@ python -m pymusiclooper "TRACK_NAME.wav" -e -i
 Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
 
 ```sh
-python -m pymusiclooper -ret . -o "Music Loops" -n 4 --preserve-tags
+pymusiclooper -ret . -o "Music Loops" -n 4 --preserve-tags
 ```
 
 ## Building from source
@@ -180,6 +180,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.1.0 CLI can now be launched directly by calling `pymusiclooper` in the terminal
 - v2.0.0 Rewrite of the core loop finding algorithm with performance optimizations and slightly better loop analysis
 - v1.7.0 Added an option to export a `loop.txt` file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/) and a flatten option if the new directory behavior introduced in v1.6.2 is not desired. Fixed a bug with non-recursive batch export.
 - v1.6.2 Preserve source directory tree structure in batch output directory. Fixed json export bug.

@@ -56,7 +56,7 @@ def loop_pairs(file_path, min_duration_multiplier):
     return loop_pair_list
 
 
-if __name__ == "__main__":
+def cli_main():
     parser = ArgParser(
         prog="python -m pymusiclooper",
         description="A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.",
@@ -273,3 +273,7 @@ if __name__ == "__main__":
 
         except (TypeError, FileNotFoundError, LoopNotFoundError) as e:
             logging.error(e)
+
+
+if __name__ == "__main__":
+    cli_main()
