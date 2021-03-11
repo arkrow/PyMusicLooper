@@ -16,25 +16,21 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>."""
 
+import logging
 import os
 import time
-import logging
 
 import librosa
 import numpy as np
 import soundfile
 
+from .exceptions import LoopNotFoundError
+
 
 class MusicLooper:
     def __init__(self, filepath, min_duration_multiplier=0.35, trim=True):
         # Load the file if it exists
-        if os.path.exists(filepath) and os.path.isfile(filepath):
-            try:
-                raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
-            except Exception:
-                raise TypeError("Unsupported file type.")
-        else:
-            raise FileNotFoundError("Specified file not found.")
+        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
 
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
@@ -130,7 +126,7 @@ class MusicLooper:
 
         weights = _geometric_weights(test_offset, start=test_offset // num_test_beats)
         pair_score_list = [
-            self.pair_score(
+            self._pair_score(
                 pair["loop_start"],
                 pair["loop_end"],
                 chroma,
@@ -172,7 +168,10 @@ class MusicLooper:
                 )
             )
 
-        return candidate_pairs
+        if not candidate_pairs:
+            raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
+        else:
+            return candidate_pairs
 
     def _score_prune(self, candidate_pairs, percentile=10, acceptable_score=80):
         candidate_pairs = sorted(candidate_pairs, key=lambda x: x["score"])
@@ -226,7 +225,7 @@ class MusicLooper:
         if duration_argmax:
             pair_list.insert(0, pair_list.pop(duration_argmax))
 
-    def pair_score(self, b1, b2, chroma, test_duration, weights=None):
+    def _pair_score(self, b1, b2, chroma, test_duration, weights=None):
         lookahead_score = self._subseq_beat_similarity(
             b1, b2, chroma, test_duration, weights=weights
         )
@@ -289,8 +288,7 @@ class MusicLooper:
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
     def play_looping(self, loop_start, loop_end, start_from=0):
-        from mpg123 import ENC_FLOAT_32
-        from mpg123 import Out123
+        from mpg123 import ENC_FLOAT_32, Out123
 
         out = Out123()
 

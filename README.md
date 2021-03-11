@@ -14,9 +14,11 @@ Features:
 
 ### Pre-requisites
 
+The following software must be installed for `pymusiclooper` to function correctly.
+
 - [Python](https://www.python.org/downloads/) >= 3.6
-- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other proprietary audio formats)
-- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal.
+- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other audio formats)
+- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal
 
 ### Installing using pip
 
@@ -31,13 +33,11 @@ Installation note:
 ## Usage
 
 ```raw
-usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags]
-                               [-t] [-r] [-f] [-n N_JOBS] [-o OUTPUT_DIR]
-                               [-m MIN_DURATION_MULTIPLIER]
-                               path
+usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-t] [-r] [-f] [-n N_JOBS] [-o OUTPUT_DIR]
+                     [-m MIN_DURATION_MULTIPLIER] [-V]
+                     path
 
-A script for repeating music seamlessly and endlessly, by automatically
-finding the best loop points.
+A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.
 
 positional arguments:
   path                  path to file or directory
@@ -45,37 +45,28 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         enable verbose logging output
-  -i, --interactive     manually preview/choose which loop to use out of the
-                        discovered loop points
+  -i, --interactive     manually preview/choose which loop to use out of the discovered loop points
+  -V, --version         show program's version number and exit
 
 Play:
-  -p, --play            play the song on repeat with the best discovered loop
-                        point (default).
+  -p, --play            play the song on repeat with the best discovered loop point (default).
 
 Export:
-  -e, --export          export the song into intro, loop and outro files (WAV
-                        format).
+  -e, --export          export the song into intro, loop and outro files (WAV format).
   --preserve-tags       export with the track's original tags.
-  -t, --txt             export the loop points of a track in samples and
-                        append to a loop.txt file (compatible with
+  -t, --txt             export the loop points of a track in samples and append to a loop.txt file (compatible with
                         LoopingAudioConverter).
-  -r, --recursive       process directories and their contents recursively
-                        (has an effect only if the given path is a
-                        directory).
-  -f, --flatten         flatten the output directory structure instead of
-                        preserving it when using the --recursive flag.
+  -r, --recursive       process directories and their contents recursively (has an effect only if the given path is a directory).
+  -f, --flatten         flatten the output directory structure instead of preserving it when using the --recursive flag.
   -n N_JOBS, --n-jobs N_JOBS
-                        number of files to batch process at a time (default:
-                        1). WARNING: greater values result in higher memory
+                        number of files to batch process at a time (default: 1). WARNING: greater values result in higher memory
                         consumption.
 
 General Options:
   -o OUTPUT_DIR, --output-dir OUTPUT_DIR
                         specify a different output directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
-                        specify minimum loop duration as a multiplier of song
-                        duration (default: 0.35)
-
+                        specify minimum loop duration as a multiplier of song duration (default: 0.35)
 ```
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
@@ -84,9 +75,9 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
 
-(c) export the loop points (in samples) to a JSON or text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
+(c) export the loop points (in samples) to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
-**Note**: using the interactive `-i` option is highly recommended, since the algorithmically chosen "best" loop point may not be perceptually good, due to loudness difference, overall song beat, etc.
+**Note**: using the interactive `-i` option is highly recommended, since the algorithmically chosen "best" loop point may not be perceptually good, mainly due to some chosen loop points causing 'sound popping' when played.
 
 ## Example Usage
 
@@ -158,16 +149,13 @@ Followed by:
 python setup.py install
 ```
 
-## Contribution
-
-If there is a song that you think PyMusicLooper should be able to loop but doesn't, please feel free to open an issue with a link to that song and mention the approximate timestamp at which it loops. Forks and pull requests are of course welcome.
-
 ## Acknowledgement
 
 This project started out as a fork of [Nolan Nicholson](https://github.com/NolanNicholson)'s project [Looper](https://github.com/NolanNicholson/Looper/). Although at this point only a few lines of code remain from that project due to adopting a completely different approach and implementation; this project would not have been possible without their initial contribution.
 
 ## Version History
 
+- v2.3.0 Partial code re-organization and improvement; better exception handling
 - v2.2.0 Merged the 'complete' installation option with the 'core' installation
 - v2.1.0 CLI can now be launched directly by calling `pymusiclooper` in the terminal
 - v2.0.0 Rewrite of the core loop finding algorithm with performance optimizations and slightly better loop analysis

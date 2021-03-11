@@ -91,7 +91,7 @@ class ArgParser(ArgumentParser):
 
             if x <= 0.0 or x >= 1.0:
                 raise argparse.ArgumentTypeError(
-                    "%r not in range (0.0, 1.0) exclusive" % (x,)
+                    "%r is not between 0.0 and 1.0" % (x,)
                 )
             return x
 

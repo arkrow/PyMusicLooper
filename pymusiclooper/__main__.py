@@ -24,50 +24,46 @@ from multiprocessing import Process
 
 from tqdm import tqdm
 
-from .core import MusicLooper
+from pymusiclooper import __version__
+
 from .argparser import ArgParser
-
-
-class LoopNotFoundError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
+from .core import MusicLooper
+from .exceptions import LoopNotFoundError
 
 
 def loop_pairs(file_path, min_duration_multiplier):
     """
     Discovers the possible loop points of an audio file and returns a list of dicts with keys "loop_start", "loop_end" and "score"
     """
-    if not os.path.exists(file_path):
-        logging.warning(f"File or directory '{os.path.abspath(args.path)}' not found")
-        return
-
     track = MusicLooper(file_path, min_duration_multiplier)
 
     logging.info("Loaded '{}'. Analyzing...".format(file_path))
 
     loop_pair_list = track.find_loop_pairs()
-    if not loop_pair_list:
-        raise LoopNotFoundError(f"No loop points found for '{file_path}'.")
 
     return loop_pair_list
 
 
 def cli_main():
     parser = ArgParser(
-        prog="python -m pymusiclooper",
         description="A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.",
     )
+    parser.add_argument('-V', '--version', action='version', version='{} {}'.format("%(prog)s", __version__))
 
     args = parser.parse_args()
-
-    default_out = os.path.join(os.path.dirname(args.path), "Loops")
-    output_dir = args.output_dir if args.output_dir else default_out
 
     if args.verbose:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
     else:
         warnings.filterwarnings("ignore")
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
+
+    default_out = os.path.join(os.path.dirname(args.path), "Loops")
+    output_dir = args.output_dir if args.output_dir else default_out
+
+    if not os.path.exists(args.path):
+        logging.error(f'No such file or directory: {os.path.abspath(args.path)}')
+        return
 
     def interactive_handler(loop_pair_list, file_path):
         preview_looper = MusicLooper(file_path, args.min_duration_multiplier)
@@ -132,11 +128,11 @@ def cli_main():
         score = loop_pair_list[index]["score"]
         return loop_start, loop_end, score
 
-    def export_handler(file_path, output_directory=output_dir):
+    def export_handler(file_path, output_directory=output_dir, batch=False):
         try:
             loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
-        except LoopNotFoundError:
-            logging.error(f"No suitable loop point found for {file_path}")
+        except (LoopNotFoundError, FileNotFoundError) as e:
+            logging.error(e)
             return
         except TypeError as e:
             logging.error(f"Skipping '{file_path}'. {e}")
@@ -149,9 +145,11 @@ def cli_main():
         if args.txt:
             track.export_txt(loop_start, loop_end, output_dir=output_directory)
             out_path = os.path.join(output_directory, 'loop.txt')
-            logging.info(
-                f"Successfully added '{track.filename}' loop points to '{out_path}'"
-            )
+            message = f"Successfully added '{track.filename}' loop points to '{out_path}'"
+            if batch:
+                logging.info(message)
+            else:
+                print(message)
         if args.export:
             track.export(
                 loop_start,
@@ -159,7 +157,11 @@ def cli_main():
                 output_dir=output_directory,
                 preserve_tags=args.preserve_tags,
             )
-            logging.info(f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'")
+            message = f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'"
+            if batch:
+                logging.info(message)
+            else:
+                print(message)
 
     def batch_handler(dir_path):
         dir_path = os.path.abspath(dir_path)
@@ -183,7 +185,7 @@ def cli_main():
                 for f in os.listdir(dir_path)
                 if os.path.isfile(os.path.join(dir_path, f))
             ]
-        
+
         if not args.flatten:
             common_path = os.path.commonpath(files)
             output_dirs = [
@@ -195,7 +197,7 @@ def cli_main():
                 if not os.path.isdir(out_dir):
                     os.makedirs(out_dir, exist_ok=True)
 
-        if len(files) == 0:
+        if not files:
             logging.error(f"No files found in '{dir_path}'")
 
         num_files = len(files)
@@ -204,7 +206,7 @@ def cli_main():
             tqdm_files = tqdm(files)
             for file in tqdm_files:
                 tqdm_files.set_description(f"Processing '{file}'")
-                export_handler(file)
+                export_handler(file, batch=True)
         else:
             processes = []
             file_idx = 0
@@ -216,6 +218,7 @@ def cli_main():
                             target=export_handler,
                             kwargs={
                                 "file_path": files[file_idx],
+                                "batch": True,
                                 "output_directory":
                                     output_dir
                                     if args.flatten
@@ -242,7 +245,7 @@ def cli_main():
             os.mkdir(output_dir)
 
         if os.path.isfile(args.path):
-            export_handler(args.path)
+            export_handler(args.path, batch=False)
         else:
             batch_handler(args.path)
 
@@ -267,6 +270,7 @@ def cli_main():
 
         except (TypeError, FileNotFoundError, LoopNotFoundError) as e:
             logging.error(e)
+            return
 
 
 if __name__ == "__main__":
