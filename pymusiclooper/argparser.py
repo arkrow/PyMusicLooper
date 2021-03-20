@@ -43,7 +43,7 @@ class ArgParser(ArgumentParser):
             "--preserve-tags",
             action="store_true",
             default=False,
-            help="export with the track's original tags.",
+            help="export with the track's original tags. [Currently Disabled]",
         )
         export_options.add_argument(
             "-t",

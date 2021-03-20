@@ -26,9 +26,11 @@ The following software must be installed for `pymusiclooper` to function correct
 pip install pymusiclooper
 ```
 
-Installation note:
+### Installing directly from git
 
-- Debian-based GNU/Linux distributions may need to install taglib with development headers for the tag preservation feature: `sudo apt install libtag1-dev`
+```sh
+pip install git+https://github.com/arkrow/PyMusicLooper.git
+```
 
 ## Usage
 
@@ -53,7 +55,7 @@ Play:
 
 Export:
   -e, --export          export the song into intro, loop and outro files (WAV format).
-  --preserve-tags       export with the track's original tags.
+  --preserve-tags       export with the track's original tags. [Currently Disabled]
   -t, --txt             export the loop points of a track in samples and append to a loop.txt file (compatible with
                         LoopingAudioConverter).
   -r, --recursive       process directories and their contents recursively (has an effect only if the given path is a directory).
@@ -93,10 +95,10 @@ pymusiclooper "TRACK_NAME.mp3"
 
 ### Export
 
-Export the song into intro, loop and outro files, and carry over the track's original tags.
+Export the song into intro, loop and outro files.
 
 ```sh
-pymusiclooper -e "TRACK_NAME.ogg" --preserve-tags
+pymusiclooper -e "TRACK_NAME.ogg"
 ```
 
 Export the loop points of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).

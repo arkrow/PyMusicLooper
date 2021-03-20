@@ -351,35 +351,7 @@ class MusicLooper:
         )
 
         if preserve_tags:
-            import taglib
-
-            track = taglib.File(self.filepath)
-
-            intro_file = taglib.File(out_path + "-intro." + format.lower())
-            loop_file = taglib.File(out_path + "-loop." + format.lower())
-            outro_file = taglib.File(out_path + "-outro." + format.lower())
-
-            try:
-                original_title = (
-                    track.tags["TITLE"][0]
-                    if track.tags is not None and len(track.tags["TITLE"]) > 0
-                    else os.path.basename(self.filepath)
-                )
-            except KeyError:
-                original_title = os.path.basename(self.filepath)
-
-            intro_file.tags = track.tags
-            loop_file.tags = track.tags
-            outro_file.tags = track.tags
-
-            intro_file.tags["TITLE"] = [original_title + " - Intro"]
-            intro_file.save()
-
-            loop_file.tags["TITLE"] = [original_title + " - Loop"]
-            loop_file.save()
-
-            outro_file.tags["TITLE"] = [original_title + " - Outro"]
-            outro_file.save()
+            pass
 
     def export_txt(self, loop_start, loop_end, output_dir=None):
         if output_dir is not None:
