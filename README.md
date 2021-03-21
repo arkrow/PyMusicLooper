@@ -55,7 +55,7 @@ Play:
 
 Export:
   -e, --export          export the song into intro, loop and outro files (WAV format).
-  --preserve-tags       export with the track's original tags. [Currently Disabled]
+  --preserve-tags       export with the track's original tags. [currently disabled]
   -t, --txt             export the loop points of a track in samples and append to a loop.txt file (compatible with
                         LoopingAudioConverter).
   -r, --recursive       process directories and their contents recursively (has an effect only if the given path is a directory).
