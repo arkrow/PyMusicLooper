@@ -142,6 +142,8 @@ def cli_main():
 
         track = MusicLooper(file_path, min_duration_multiplier=args.min_duration_multiplier)
 
+        if args.stdout:
+            track.print(loop_start, loop_end)
         if args.txt:
             track.export_txt(loop_start, loop_end, output_dir=output_directory)
             out_path = os.path.join(output_directory, 'loop.txt')
@@ -240,7 +242,7 @@ def cli_main():
 
                     processes = []
 
-    if args.export or args.txt:
+    if args.export or args.txt or args.stdout:
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
 
@@ -249,7 +251,7 @@ def cli_main():
         else:
             batch_handler(args.path)
 
-    if args.play and not (args.export or args.txt):
+    if args.play and not (args.export or args.txt or args.stdout):
         try:
             loop_pair_list = loop_pairs(args.path, args.min_duration_multiplier)
 

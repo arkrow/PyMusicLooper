@@ -365,6 +365,11 @@ class MusicLooper:
         with open(out_path, "a") as file:
             file.write(f"{loop_start} {loop_end} {self.filename}\n")
 
+    def print(self, loop_start, loop_end):
+        loop_start = int(self.frames_to_samples(loop_start))
+        loop_end = int(self.frames_to_samples(loop_end))
+        print(loop_start, loop_end)
+
 
 def _geometric_weights(length, start=100, stop=1):
     return np.geomspace(start, stop, num=length)
