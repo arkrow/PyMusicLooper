@@ -243,7 +243,7 @@ def cli_main():
                     processes = []
 
     if args.export or args.txt or args.stdout:
-        if not os.path.exists(output_dir):
+        if not os.path.exists(output_dir) and not args.stdout:
             os.mkdir(output_dir)
 
         if os.path.isfile(args.path):
