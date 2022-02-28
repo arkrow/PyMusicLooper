@@ -53,6 +53,12 @@ class ArgParser(ArgumentParser):
             help="export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).",
         )
         export_options.add_argument(
+            "--stdout",
+            action="store_true",
+            default=False,
+            help="print the loop points of a track in samples to stdout (Standard Output)",
+        )
+        export_options.add_argument(
             "-r",
             "--recursive",
             action="store_true",
