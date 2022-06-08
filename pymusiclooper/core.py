@@ -145,13 +145,9 @@ class MusicLooper:
 
         for pair in candidate_pairs:
             logging.info(
-                "Found from {} to {}, dB_diff:{}, similarity:{}".format(
-                    pair["loop_start"],
-                    pair["loop_end"],
-                    pair["dB_diff"],
-                    pair["score"],
-                )
+                f'Found from {pair["loop_start"]} to {pair["loop_end"]}, dB_diff:{pair["dB_diff"]}, similarity:{pair["score"]}'
             )
+
 
         if not candidate_pairs:
             raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
@@ -294,7 +290,7 @@ class MusicLooper:
                 if i >= loop_end or i >= idx_end:
                     i = loop_start
                     loop_count += 1
-                    print("Currently on loop #{}".format(loop_count), end="\r")
+                    print(f"Currently on loop #{loop_count}", end="\r")
 
         except KeyboardInterrupt:
             print("\rPlayer will not loop. Ctrl+C again to stop playback.")
@@ -317,26 +313,25 @@ class MusicLooper:
         loop_end = self.frames_to_samples(loop_end)
 
         soundfile.write(
-            out_path + "-intro." + format.lower(),
+            f"{out_path}-intro.{format.lower()}",
             self.playback_audio[..., :loop_start].T,
             self.rate,
             format=format,
         )
+
         soundfile.write(
-            out_path + "-loop." + format.lower(),
+            f"{out_path}-loop.{format.lower()}",
             self.playback_audio[..., loop_start:loop_end].T,
             self.rate,
             format=format,
         )
+
         soundfile.write(
-            out_path + "-outro." + format.lower(),
+            f"{out_path}-outro.{format.lower()}",
             self.playback_audio[..., loop_end:].T,
             self.rate,
             format=format,
         )
-
-        if preserve_tags:
-            pass
 
     def export_txt(self, loop_start, loop_end, output_dir=None):
         if output_dir is not None:

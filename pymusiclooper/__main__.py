@@ -22,11 +22,9 @@ def loop_pairs(file_path, min_duration_multiplier):
     """
     track = MusicLooper(file_path, min_duration_multiplier)
 
-    logging.info("Loaded '{}'. Analyzing...".format(file_path))
+    logging.info(f"Loaded '{file_path}'. Analyzing...")
 
-    loop_pair_list = track.find_loop_pairs()
-
-    return loop_pair_list
+    return track.find_loop_pairs()
 
 
 def cli_main():
@@ -80,19 +78,18 @@ def cli_main():
                 if not 0 <= idx < len(loop_pair_list):
                     raise IndexError
 
-                if preview:
-                    print(f"Previewing loop #{idx} (Press Ctrl+C to stop looping):")
-                    loop_start = loop_pair_list[idx]["loop_start"]
-                    loop_end = loop_pair_list[idx]["loop_end"]
-                    offset = preview_looper.seconds_to_frames(5)
-                    preview_offset = loop_end - offset if loop_end - offset > 0 else 0
-                    preview_looper.play_looping(
-                        loop_start, loop_end, start_from=preview_offset
-                    )
-                    return get_user_input()
-                else:
+                if not preview:
                     return idx
 
+                print(f"Previewing loop #{idx} (Press Ctrl+C to stop looping):")
+                loop_start = loop_pair_list[idx]["loop_start"]
+                loop_end = loop_pair_list[idx]["loop_end"]
+                offset = preview_looper.seconds_to_frames(5)
+                preview_offset = max(loop_end - offset, 0)
+                preview_looper.play_looping(
+                    loop_start, loop_end, start_from=preview_offset
+                )
+                return get_user_input()
             except (ValueError, IndexError):
                 print(f"Please enter a number within the range [0,{len(loop_pair_list)-1}].")
                 return get_user_input()
@@ -187,8 +184,6 @@ def cli_main():
         if not files:
             logging.error(f"No files found in '{dir_path}'")
 
-        num_files = len(files)
-
         if args.n_jobs == 1:
             tqdm_files = tqdm(files)
             for file in tqdm_files:
@@ -198,9 +193,11 @@ def cli_main():
             processes = []
             file_idx = 0
 
+            num_files = len(files)
+
             with tqdm(total=num_files) as pbar:
                 while file_idx < num_files:
-                    for pid in range(args.n_jobs):
+                    for _ in range(args.n_jobs):
                         p = Process(
                             target=export_handler,
                             kwargs={
