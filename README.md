@@ -35,11 +35,12 @@ pip install git+https://github.com/arkrow/PyMusicLooper.git
 ## Usage
 
 ```raw
-usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-t] [-r] [-f] [-n N_JOBS] [-o OUTPUT_DIR]
-                     [-m MIN_DURATION_MULTIPLIER] [-V]
+usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-t] [--stdout] [-r] [-f]
+                     [-n N_JOBS] [-o OUTPUT_DIR] [-m MIN_DURATION_MULTIPLIER] [-V]
                      path
 
-A script for repeating music seamlessly and endlessly, by automatically finding the best loop points.
+A script for repeating music seamlessly and endlessly, by automatically finding the best loop
+points.
 
 positional arguments:
   path                  path to file or directory
@@ -47,7 +48,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         enable verbose logging output
-  -i, --interactive     manually preview/choose which loop to use out of the discovered loop points
+  -i, --interactive     manually preview/choose which loop to use out of the discovered loop
+                        points
   -V, --version         show program's version number and exit
 
 Play:
@@ -55,20 +57,23 @@ Play:
 
 Export:
   -e, --export          export the song into intro, loop and outro files (WAV format).
-  --preserve-tags       export with the track's original tags. [currently disabled]
-  -t, --txt             export the loop points of a track in samples and append to a loop.txt file (compatible with
-                        LoopingAudioConverter).
-  -r, --recursive       process directories and their contents recursively (has an effect only if the given path is a directory).
-  -f, --flatten         flatten the output directory structure instead of preserving it when using the --recursive flag.
+  -t, --txt             export the loop points of a track in samples and append to a loop.txt
+                        file (compatible with LoopingAudioConverter).
+  --stdout              print the loop points of a track in samples to stdout (Standard Output)
+  -r, --recursive       process directories and their contents recursively (has an effect only if
+                        the given path is a directory).
+  -f, --flatten         flatten the output directory structure instead of preserving it when
+                        using the --recursive flag.
   -n N_JOBS, --n-jobs N_JOBS
-                        number of files to batch process at a time (default: 1). WARNING: greater values result in higher memory
-                        consumption.
+                        number of files to batch process at a time (default: 1). WARNING: greater
+                        values result in higher memory consumption.
 
 General Options:
   -o OUTPUT_DIR, --output-dir OUTPUT_DIR
                         specify a different output directory.
   -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
-                        specify minimum loop duration as a multiplier of song duration (default: 0.35)
+                        specify minimum loop duration as a multiplier of song duration (default:
+                        0.35)
 ```
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
@@ -157,6 +162,8 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.5.0 Added option to print loop points to terminal STDOUT (contributed by Coolsonickirby). Project relicensed to MIT license as of v2.5+.
+- v2.4.0 Temporarily disabled preserve_tags features to resolve dependency installation issues; pending re-implementation.
 - v2.3.0 Partial code re-organization and improvement; better exception handling
 - v2.2.0 Merged the 'complete' installation option with the 'core' installation
 - v2.1.0 CLI can now be launched directly by calling `pymusiclooper` in the terminal
