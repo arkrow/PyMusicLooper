@@ -162,6 +162,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.5.1 Fixed error handling when no loop points were found
 - v2.5.0 Added option to print loop points to terminal STDOUT (contributed by Coolsonickirby). Project relicensed to MIT license as of v2.5+.
 - v2.4.0 Temporarily disabled preserve_tags features to resolve dependency installation issues; pending re-implementation.
 - v2.3.0 Partial code re-organization and improvement; better exception handling

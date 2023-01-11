@@ -96,7 +96,7 @@ class MusicLooper:
         logging.info(f"Found {len(candidate_pairs)} possible loop points")
 
         if not candidate_pairs:
-            return candidate_pairs
+            raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
 
         beats_per_second = bpm / 60
         num_test_beats = 12
