@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 
 
 class ArgParser(ArgumentParser):
@@ -8,6 +8,7 @@ class ArgParser(ArgumentParser):
 
         play_options = self.add_argument_group("Play")
         export_options = self.add_argument_group("Export")
+        batch_options = self.add_argument_group("Batch Options")
         general_options = self.add_argument_group("General Options")
 
         self.add_argument(
@@ -40,12 +41,6 @@ class ArgParser(ArgumentParser):
             help="export the song into intro, loop and outro files (WAV format).",
         )
         export_options.add_argument(
-            "--preserve-tags",
-            action="store_true",
-            default=False,
-            help="export with the track's original tags. [currently disabled]",
-        )
-        export_options.add_argument(
             "-t",
             "--txt",
             action="store_true",
@@ -58,21 +53,21 @@ class ArgParser(ArgumentParser):
             default=False,
             help="print the loop points of a track in samples to stdout (Standard Output)",
         )
-        export_options.add_argument(
+        batch_options.add_argument(
             "-r",
             "--recursive",
             action="store_true",
             default=False,
             help="process directories and their contents recursively (has an effect only if the given path is a directory).",
         )
-        export_options.add_argument(
+        batch_options.add_argument(
             "-f",
             "--flatten",
             action="store_true",
             default=False,
             help="flatten the output directory structure instead of preserving it when using the --recursive flag.",
         )
-        export_options.add_argument(
+        batch_options.add_argument(
             "-n",
             "--n-jobs",
             type=int,
@@ -91,12 +86,12 @@ class ArgParser(ArgumentParser):
             try:
                 x = float(x)
             except ValueError:
-                raise argparse.ArgumentTypeError(
+                raise ArgumentTypeError(
                     "%r not a floating-point literal" % (x,)
                 )
 
             if x <= 0.0 or x >= 1.0:
-                raise argparse.ArgumentTypeError(
+                raise ArgumentTypeError(
                     "%r is not between 0.0 and 1.0" % (x,)
                 )
             return x

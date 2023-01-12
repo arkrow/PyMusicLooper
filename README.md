@@ -18,7 +18,7 @@ The following software must be installed for `pymusiclooper` to function correct
 
 - [Python](https://www.python.org/downloads/) >= 3.6
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other audio formats)
-- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal
+- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal (Note: pymusiclooper will still work without mpg123, however terminal playback will not be available, disabling the following functionalities: the default --play option, and the loop preview function in interactive mode)
 
 ### Installing using pip
 
@@ -60,6 +60,8 @@ Export:
   -t, --txt             export the loop points of a track in samples and append to a loop.txt
                         file (compatible with LoopingAudioConverter).
   --stdout              print the loop points of a track in samples to stdout (Standard Output)
+ 
+Batch Options:
   -r, --recursive       process directories and their contents recursively (has an effect only if
                         the given path is a directory).
   -f, --flatten         flatten the output directory structure instead of preserving it when
@@ -82,7 +84,7 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
 
-(c) export the loop points (in samples) to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
+(c) export the loop points (in samples) directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
 **Note**: using the interactive `-i` option is highly recommended, since the algorithmically chosen "best" loop point may not be perceptually good, mainly due to some chosen loop points causing 'sound popping' when played.
 
@@ -106,10 +108,16 @@ Export the song into intro, loop and outro files.
 pymusiclooper -e "TRACK_NAME.ogg"
 ```
 
-Export the loop points of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
+Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
 
 ```sh
 pymusiclooper -t "/path/to/dir/"
+```
+
+Instead of exporting the file into loop segments, the discovered loop points can be output directly to the CLI as sample points
+
+```sh
+pymusiclooper "/path/to/track.mp3" --stdout
 ```
 
 Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
@@ -132,10 +140,10 @@ pymusiclooper "TRACK_NAME.wav" -e -i
 
 ### Example of multiple functionalities in action
 
-Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently, preserving the original tags.
+Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
 
 ```sh
-pymusiclooper -ret . -o "Music Loops" -n 4 --preserve-tags
+pymusiclooper -ret . -o "Music Loops" -n 4
 ```
 
 ## Building from source
@@ -162,7 +170,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
-- v2.5.1 Added workaround for libsndfile mp3 loading issue; fixed error handling when no loop points were found or when audio has not been loaded.
+- v2.5.1 Added workaround for libsndfile mp3 loading issue; fixed error handling when no loop points were found, when audio has not been loaded or when mpg123 is unavailable.
 - v2.5.0 Added option to print loop points to terminal STDOUT (contributed by Coolsonickirby). Project relicensed to MIT license as of v2.5+.
 - v2.4.0 Temporarily disabled preserve_tags features to resolve dependency installation issues; pending re-implementation.
 - v2.3.0 Partial code re-organization and improvement; better exception handling

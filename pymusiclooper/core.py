@@ -278,11 +278,16 @@ class MusicLooper:
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
 
     def play_looping(self, loop_start, loop_end, start_from=0):
-        from mpg123 import ENC_FLOAT_32, Out123
+        try:
+            from mpg123 import ENC_FLOAT_32, Out123
 
-        out = Out123()
+            out = Out123()
 
-        out.start(self.rate, self.channels, ENC_FLOAT_32)
+            out.start(self.rate, self.channels, ENC_FLOAT_32)
+        except Exception as e:
+            logging.error('An issue related to the mpg123 library for playback has occured. If it is not installed/functional, alternatively use the export fucntionalities such as --export . See ` pymusiclooper --help ` for a full list of options.')
+            logging.error(e)
+            return
 
         playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"), frame_length=2048, hop_length=512)
         loop_start = loop_start * self.channels
