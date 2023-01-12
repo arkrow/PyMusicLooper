@@ -9,13 +9,18 @@ import librosa
 import numpy as np
 import soundfile
 
-from .exceptions import LoopNotFoundError
+from .exceptions import LoopNotFoundError, AudioLoadError
 
 
 class MusicLooper:
     def __init__(self, filepath, min_duration_multiplier=0.35, trim=True):
         # Load the file if it exists
-        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
+        # dtype and subsequent type cast are workarounds for a libsnd bug; see https://github.com/librosa/librosa/issues/1622 and https://github.com/bastibe/python-soundfile/issues/349
+        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False, dtype=None)
+        raw_audio = raw_audio.astype(np.float32)
+
+        if raw_audio.size == 0:
+            raise AudioLoadError('The audio file could not be loaded for analysis. The file may be corrupted, or the current environment may be lacking the necessary tools to open this file format.')
 
         self.filepath = filepath
         self.filename = os.path.basename(filepath)

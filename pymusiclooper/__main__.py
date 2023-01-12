@@ -13,7 +13,7 @@ from pymusiclooper import __version__
 
 from .argparser import ArgParser
 from .core import MusicLooper
-from .exceptions import LoopNotFoundError
+from .exceptions import LoopNotFoundError, AudioLoadError
 
 
 def loop_pairs(file_path, min_duration_multiplier):
@@ -116,11 +116,14 @@ def cli_main():
     def export_handler(file_path, output_directory=output_dir, batch=False):
         try:
             loop_pair_list = loop_pairs(file_path, args.min_duration_multiplier)
-        except (LoopNotFoundError, FileNotFoundError) as e:
+        except (LoopNotFoundError, AudioLoadError, FileNotFoundError) as e:
             logging.error(e)
             return
         except TypeError as e:
             logging.error(f"Skipping '{file_path}'. {e}")
+            return
+        except Exception as e:
+            logging.error(e)
             return
 
         loop_start, loop_end, score = choose_loop_pair(loop_pair_list, file_path)
@@ -255,7 +258,7 @@ def cli_main():
 
             track.play_looping(loop_start, loop_end)
 
-        except (TypeError, FileNotFoundError, LoopNotFoundError) as e:
+        except Exception as e:
             logging.error(e)
             return
 
