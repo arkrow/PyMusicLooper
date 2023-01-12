@@ -170,6 +170,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 
 ## Version History
 
+- v2.5.2 Hotfix for v2.5.1's redundant mpg123-related error message
 - v2.5.1 Added workaround for libsndfile mp3 loading issue; fixed error handling when no loop points were found, when audio has not been loaded or when mpg123 is unavailable.
 - v2.5.0 Added option to print loop points to terminal STDOUT (contributed by Coolsonickirby). Project relicensed to MIT license as of v2.5+.
 - v2.4.0 Temporarily disabled preserve_tags features to resolve dependency installation issues; pending re-implementation.

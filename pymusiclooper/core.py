@@ -286,7 +286,6 @@ class MusicLooper:
             out.start(self.rate, self.channels, ENC_FLOAT_32)
         except Exception as e:
             logging.error('An issue related to the mpg123 library for playback has occured. If it is not installed/functional, alternatively use the export fucntionalities such as --export . See ` pymusiclooper --help ` for a full list of options.')
-            logging.error(e)
             return
 
         playback_frames = librosa.util.frame(self.playback_audio.flatten(order="F"), frame_length=2048, hop_length=512)
