@@ -314,7 +314,7 @@ class MusicLooper:
                 print()
 
     def export(
-        self, loop_start, loop_end, format="WAV", output_dir=None, preserve_tags=False
+        self, loop_start, loop_end, format="WAV", output_dir=None
     ):
 
         if output_dir is not None:
@@ -343,9 +343,6 @@ class MusicLooper:
             self.rate,
             format=format,
         )
-
-        if preserve_tags:
-            pass
 
     def export_txt(self, loop_start, loop_end, output_dir=None):
         if output_dir is not None:

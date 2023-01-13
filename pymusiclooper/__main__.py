@@ -144,8 +144,7 @@ def cli_main():
             track.export(
                 loop_start,
                 loop_end,
-                output_dir=output_directory,
-                preserve_tags=args.preserve_tags,
+                output_dir=output_directory
             )
             message = f"Successfully exported '{track.filename}' intro/loop/outro sections to '{output_directory}'"
             if batch:
