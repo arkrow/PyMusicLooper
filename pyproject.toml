@@ -1,3 +1,39 @@
+[tool.poetry]
+name = "pymusiclooper"
+version = "3.0.0"
+description = "Automatically find the loop points of any music file and export into intro/loop/outro sections or loop points, with optional playback through the terminal."
+license = "MIT"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Multimedia :: Sound/Audio",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+repository = "https://github.com/arkrow/PyMusicLooper"
+readme = "README.md"
+authors = ["arkrow <arkrow@protonmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+librosa = ">=0.10.0"
+numpy = ">=1.24.0"
+soundfile = ">=0.12.1"
+tqdm = ">=4.45.0"
+sounddevice = ">=0.4.6"
+
+[tool.poetry.scripts]
+pymusiclooper = 'pymusiclooper.__main__:cli_main'
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.yapf]
+based_on_style = "google"

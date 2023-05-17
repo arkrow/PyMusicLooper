@@ -16,9 +16,8 @@ Features:
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python](https://www.python.org/downloads/) >= 3.6
+- [Python](https://www.python.org/downloads/) >= 3.8
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other audio formats)
-- [mpg123](https://www.mpg123.de/download.shtml) to play/preview music loops through the terminal (Note: pymusiclooper will still work without mpg123, however terminal playback will not be available, disabling the following functionalities: the default --play option, and the loop preview function in interactive mode)
 
 ### Installing using pip
 
@@ -148,20 +147,14 @@ pymusiclooper -ret . -o "Music Loops" -n 4
 
 ## Building from source
 
-Required python packages: `pip` and `setuptools`.
+Required python packages: `pip` and `poetry`.
 
-Clone the git repository to a directory of your choice and cd to inside the repo.
+Clone the git repository to a directory of your choice and `cd` to inside the repo.
 
 Run:
 
 ```sh
-python setup.py build
-```
-
-Followed by:
-
-```sh
-python setup.py install
+poetry install
 ```
 
 ## Acknowledgement
