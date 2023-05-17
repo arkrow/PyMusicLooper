@@ -38,9 +38,10 @@ class PlaybackHandler:
                 callback=callback, finished_callback=self.event.set)
 
             with stream:
+                # Override SIGINT/KeyboardInterrupt handler with custom logic for loop handling
+                signal.signal(signal.SIGINT, self._loop_interrupt_handler)
                 # Workaround for python issue on Windows
                 # (threading.Event().wait() not interruptable with Ctrl-C on Windows): https://bugs.python.org/issue35935
-                signal.signal(signal.SIGINT, self._loop_interrupt_handler) # Override SIGINT/KeyboardInterrupt with own logic for loop handling
                 while not self.event.wait(.5): # 0.5 second timeout to handle interrupts in-between
                     pass
         except Exception as e:
