@@ -33,16 +33,16 @@ class PlaybackHandler:
                     raise sd.CallbackStop()
                 self.current_frame += chunksize
 
-            stream = sd.OutputStream(
+            self.stream = sd.OutputStream(
                 samplerate=fs, channels=data.shape[1],
                 callback=callback, finished_callback=self.event.set)
 
-            with stream:
+            with self.stream:
                 # Override SIGINT/KeyboardInterrupt handler with custom logic for loop handling
                 signal.signal(signal.SIGINT, self._loop_interrupt_handler)
                 # Workaround for python issue on Windows
                 # (threading.Event().wait() not interruptable with Ctrl-C on Windows): https://bugs.python.org/issue35935
-                while not self.event.wait(.5): # 0.5 second timeout to handle interrupts in-between
+                while not self.event.wait(0.5): # 0.5 second timeout to handle interrupts in-between
                     pass
         except Exception as e:
             # parser.exit(type(e).__name__ + ': ' + str(e))
@@ -53,6 +53,8 @@ class PlaybackHandler:
             self.looping = False
             print('(Looping disabled. Ctrl+C again to stop playback.)')
         else:
-            signal.signal(signal.SIGINT, signal.default_int_handler) # restore default SIGINT handler
             self.event.set()
+            self.stream.stop()
+            self.stream.close()
             print('Playback interrupted by user.')
+            signal.signal(signal.SIGINT, signal.default_int_handler) # restore default SIGINT handler

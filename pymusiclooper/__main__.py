@@ -66,8 +66,8 @@ def cli_main():
                 print(f"  {idx}) from {end_time} back to {start_time}; score: {score:.2%}")
 
         def get_user_input():
-            num_input = input("Enter the number for the loop you'd like to use (append p to preview; e.g. 0p):")
             try:
+                num_input = input("Enter the number for the loop you'd like to use (append p to preview; e.g. 0p):")
                 idx = 0
                 preview = False
 
@@ -99,9 +99,16 @@ def cli_main():
 
             except KeyboardInterrupt:
                 print("\nOperation terminated by user. Exiting.")
-                sys.exit(0)
+                sys.exit()
+            except Exception as e:
+                print(f"An unexpected error has occured.\n{e}")
 
         selected_index = get_user_input()
+        
+        if selected_index is None:
+            print('Please select a valid number.')
+            return get_user_input()
+        
         return selected_index
 
     def choose_loop_pair(loop_pair_list, file_path):
