@@ -14,11 +14,19 @@ from .exceptions import LoopNotFoundError, AudioLoadError
 
 
 class MusicLooper:
-    def __init__(self, filepath, min_duration_multiplier=0.35, trim=True):
+
+    def __init__(self,
+                 filepath,
+                 min_duration_multiplier=0.35,
+                 min_loop_duration=None,
+                 max_loop_duration=None,
+                 trim=True):
         # Load the file if it exists
         # dtype and subsequent type cast are workarounds for a libsnd bug; see https://github.com/librosa/librosa/issues/1622 and https://github.com/bastibe/python-soundfile/issues/349
         raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False, dtype=None)
         raw_audio = raw_audio.astype(np.float32)
+        self.total_duration = librosa.get_duration(y=raw_audio,
+                                                   sr=sampling_rate)
 
         if raw_audio.size == 0:
             raise AudioLoadError('The audio file could not be loaded for analysis. The file may be corrupted, or the current environment may be lacking the necessary tools to open this file format.')
@@ -36,7 +44,14 @@ class MusicLooper:
         self.trim_offset = self.trim_offset[0]
 
         self.rate = sampling_rate
-        self.min_duration_multiplier = min_duration_multiplier
+        self.min_loop_duration = (self.seconds_to_frames(min_loop_duration)
+                             if min_loop_duration is not None else
+                             self.seconds_to_frames(
+                                 int(min_duration_multiplier *
+                                     self.total_duration)))
+        self.max_loop_duration = (self.seconds_to_frames(max_loop_duration)
+                             if max_loop_duration is not None else
+                             self.seconds_to_frames(self.total_duration))
 
         # Initialize parameters for playback
         self.playback_audio = raw_audio
@@ -70,8 +85,6 @@ class MusicLooper:
 
         logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
-        min_duration = int(chroma.shape[-1] * self.min_duration_multiplier)
-
         runtime_end = time.time()
         prep_time = runtime_end - runtime_start
         logging.info("Finished initial audio processing in {:.3}s".format(prep_time))
@@ -82,8 +95,11 @@ class MusicLooper:
 
         for idx, loop_end in enumerate(beats):
             for loop_start in beats:
-                if loop_end - loop_start < min_duration:
+                loop_length = loop_end - loop_start
+                if loop_length < self.min_loop_duration:
                     break
+                if loop_length > self.max_loop_duration:
+                    continue
                 dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
                 if dist <= deviation[idx]:
                     db_diff = self.db_diff(
@@ -113,25 +129,24 @@ class MusicLooper:
         if test_offset > chroma.shape[-1]:
             test_offset = chroma.shape[-1] // 4
 
-        candidate_pairs = self._dB_prune(candidate_pairs)
+        candidate_pairs = self._prune_by_dB_diff(candidate_pairs)
 
         weights = _geometric_weights(test_offset, start=test_offset // num_test_beats)
         pair_score_list = [
-            self._pair_score(
+            self._calculate_loop_score(
                 pair["loop_start"],
                 pair["loop_end"],
                 chroma,
                 test_duration=test_offset,
                 weights=weights,
-            )
-            for pair in candidate_pairs
+            ) for pair in candidate_pairs
         ]
 
         # Add cosine similarity as score
         for pair, score in zip(candidate_pairs, pair_score_list):
             pair["score"] = score
 
-        candidate_pairs = self._score_prune(candidate_pairs)
+        candidate_pairs = self._prune_by_score(candidate_pairs)
 
         # re-sort based on new score
         candidate_pairs = sorted(candidate_pairs, reverse=True, key=lambda x: x["score"])
@@ -164,7 +179,7 @@ class MusicLooper:
         else:
             return candidate_pairs
 
-    def _score_prune(self, candidate_pairs, percentile=10, acceptable_score=80):
+    def _prune_by_score(self, candidate_pairs, percentile=10, acceptable_score=80):
         candidate_pairs = sorted(candidate_pairs, key=lambda x: x["score"])
 
         score_array = np.array(
@@ -177,7 +192,7 @@ class MusicLooper:
 
         return candidate_pairs[min(percentile_idx, acceptable_idx):]
 
-    def _dB_prune(self, candidate_pairs, percentile=90, acceptable_db_diff=0.125):
+    def _prune_by_dB_diff(self, candidate_pairs, percentile=90, acceptable_db_diff=0.125):
         candidate_pairs = sorted(candidate_pairs, key=lambda x: x["dB_diff"])
 
         db_diff_array = np.array(
@@ -216,17 +231,17 @@ class MusicLooper:
         if duration_argmax:
             pair_list.insert(0, pair_list.pop(duration_argmax))
 
-    def _pair_score(self, b1, b2, chroma, test_duration, weights=None):
-        lookahead_score = self._subseq_beat_similarity(
+    def _calculate_loop_score(self, b1, b2, chroma, test_duration, weights=None):
+        lookahead_score = self._calculate_subseq_beat_similarity(
             b1, b2, chroma, test_duration, weights=weights
         )
-        lookbehind_score = self._subseq_beat_similarity(
+        lookbehind_score = self._calculate_subseq_beat_similarity(
             b1, b2, chroma, -test_duration, weights=weights[::-1]
         )
 
         return max(lookahead_score, lookbehind_score)
 
-    def _subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
+    def _calculate_subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
         if test_duration < 0:
             max_negative_offset = max(test_duration, -b1_start, -b2_start)
             b1_start = b1_start + max_negative_offset
@@ -301,19 +316,19 @@ class MusicLooper:
         loop_end = self.frames_to_samples(loop_end)
 
         soundfile.write(
-            out_path + "-intro." + format.lower(),
+            f"{out_path}-intro.{format.lower()}",
             self.playback_audio[..., :loop_start].T,
             self.rate,
             format=format,
         )
         soundfile.write(
-            out_path + "-loop." + format.lower(),
+            f"{out_path}-loop.{format.lower()}",
             self.playback_audio[..., loop_start:loop_end].T,
             self.rate,
             format=format,
         )
         soundfile.write(
-            out_path + "-outro." + format.lower(),
+            f"{out_path}-outro.{format.lower()}",
             self.playback_audio[..., loop_end:].T,
             self.rate,
             format=format,
