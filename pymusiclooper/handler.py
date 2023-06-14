@@ -105,14 +105,15 @@ class CliLoopHandler:
             return get_user_input()
         
         return selected_index
-    
+
 class ExportHandler(CliLoopHandler):
-    def __init__(self, file_path, min_duration_multiplier, output_dir, to_txt, to_stdout, samples, interactive_mode, batch_mode=False) -> None:
+    def __init__(self, file_path, min_duration_multiplier, output_dir, to_txt=False, to_stdout=False, samples=False, tag_names:tuple[str, str]=None, interactive_mode=False, batch_mode=False) -> None:
         super().__init__(file_path, min_duration_multiplier)
         self.output_directory = output_dir
         self.to_txt = to_txt
         self.to_stdout = to_stdout
         self.samples = samples
+        self.tag_names = tag_names
         self.interactive_mode = interactive_mode
         self.batch_mode = batch_mode
     
@@ -133,6 +134,18 @@ class ExportHandler(CliLoopHandler):
 
         track = self.get_musiclooper_obj()
 
+        if self.tag_names is not None:
+            loop_start_tag, loop_end_tag = self.tag_names
+            track.export_tags(loop_start, loop_end, loop_start_tag, loop_end_tag, output_dir=self.output_directory)
+
+            loop_start_samples, loop_end_samples = track.frames_to_samples(loop_start), track.frames_to_samples(loop_end)
+            
+            message = f"Exported {loop_start_tag}:{loop_start_samples} and {loop_end_tag}:{loop_end_samples} to a copy in {self.output_directory}"
+            if self.batch_mode:
+                logging.info(message)
+            else:
+                click.echo(message)
+
         if self.to_stdout:
             loop_start_samples = track.frames_to_samples(loop_start)
             loop_end_samples = track.frames_to_samples(loop_end)
@@ -145,7 +158,7 @@ class ExportHandler(CliLoopHandler):
                 logging.info(message)
             else:
                 click.echo(message)
-        if not (self.to_stdout or self.to_txt):
+        if not (self.to_stdout or self.to_txt or self.tag_names is not None):
             track.export(
                 loop_start,
                 loop_end,
@@ -158,7 +171,7 @@ class ExportHandler(CliLoopHandler):
                 click.echo(message)
 
 class BatchHandler:
-    def __init__(self, directory_path, min_duration_multiplier, output_dir, to_txt, to_stdout, samples, recursive, flatten, n_jobs, interactive_mode) -> None:
+    def __init__(self, directory_path, min_duration_multiplier, output_dir, to_txt=False, to_stdout=False, samples=False, recursive=False, flatten=False, n_jobs=1, tag_names:tuple[str, str]=None, interactive_mode=False) -> None:
         self.directory_path = os.path.abspath(directory_path)
         self.min_duration_multiplier = min_duration_multiplier
         self.output_directory = output_dir
@@ -168,13 +181,13 @@ class BatchHandler:
         self.recursive = recursive
         self.flatten = flatten
         self.n_jobs = max(n_jobs, 1)
+        self.tag_names = tag_names
         self.interactive_mode = interactive_mode
 
     def run(self):
         files = self.get_files_in_directory(self.directory_path, recursive=self.recursive)
-
-        if not self.flatten:
-            output_dirs = self.clone_file_tree_structure(files, self.output_directory)
+        
+        output_dirs = None if self.flatten else self.clone_file_tree_structure(files, self.output_directory)
 
         if not files:
             logging.error(f"No files found in '{self.directory_path}'")
@@ -184,15 +197,15 @@ class BatchHandler:
             tqdm_files = tqdm(files)
             for file_idx, file in enumerate(tqdm_files):
                 tqdm_files.set_description(f"Processing '{file}'")
-                self.export(
-                    file,
-                    self.min_duration_multiplier,
-                    self.output_directory if self.flatten else output_dirs[file_idx],
-                    self.to_txt,
-                    self.to_stdout,
-                    self.samples,
-                    self.interactive_mode
-                )
+                self._batch_export_helper(
+                    file_path=file,
+                    min_duration_multiplier=self.min_duration_multiplier,
+                    output_dir=self.output_directory if self.flatten else output_dirs[file_idx],
+                    to_txt=self.to_txt,
+                    to_stdout=self.to_stdout,
+                    samples=self.samples,
+                    tag_names=self.tag_names,
+                    interactive_mode=self.interactive_mode)
         else:
             # Note: some arguments are disabled due to inherent incompatibility with the current multiprocessing implementation
             self._batch_multiprocess(files, output_dirs, processes=[], file_idx=0, num_files=len(files))
@@ -202,10 +215,10 @@ class BatchHandler:
             while file_idx < num_files:
                 for pid in range(self.n_jobs):
                     p = Process(
-                            target=self.export,
+                            target=self._batch_export_helper,
                             kwargs={
-                                "path": files[file_idx],
-                                "output_directory":
+                                "file_path": files[file_idx],
+                                "output_dir":
                                     self.output_directory
                                     if self.flatten
                                     else output_dirs[file_idx],
@@ -213,6 +226,7 @@ class BatchHandler:
                                 "to_txt": False,
                                 "to_stdout": False,
                                 "samples": False,
+                                "tag_names":self.tag_names,
                                 "interactive_mode": False
                                 },
                             daemon=True,
@@ -261,6 +275,14 @@ class BatchHandler:
         )
     
     @staticmethod
-    def export(path, min_duration_multiplier, output_directory, to_txt, to_stdout, samples, interactive_mode):
-            export_handler = ExportHandler(path, min_duration_multiplier, output_directory, to_txt, to_stdout, samples, interactive_mode, batch_mode=True)
+    def _batch_export_helper(file_path, min_duration_multiplier, output_dir, to_txt, to_stdout, samples, tag_names, interactive_mode):
+            export_handler = ExportHandler(file_path=file_path,
+                                           min_duration_multiplier=min_duration_multiplier,
+                                           output_dir=output_dir,
+                                           to_txt=to_txt,
+                                           to_stdout=to_stdout,
+                                           samples=samples,
+                                           tag_names=tag_names,
+                                           interactive_mode=interactive_mode,
+                                           batch_mode=True)
             export_handler.run()

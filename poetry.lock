@@ -249,26 +249,6 @@ files = [
 ]
 
 [[package]]
-name = "importlib-metadata"
-version = "6.6.0"
-description = "Read metadata from Python packages"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "importlib_metadata-6.6.0-py3-none-any.whl", hash = "sha256:43dd286a2cd8995d5eaef7fee2066340423b818ed3fd70adf0bad5f1fac53fed"},
-    {file = "importlib_metadata-6.6.0.tar.gz", hash = "sha256:92501cdf9cc66ebd3e612f1b4f0c0765dfa42f0fa38ffb319b6bd84dd675d705"},
-]
-
-[package.dependencies]
-zipp = ">=0.5"
-
-[package.extras]
-docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-perf = ["ipython"]
-testing = ["flake8 (<5)", "flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)", "pytest-perf (>=0.9.2)"]
-
-[[package]]
 name = "joblib"
 version = "1.2.0"
 description = "Lightweight pipelining with Python functions"
@@ -470,7 +450,6 @@ files = [
 ]
 
 [package.dependencies]
-importlib-metadata = {version = "*", markers = "python_version < \"3.9\""}
 llvmlite = ">=0.40.0dev0,<0.41"
 numpy = ">=1.21,<1.25"
 
@@ -557,6 +536,50 @@ files = [
     {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},
     {file = "pycparser-2.21.tar.gz", hash = "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"},
 ]
+
+[[package]]
+name = "pytaglib"
+version = "2.0.0"
+description = "cross-platform, Python audio metadata (\"tagging\") library based on TagLib"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pytaglib-2.0.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0fd398ed65806ae4ff4adfc12cfc4a7645b51355d19f334ea3573ef01a9515a8"},
+    {file = "pytaglib-2.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b79819c9b79ab64860c6ffac57f43299f759ce37e520abd162132d49fa8e5b53"},
+    {file = "pytaglib-2.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba9083f0c9b60600f79befb775595f8339407076d30f1d05500ee588a5e3bf2e"},
+    {file = "pytaglib-2.0.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:6dbe79567a2e933f5df8dd665424e530e6e9f3fc54da5b6c40c8ad451ed9e612"},
+    {file = "pytaglib-2.0.0-cp310-cp310-win_amd64.whl", hash = "sha256:5671961fb475bef11ccfe9a76fad0b0ce2df8213eeab1dbdd54e859341797472"},
+    {file = "pytaglib-2.0.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:f96f08d4648f8e74a4f951877e77e5c774b712cf710ca6c153df0755a1861071"},
+    {file = "pytaglib-2.0.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b39a23f3f0b565239ea8a252bae4e8a4fc94ca5cd3f0b78afbb5c8fa7f28fb91"},
+    {file = "pytaglib-2.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2cbc60a9e3acbd2cf703c3b04c7ea1b888e8b76c4517bc8e3373b41c461ae295"},
+    {file = "pytaglib-2.0.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:8a532665f95571878bba9b9b4799cc093c718f76bfe77db440e9b81b5ea8c5ef"},
+    {file = "pytaglib-2.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:4c98c86c04c544d1910a9af07ad9c951144c1f249d456ce3d09ec8af1aab5d4e"},
+    {file = "pytaglib-2.0.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:d4b1a80808628967b02a42be43d82704a22016045ca68b58fa7a0466af4c330e"},
+    {file = "pytaglib-2.0.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ae2acb0d85b7bc37cfeafeb372e5899e3a64bb5abd1b2787c5df50f0bcde31ff"},
+    {file = "pytaglib-2.0.0-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:e465b39fca4e24bf22f733f9a1377dddb488e1beb8f67e8d1cb6c3925ed12efd"},
+    {file = "pytaglib-2.0.0-cp37-cp37m-win_amd64.whl", hash = "sha256:dbe25c2395eb1717c88f204d2fe0190d000bf9fd86a00f3edb0b4c1d3b15c141"},
+    {file = "pytaglib-2.0.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:df0e26db35a1fa10601ac09afaa6466022db0a8a14bbc5deb023e22e679a3696"},
+    {file = "pytaglib-2.0.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:adc2a15348c737c90c1e1968848671e7fe7aa7d50166ad13848d9d32c281fc63"},
+    {file = "pytaglib-2.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d0a147257b592aa64689cd42a5efdefabef23615adebdf6ad582b80f64696753"},
+    {file = "pytaglib-2.0.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:2bd293b01fd276cc2cae48fb5c435c955184ff36eed7b3d5a1e67649cd0fb877"},
+    {file = "pytaglib-2.0.0-cp38-cp38-win_amd64.whl", hash = "sha256:877a9342b2aea30f42c000fca61fa7aeb47a94441f6f502e76447e1c8b3ba0d8"},
+    {file = "pytaglib-2.0.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:cfec52044570e058a9918a23a2c9c6a630401d1c5830c58be0a6ed9de3178678"},
+    {file = "pytaglib-2.0.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:e8f8853de3d6a12ba91103bedf5f6b4199697f5ebb50f8026d050949bd298652"},
+    {file = "pytaglib-2.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2aa2c4ac5389b22b4b891ca7a9d9906d5a008b8797997add2a883fcea72c439f"},
+    {file = "pytaglib-2.0.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:757bf7be89eea76fa7886830e737a86cc42e657c0bfe398a2a82af802cd4074c"},
+    {file = "pytaglib-2.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:63c70a26fc08d2f3c6c8d9a361b57cf7af6362f6931276fc28cbd8f26062efee"},
+    {file = "pytaglib-2.0.0-pp37-pypy37_pp73-macosx_10_9_x86_64.whl", hash = "sha256:a62a5301ae625828d0d24e2821600a8b6c8c70375cc618fa8445a42e6935ce96"},
+    {file = "pytaglib-2.0.0-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b5d0c1c27f44c298547fd5dda767cc76372bb8f29acfddd5909d93d0689bc6f7"},
+    {file = "pytaglib-2.0.0-pp38-pypy38_pp73-macosx_10_9_x86_64.whl", hash = "sha256:6adca15a436acf9db15aea9730c95bc7dcacd054ac1e91a92c273939b9ee65fa"},
+    {file = "pytaglib-2.0.0-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3ca00157213982519119f9a798456db989b0b14bf1612a58bc7101195bc123c3"},
+    {file = "pytaglib-2.0.0-pp39-pypy39_pp73-macosx_10_9_x86_64.whl", hash = "sha256:b4ad15bf7a0f8f451a8cbbac32bc599af06118b99c418bf352f25d1c7782843a"},
+    {file = "pytaglib-2.0.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3eddbcb05d9cf52d5ed1a080d2b8c4eab1068e702cb33087f8c1d29ad8fad09a"},
+    {file = "pytaglib-2.0.0.tar.gz", hash = "sha256:f62f45b7dd998ea81705bd228c2643ed743f5537543988d918955d5662b80737"},
+]
+
+[package.extras]
+tests = ["pytest"]
 
 [[package]]
 name = "requests"
@@ -832,23 +855,7 @@ secure = ["certifi", "cryptography (>=1.9)", "idna (>=2.0.0)", "pyopenssl (>=17.
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
-[[package]]
-name = "zipp"
-version = "3.15.0"
-description = "Backport of pathlib-compatible object wrapper for zip files"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "zipp-3.15.0-py3-none-any.whl", hash = "sha256:48904fc76a60e542af151aded95726c1a5c34ed43ab4134b597665c86d7ad556"},
-    {file = "zipp-3.15.0.tar.gz", hash = "sha256:112929ad649da941c23de50f356a2b5570c954b65150642bccdd66bf194d224b"},
-]
-
-[package.extras]
-docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)"]
-
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.8"
-content-hash = "951d15ee8c9f17f8d7618c029c29ceaaa263f2dc10fa7ecf00f681f4ccb9ac2c"
+python-versions = ">=3.9"
+content-hash = "bd8102c1c2c36c182fa7df283d648289f79b1507790e9ba7a912d4074d4218a7"

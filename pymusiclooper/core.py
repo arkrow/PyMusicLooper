@@ -4,10 +4,12 @@
 import logging
 import os
 import time
+import shutil
 
 import librosa
 import numpy as np
 import soundfile
+import taglib
 
 from .playback import PlaybackHandler
 from .exceptions import LoopNotFoundError, AudioLoadError
@@ -345,6 +347,22 @@ class MusicLooper:
 
         with open(out_path, "a") as file:
             file.write(f"{loop_start} {loop_end} {self.filename}\n")
+
+    def export_tags(self, loop_start, loop_end, loop_start_tag, loop_end_tag, output_dir=None):
+        if output_dir is None:
+            output_dir = os.path.abspath(self.filepath)
+        
+        track_name, file_extension = os.path.splitext(self.filename)
+
+        exported_file_path = os.path.join(output_dir, f"{track_name}-tagged{file_extension}")
+        shutil.copyfile(self.filepath, exported_file_path)
+
+        loop_start = int(self.frames_to_samples(loop_start))
+        loop_end = int(self.frames_to_samples(loop_end))
+
+        with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
+            audio_file.tags[loop_start_tag] = [str(loop_start)]
+            audio_file.tags[loop_end_tag] = [str(loop_end)]
 
     def print(self, loop_start, loop_end):
         loop_start = int(self.frames_to_samples(loop_start))
