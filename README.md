@@ -1,5 +1,10 @@
 # PyMusicLooper
 
+## Note for the current v3 development branch
+
+Since PyMusicLooper v3.0 is still in development and carries several new features as well as many breaking changes especially to its CLI,
+use the built-in `--help` option for up-to-date interface options.
+
 A python script for repeating music seamlessly and endlessly, by automatically finding the best loop points.
 
 Features:
@@ -17,73 +22,60 @@ Features:
 The following software must be installed for `pymusiclooper` to function correctly.
 
 - [Python](https://www.python.org/downloads/) >= 3.8
-- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and other audio formats)
+- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and many other audio formats)
 
-### Installing using pip
+### Option 1: Installing using pip
 
 ```sh
 pip install pymusiclooper
 ```
 
-### Installing directly from git
+### Option 2: Installing directly from source
+
+Required python packages: `pip` and `poetry`.
+
+Clone the git repository to a directory of your choice and `cd` to inside the repo.
+
+(Optional): `git checkout` to the desired branch
+
+Then, run:
 
 ```sh
-pip install git+https://github.com/arkrow/PyMusicLooper.git
+poetry install
 ```
+
+This will install all the project dependencies and the project itself.
+Using a virtual environment is usually recommended to avoid version conflicts with other packages.
 
 ## Usage
 
 ```raw
-usage: pymusiclooper [-h] [-v] [-i] [-p] [-e] [--preserve-tags] [-t] [--stdout] [-r] [-f]
-                     [-n N_JOBS] [-o OUTPUT_DIR] [-m MIN_DURATION_MULTIPLIER] [-V]
-                     path
+Usage: pymusiclooper [OPTIONS] COMMAND [ARGS]...
 
-A script for repeating music seamlessly and endlessly, by automatically finding the best loop
-points.
+  A program for repeating music seamlessly and endlessly, by automatically
+  finding the best loop points.
 
-positional arguments:
-  path                  path to file or directory
+Options:
+  -v, --verbose      Enables verbose logging output.
+  -i, --interactive  Enables interactive mode to manually preview/choose the
+                     desired loop point.
+  --version          Show the version and exit.
+  --help             Show this message and exit.
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         enable verbose logging output
-  -i, --interactive     manually preview/choose which loop to use out of the discovered loop
-                        points
-  -V, --version         show program's version number and exit
-
-Play:
-  -p, --play            play the song on repeat with the best discovered loop point (default).
-
-Export:
-  -e, --export          export the song into intro, loop and outro files (WAV format).
-  -t, --txt             export the loop points of a track in samples and append to a loop.txt
-                        file (compatible with LoopingAudioConverter).
-  --stdout              print the loop points of a track in samples to stdout (Standard Output)
- 
-Batch Options:
-  -r, --recursive       process directories and their contents recursively (has an effect only if
-                        the given path is a directory).
-  -f, --flatten         flatten the output directory structure instead of preserving it when
-                        using the --recursive flag.
-  -n N_JOBS, --n-jobs N_JOBS
-                        number of files to batch process at a time (default: 1). WARNING: greater
-                        values result in higher memory consumption.
-
-General Options:
-  -o OUTPUT_DIR, --output-dir OUTPUT_DIR
-                        specify a different output directory.
-  -m MIN_DURATION_MULTIPLIER, --min-duration-multiplier MIN_DURATION_MULTIPLIER
-                        specify minimum loop duration as a multiplier of song duration (default:
-                        0.35)
+Commands:
+  export  Export the audio into intro, loop and outro files
+  play    Play an audio file on repeat from the terminal
 ```
+
+Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export --help`)
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on your arguments:
 
-(a) play the song on repeat using the best discovered loop point (default, requires [mpg123](https://www.mpg123.de/download.shtml));
+(a) play the song on repeat using the best discovered loop point;
 
-(b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/) or [Audacity](https://www.audacityteam.org/));
+(b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/), [Audacity](https://www.audacityteam.org/), etc.);
 
-(c) export the loop points (in samples) directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
+(c) export the loop points (in samples) to the terminal directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
 **Note**: using the interactive `-i` option is highly recommended, since the algorithmically chosen "best" loop point may not be perceptually good, mainly due to some chosen loop points causing 'sound popping' when played.
 
@@ -96,7 +88,13 @@ Side note: Most terminals support file drag-and-drop, which can be utilized inst
 Play the song on repeat with the best discovered loop point.
 
 ```sh
-pymusiclooper "TRACK_NAME.mp3"
+pymusiclooper play --path "TRACK_NAME.mp3"
+```
+
+If the automatically chosen loop is undesirable, you can use pymusiclooper in interactive mode, e.g.
+
+```sh
+pymusiclooper -i play --path "TRACK_NAME.mp3"
 ```
 
 ### Export
@@ -104,19 +102,19 @@ pymusiclooper "TRACK_NAME.mp3"
 Export the song into intro, loop and outro files.
 
 ```sh
-pymusiclooper -e "TRACK_NAME.ogg"
+pymusiclooper export "TRACK_NAME.ogg"
 ```
 
 Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
 
 ```sh
-pymusiclooper -t "/path/to/dir/"
+pymusiclooper export --path "/path/to/dir/" --to-txt
 ```
 
 Instead of exporting the file into loop segments, the discovered loop points can be output directly to the CLI as sample points
 
 ```sh
-pymusiclooper "/path/to/track.mp3" --stdout
+pymusiclooper export --path "/path/to/track.mp3" --to-stdout
 ```
 
 Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
@@ -125,36 +123,25 @@ Note: each line in loop.txt follows the following format: `{loop-start} {loop-en
 
 If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
 If the most of the track is the loop section, specifying a higher multiplier will also speed the algorithm up.
-Here `-m 0.85` means that, excluding silence, the loop section is at least 85% of the music track.
+Here `--min-duration-multiplier 0.85` means that, excluding trailing silence, the loop section is at least 85% of the music track.
 
 ```sh
-pymusiclooper "TRACK_NAME.flac" -m 0.85
+pymusiclooper export --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
 ```
 
 Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
 
 ```sh
-pymusiclooper "TRACK_NAME.wav" -e -i
+pymusiclooper -i export --path "TRACK_NAME.wav"
 ```
 
 ### Example of multiple functionalities in action
 
 Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
+(Note: due to current limitations, concurrent processing is very memory intensive. Ten minute tracks can consume 3GBs of memory during processing, with typical shorter tracks (3-4 minutes) using 1-2 GBs each.)
 
 ```sh
-pymusiclooper -ret . -o "Music Loops" -n 4
-```
-
-## Building from source
-
-Required python packages: `pip` and `poetry`.
-
-Clone the git repository to a directory of your choice and `cd` to inside the repo.
-
-Run:
-
-```sh
-poetry install
+pymusiclooper export --path "./" --recursive --output-dir "Music Loops" --n-jobs 4
 ```
 
 ## Acknowledgement
