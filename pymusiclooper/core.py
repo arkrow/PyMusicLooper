@@ -59,31 +59,10 @@ class MusicLooper:
         self.playback_audio = raw_audio
         self.channels = self.playback_audio.shape[0]
 
-    def db_diff(self, power_db_f1, power_db_f2):
-        f1_max = np.max(power_db_f1)
-        f2_max = np.max(power_db_f2)
-        return max(f1_max, f2_max) - min(f1_max, f2_max)
-
     def find_loop_pairs(self):
         runtime_start = time.time()
 
-        S = librosa.core.stft(y=self.audio)
-        S_power = np.abs(S) ** 2
-        S_weighed = librosa.core.perceptual_weighting(
-            S=S_power, frequencies=librosa.fft_frequencies(sr=self.rate)
-        )
-        mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed, sr=self.rate, n_mels=128, fmax=8000)
-        chroma = librosa.feature.chroma_stft(S=S_power)
-        power_db = librosa.power_to_db(S_weighed, ref=np.median)
-
-        onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
-
-        pulse = librosa.beat.plp(onset_envelope=onset_env)
-        beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-        bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
-
-        beats = np.union1d(beats, beats_plp)
-        beats = np.sort(beats)
+        chroma, power_db, bpm, beats = self._analyze_audio()
 
         logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
 
@@ -91,37 +70,34 @@ class MusicLooper:
         prep_time = runtime_end - runtime_start
         logging.info("Finished initial audio processing in {:.3}s".format(prep_time))
 
-        candidate_pairs = []
-
-        deviation = np.linalg.norm(chroma[..., beats] * 0.085, axis=0)
-
-        for idx, loop_end in enumerate(beats):
-            for loop_start in beats:
-                loop_length = loop_end - loop_start
-                if loop_length < self.min_loop_duration:
-                    break
-                if loop_length > self.max_loop_duration:
-                    continue
-                dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
-                if dist <= deviation[idx]:
-                    db_diff = self.db_diff(
-                        power_db[..., loop_end], power_db[..., loop_start]
-                    )
-                    if db_diff <= 1.5:
-                        candidate_pairs.append(
-                            {
-                                "loop_start": loop_start,
-                                "loop_end": loop_end,
-                                "dB_diff": db_diff,
-                                "dist": (dist / deviation[idx])
-                            }
-                        )
+        candidate_pairs = self._find_candidate_pairs(chroma, power_db, beats)
 
         logging.info(f"Found {len(candidate_pairs)} possible loop points")
 
         if not candidate_pairs:
             raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
 
+        filtered_candidate_pairs = self._assess_and_filter_loop_pairs(chroma, bpm, candidate_pairs)
+
+        # prefer longer loops for highly similar sequences
+        if len(filtered_candidate_pairs) > 1:
+            self._prioritize_duration(filtered_candidate_pairs)
+
+        if self.trim_offset:
+            for pair in filtered_candidate_pairs:
+                pair["loop_start"] = self.apply_trim_offset(
+                    pair["loop_start"]
+                )
+                pair["loop_end"] = self.apply_trim_offset(
+                    pair["loop_end"]
+                )
+
+        if not filtered_candidate_pairs:
+            raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
+        else:
+            return filtered_candidate_pairs
+
+    def _assess_and_filter_loop_pairs(self, chroma, bpm, candidate_pairs):
         beats_per_second = bpm / 60
         num_test_beats = 12
         seconds_to_test = num_test_beats / beats_per_second
@@ -152,34 +128,56 @@ class MusicLooper:
 
         # re-sort based on new score
         candidate_pairs = sorted(candidate_pairs, reverse=True, key=lambda x: x["score"])
+        return candidate_pairs
 
-        # prefer longer loops for highly similar sequences
-        if len(candidate_pairs) > 1:
-            self._prioritize_duration(candidate_pairs)
+    def _find_candidate_pairs(self, chroma, power_db, beats):
+        candidate_pairs = []
 
-        if self.trim_offset:
-            for pair in candidate_pairs:
-                pair["loop_start"] = self.apply_trim_offset(
-                    pair["loop_start"]
-                )
-                pair["loop_end"] = self.apply_trim_offset(
-                    pair["loop_end"]
-                )
+        deviation = np.linalg.norm(chroma[..., beats] * 0.085, axis=0)
 
-        for pair in candidate_pairs:
-            logging.info(
-                "Found from {} to {}, dB_diff:{}, similarity:{}".format(
-                    pair["loop_start"],
-                    pair["loop_end"],
-                    pair["dB_diff"],
-                    pair["score"],
-                )
-            )
+        for idx, loop_end in enumerate(beats):
+            for loop_start in beats:
+                loop_length = loop_end - loop_start
+                if loop_length < self.min_loop_duration:
+                    break
+                if loop_length > self.max_loop_duration:
+                    continue
+                dist = np.linalg.norm(chroma[..., loop_end] - chroma[..., loop_start])
+                if dist <= deviation[idx]:
+                    db_diff = self._db_diff(
+                        power_db[..., loop_end], power_db[..., loop_start]
+                    )
+                    if db_diff <= 1.5:
+                        candidate_pairs.append(
+                            {
+                                "loop_start": loop_start,
+                                "loop_end": loop_end,
+                                "dB_diff": db_diff,
+                                "dist": (dist / deviation[idx])
+                            }
+                        )
+                        
+        return candidate_pairs
 
-        if not candidate_pairs:
-            raise LoopNotFoundError(f'No loop points found for {self.filename} with current parameters.')
-        else:
-            return candidate_pairs
+    def _analyze_audio(self):
+        S = librosa.core.stft(y=self.audio)
+        S_power = np.abs(S) ** 2
+        S_weighed = librosa.core.perceptual_weighting(
+            S=S_power, frequencies=librosa.fft_frequencies(sr=self.rate)
+        )
+        mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed, sr=self.rate, n_mels=128, fmax=8000)
+        chroma = librosa.feature.chroma_stft(S=S_power)
+        power_db = librosa.power_to_db(S_weighed, ref=np.median)
+
+        onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
+
+        pulse = librosa.beat.plp(onset_envelope=onset_env)
+        beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+        bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+
+        beats = np.union1d(beats, beats_plp)
+        beats = np.sort(beats)
+        return chroma,power_db,bpm,beats
 
     def _prune_by_score(self, candidate_pairs, percentile=10, acceptable_score=80):
         candidate_pairs = sorted(candidate_pairs, key=lambda x: x["score"])
@@ -242,6 +240,11 @@ class MusicLooper:
         )
 
         return max(lookahead_score, lookbehind_score)
+
+    def _db_diff(self, power_db_f1, power_db_f2):
+        f1_max = np.max(power_db_f1)
+        f2_max = np.max(power_db_f2)
+        return max(f1_max, f2_max) - min(f1_max, f2_max)
 
     def _calculate_subseq_beat_similarity(self, b1_start, b2_start, chroma, test_duration, weights=None):
         if test_duration < 0:
