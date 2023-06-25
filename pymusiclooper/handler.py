@@ -18,8 +18,8 @@ class LoopHandler:
         self.musiclooper = MusicLooper(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration)
         logging.info(f"Loaded '{file_path}'. Analyzing...")
         self.loop_pair_list = self.musiclooper.find_loop_pairs()
-        self.interactive_mode = bool(os.environ.get('PML_INTERACTIVE_MODE', False))
-        self.in_samples = bool(os.environ.get('PML_DISPLAY_SAMPLES', False))
+        self.interactive_mode = (os.environ.get('PML_INTERACTIVE_MODE', 'False') == 'True')
+        self.in_samples = (os.environ.get('PML_DISPLAY_SAMPLES', 'False') == 'True')
 
     def get_all_loop_pairs(self) -> list[LoopPair]:
         """
