@@ -34,6 +34,9 @@ numba = "^0.57.0"
 [tool.poetry.scripts]
 pymusiclooper = 'pymusiclooper.__main__:cli'
 
+[tool.poetry.urls]
+"Changelog" = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
