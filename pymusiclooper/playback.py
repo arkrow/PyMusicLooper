@@ -1,8 +1,9 @@
 import threading
 import signal
-import sounddevice as sd
 import logging
 import signal
+
+import sounddevice as sd
 
 class PlaybackHandler:
     def __init__(self) -> None:
@@ -45,7 +46,6 @@ class PlaybackHandler:
                 while not self.event.wait(0.5): # 0.5 second timeout to handle interrupts in-between
                     pass
         except Exception as e:
-            # parser.exit(type(e).__name__ + ': ' + str(e))
             logging.error(e)
     
     def _loop_interrupt_handler(self, *args):
