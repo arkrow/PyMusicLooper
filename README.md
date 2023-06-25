@@ -1,19 +1,27 @@
 # PyMusicLooper
 
+[![Downloads](https://static.pepy.tech/badge/pymusiclooper)](https://pepy.tech/project/pymusiclooper)
+[![Downloads](https://static.pepy.tech/badge/pymusiclooper/month)](https://pepy.tech/project/pymusiclooper)
+[![PyPI pyversions](https://img.shields.io/pypi/v/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
+
 ## Note for the current v3 development branch
 
 Since PyMusicLooper v3.0 is still in development and carries several new features as well as many breaking changes especially to its CLI,
 use the built-in `--help` option for up-to-date interface options.
 
+---
+
 A python script for repeating music seamlessly and endlessly, by automatically finding the best loop points.
 
 Features:
 
-- Find loop points within any music file (if they exist).
-- Supports a large set of different audio formats, and all the popular ones (MP3, OGG, M4A, FLAC, WAV, etc).
-- Play the music file endlessly and seamlessly with the best discovered loop.
+- Find loop points within any audio file (if they exist).
+- Supports a large set of different audio formats, including all the popular ones through ffmpeg (MP3, OGG, M4A, FLAC, WAV, etc).
+- Play the audio file endlessly and seamlessly with the best discovered loop.
 - Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
 - Export loop points in samples to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
+- Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
 
 ## Installation
 
@@ -21,7 +29,7 @@ Features:
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python](https://www.python.org/downloads/) >= 3.9
+- [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and many other audio formats)
 
 ### Option 1: Installing using pip
@@ -153,13 +161,15 @@ pymusiclooper -i export-loop-points --path "TRACK_NAME.wav"
 
 Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
 
-(Note: due to current limitations, concurrent processing is very memory intensive. Long tracks (~10 mins) can consume 3GBs of memory during processing, with typical shorter tracks (2-6 mins) using 1-2 GBs each.)
-
-(Additional Note: when using parallel processing (i.e. n-jobs > 1), certain functionalities are disabled, namely: interactive mode, export to txt, export to stdout)
-
 ```sh
 pymusiclooper split-audio --path "./" --recursive --output-dir "Music Loops" --n-jobs 4
 ```
+
+Generally, concurrent batch processing (i.e. when `--n-jobs` is set >1) is not encouraged as interactive mode cannot be used, however, it is relatively reliable with tracks that have clear and distinct repetition.
+
+(Note: due to current limitations, concurrent processing is very memory intensive and scales multiplicatively with `--n-jobs`. Long tracks (~10 mins) can consume upwards of 3GBs of memory during processing, with typical shorter tracks (2-6 mins) using 1-2 GBs each.)
+
+(Additional Note: when using parallel processing (i.e. n-jobs > 1), certain functionalities are disabled, namely: interactive mode, export to txt, export to stdout)
 
 ## Acknowledgement
 
