@@ -53,14 +53,8 @@ click.rich_click.OPTION_GROUPS = {
 @click.option("--interactive", "-i", is_flag=True, default=False, help="Enables interactive mode to manually preview/choose the desired loop point.")
 @click.option("--in-samples", "-s", is_flag=True, default=False, help="Display all loop points in interactive mode in sample points instead of the default mm:ss.sss format.") 
 @click.version_option(__version__, prog_name="pymusiclooper")
-@click.pass_context
-def cli_main(ctx, verbose, interactive, in_samples):
+def cli_main(verbose, interactive, in_samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
-    ctx.ensure_object(dict)
-    ctx.obj['VERBOSE'] = verbose
-    ctx.obj['INTERACTIVE'] = interactive
-    ctx.obj['IN_SAMPLES'] = in_samples
-
     # Store flags in environ instead of passing them as parameters
     os.environ['PML_VERBOSE'] = str(int(verbose))
     os.environ['PML_INTERACTIVE_MODE'] = str(int(interactive))
@@ -101,16 +95,16 @@ def common_export_options(f):
 
 @cli_main.command()
 @common_loop_options
-@click.pass_context
-def play(ctx, path, min_duration_multiplier, min_loop_duration, max_loop_duration):
+def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration):
     """Play an audio file on repeat from the terminal with the best discovered loop points (default), or a chosen point if interactive mode is active."""
     try:
-        in_samples = ctx.obj['IN_SAMPLES']
+        in_samples = bool(os.environ.get('PML_DISPLAY_SAMPLES', False))
         handler = LoopHandler(file_path=path,
                               min_duration_multiplier=min_duration_multiplier,
                               min_loop_duration=min_loop_duration,
                               max_loop_duration=max_loop_duration)
-        chosen_loop_pair = handler.choose_loop_pair()
+        interactive_mode = bool(os.environ.get('PML_INTERACTIVE_MODE', False))
+        chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
 
         looper = handler.get_musiclooper_obj()
 
