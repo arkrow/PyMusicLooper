@@ -4,8 +4,10 @@
 
 ### Added
 
-- New feature: `tag`. Export metadata tags of loop points to a copy of the input audio file(s) - (Credit: some of the implementation code was based on/inspired by RemedyTwo's fork)
-- New options: added min loop duration and max loop duration (in seconds) as optional constraints to the CLI
+- New functionality: `tag`. Export metadata tags of loop points to a copy of the input audio file(s) - (Credit: some of the implementation code was based on/inspired by RemedyTwo's fork)
+- New loop point search options
+  - `--min-loop-duration` , `--max-loop-duration` : added min loop duration and max loop duration (in seconds) as optional constraints to the CLI
+  - `--approx-loop-position` : specify the approximate desired loop start and loop end in seconds, searching around those points only +/- 2 seconds
 
 ### Changed
 

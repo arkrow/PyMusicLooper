@@ -80,13 +80,13 @@ Using a virtual environment is usually recommended to avoid version conflicts wi
  tag                 Adds metadata tags of loop points to a copy of the input audio file(s)
 ```
 
-Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export --help`)
+Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-loop-points --help`)
 
 PyMusicLooper will find the best loop point it can detect, and will then, depending on the chosen command:
 
-(a) play the song on repeat using the best discovered loop point;
+(a) play an audio track on repeat using the best discovered loop point;
 
-(b) export intro/loop/outro sections of the song (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/), [Audacity](https://www.audacityteam.org/), etc.);
+(b) export an audio track into intro/loop/outro sections (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/), [Audacity](https://www.audacityteam.org/), etc.);
 
 (c) export the loop points (in samples) to the terminal directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
@@ -124,7 +124,7 @@ pymusiclooper split-audio "TRACK_NAME.ogg"
 Export the discovered loop points directly to the terminal as sample points
 
 ```sh
-pymusiclooper export-loop-points --path "/path/to/dir/" --export-to stdout
+pymusiclooper export-loop-points --path "/path/to/track.wav" --export-to stdout
 ```
 
  Add metadata tags of the best discovered loop points to a copy of the input audio file (or all audio files in a directory, if a directory path is used instead)
@@ -156,6 +156,14 @@ Loop points can be chosen and previewed interactively before playback/export usi
 ```sh
 pymusiclooper -i export-loop-points --path "TRACK_NAME.wav"
 ```
+
+If a desired loop point is already known, and you would like to extract the best loop positions in samples, you can use the `--approx-loop-position` option, which searches with +/- 2 seconds of the point specified. Best used interactively. Example using the `export-loop-points` subcommand:
+
+```sh
+pymusiclooper -i export-loop-points --path "/path/to/track.mp3" --export-to stdout --approx-loop-position 20 210
+```
+
+`--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark (i.e. 3:30).
 
 ### Batch processing example
 
