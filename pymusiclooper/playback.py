@@ -10,32 +10,33 @@ class PlaybackHandler:
         self.event = threading.Event()
 
     def play_looping(self, playback_audio, samplerate, loop_start, loop_end, start_from=0):
-        self.current_frame = 0
         self.loop_counter = 0
         self.looping = True
-
+        playback_data = playback_audio.T
+        self.current_frame = start_from
         try:
-            data, fs = playback_audio.T, samplerate
-            self.current_frame = start_from
-
             def callback(outdata, frames, time, status):
-                chunksize = min(len(data) - self.current_frame, frames)
+                chunksize = min(len(playback_data) - self.current_frame, frames)
 
                 # Audio looping logic
-                if self.looping and self.current_frame + chunksize > loop_end:
-                    self.current_frame = loop_start
+                if self.looping and self.current_frame + frames > loop_end:
+                    pre_loop_index = (loop_end - self.current_frame)
+                    remaining_frames = frames - (loop_end - self.current_frame)
+                    adjusted_next_frame_idx = loop_start + remaining_frames
+                    outdata[:pre_loop_index]  = playback_data[self.current_frame:loop_end]
+                    outdata[pre_loop_index:frames] = playback_data[loop_start:adjusted_next_frame_idx]
+                    self.current_frame = adjusted_next_frame_idx
                     self.loop_counter+=1
                     print(f'Currently on loop #{self.loop_counter}.',end='\r')
-
-                outdata[:chunksize] = data[self.current_frame:self.current_frame + chunksize]
-
-                if chunksize < frames:
-                    outdata[chunksize:] = 0
-                    raise sd.CallbackStop()
-                self.current_frame += chunksize
+                else:
+                    outdata[:chunksize] = playback_data[self.current_frame:self.current_frame + chunksize]
+                    self.current_frame += chunksize
+                    if chunksize < frames:
+                        outdata[chunksize:] = 0
+                        raise sd.CallbackStop()                
 
             self.stream = sd.OutputStream(
-                samplerate=fs, channels=data.shape[1],
+                samplerate=samplerate, channels=playback_data.shape[1],
                 callback=callback, finished_callback=self.event.set)
 
             with self.stream:
