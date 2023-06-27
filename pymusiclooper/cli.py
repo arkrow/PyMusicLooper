@@ -11,7 +11,7 @@ from .handler import LoopHandler, LoopExportHandler, BatchHandler
 # CLI --help styling
 _basic_options = ["--path"]
 _loop_options = ["--min-duration-multiplier", "--min-loop-duration", "--max-loop-duration", "--approx-loop-position"]
-_export_options = ["--output-dir"]
+_export_options = ["--output-dir", "--format"]
 _batch_options = ["--recursive", "--flatten", "--n-jobs"]
 
 def _option_groups(additional_basic_options: list[str]=None):
@@ -135,8 +135,9 @@ def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, ap
 @cli_main.command()
 @common_loop_options
 @common_export_options
+@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported audio files")
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
-def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, n_jobs):
+def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, format, n_jobs):
     """Split the input audio into intro, loop and outro sections (WAV format)"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -152,6 +153,7 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
                                            approx_loop_position=approx_loop_position,
                                            output_dir=output_dir,
                                            split_audio=True,
+                                           split_audio_format=format,
                                            to_txt=False,
                                            to_stdout=False,
                                            tag_names=None)
@@ -163,6 +165,7 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
                                      max_loop_duration=max_loop_duration,
                                      output_dir=output_dir,
                                      split_audio=True,
+                                     split_audio_format=format,
                                      to_txt=False,
                                      to_stdout=False,
                                      recursive=recursive,

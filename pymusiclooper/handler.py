@@ -133,10 +133,24 @@ class LoopHandler:
 
 
 class LoopExportHandler(LoopHandler):
-    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, approx_loop_position:tuple=None, split_audio=True, to_txt=False, to_stdout=False, tag_names:tuple[str, str]=None, batch_mode=False, multiprocess=False) -> None:
+    def __init__(self,
+                 file_path,
+                 min_duration_multiplier,
+                 min_loop_duration,
+                 max_loop_duration,
+                 output_dir,
+                 approx_loop_position:tuple=None,
+                 split_audio=True,
+                 split_audio_format="WAV",
+                 to_txt=False,
+                 to_stdout=False,
+                 tag_names:tuple[str, str]=None,
+                 batch_mode=False,
+                 multiprocess=False) -> None:
         super().__init__(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position)
         self.output_directory = output_dir
         self.split_audio = split_audio
+        self.split_audio_format = split_audio_format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
         self.tag_names = tag_names
@@ -194,25 +208,44 @@ class LoopExportHandler(LoopHandler):
             else:
                 click.echo(message)
         if self.split_audio:
-            music_looper.export(
-                loop_start,
-                loop_end,
-                output_dir=self.output_directory
-            )
-            message = f"Successfully exported '{music_looper.filename}' intro/loop/outro sections to '{self.output_directory}'"
-            if self.batch_mode:
-                logging.info(message)
-            else:
-                click.echo(message)
+            try:
+                music_looper.export(
+                    loop_start,
+                    loop_end,
+                    format=self.split_audio_format,
+                    output_dir=self.output_directory
+                )
+                message = f"Successfully exported '{music_looper.filename}' intro/loop/outro sections to '{self.output_directory}'"
+                if self.batch_mode:
+                    logging.info(message)
+                else:
+                    click.echo(message)
+            # Usually: unknown file format specified; raised by soundfile
+            except ValueError as e:
+                logging.error(e)
 
 class BatchHandler:
-    def __init__(self, directory_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, split_audio, to_txt=False, to_stdout=False, recursive=False, flatten=False, n_jobs=1, tag_names:tuple[str, str]=None) -> None:
+    def __init__(self,
+                 directory_path,
+                 min_duration_multiplier,
+                 min_loop_duration,
+                 max_loop_duration,
+                 output_dir,
+                 split_audio,
+                 split_audio_format="WAV",
+                 to_txt=False,
+                 to_stdout=False,
+                 recursive=False,
+                 flatten=False,
+                 n_jobs=1,
+                 tag_names:tuple[str, str]=None) -> None:
         self.directory_path = os.path.abspath(directory_path)
         self.min_duration_multiplier = min_duration_multiplier
         self.min_loop_duration = min_loop_duration
         self.max_loop_duration = max_loop_duration
         self.output_directory = output_dir
         self.split_audio = split_audio
+        self.split_audio_format = split_audio_format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
         self.recursive = recursive
@@ -238,6 +271,7 @@ class BatchHandler:
                     min_duration_multiplier=self.min_duration_multiplier,
                     min_loop_duration=self.min_loop_duration,
                     max_loop_duration=self.max_loop_duration,
+                    split_audio_format=self.split_audio_format,
                     output_dir=self.output_directory if self.flatten else output_dirs[file_idx],
                     split_audio=self.split_audio,
                     to_txt=self.to_txt,
@@ -267,6 +301,7 @@ class BatchHandler:
                                 "min_loop_duration": self.min_loop_duration,
                                 "max_loop_duration": self.max_loop_duration,
                                 "split_audio": self.split_audio,
+                                "split_audio_format": self.split_audio_format,
                                 "to_txt": False,
                                 "to_stdout": False,
                                 "tag_names":self.tag_names,
@@ -318,13 +353,14 @@ class BatchHandler:
         )
     
     @staticmethod
-    def _batch_export_helper(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, split_audio, to_txt, to_stdout, tag_names, multiprocess=False):
+    def _batch_export_helper(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, split_audio, split_audio_format, to_txt, to_stdout, tag_names, multiprocess=False):
             export_handler = LoopExportHandler(file_path=file_path,
                                            min_duration_multiplier=min_duration_multiplier,
                                            min_loop_duration=min_loop_duration,
                                            max_loop_duration=max_loop_duration,
                                            output_dir=output_dir,
                                            split_audio=split_audio,
+                                           split_audio_format=split_audio_format,
                                            to_txt=to_txt,
                                            to_stdout=to_stdout,
                                            tag_names=tag_names,
