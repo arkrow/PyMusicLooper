@@ -208,7 +208,7 @@ def _assess_and_filter_loop_pairs(mlaudio: MLAudio, chroma: np.ndarray, bpm:floa
     for pair, score in zip(pruned_candidate_pairs, pair_score_list):
         pair.score = score
 
-    if len(candidate_pairs) >= 50:
+    if len(pruned_candidate_pairs) >= 50:
         score_pruned_candidate_pairs = _prune_by_score(pruned_candidate_pairs)
     else:
         score_pruned_candidate_pairs = pruned_candidate_pairs
@@ -225,13 +225,16 @@ def _prune_candidates(candidate_pairs, drop_bottom_x_percentile=50):
         [pair.note_distance for pair in candidate_pairs]
     )
 
-    db_threshold = np.percentile(db_diff_array, drop_bottom_x_percentile) # lower is better
-    note_dist_threshold = np.percentile(note_dist_array, drop_bottom_x_percentile) # lower is better
+    # Minimum value used to avoid issues with tracks with lots of silence
+    epsilon = 1e-3
+
+    db_threshold = np.percentile(db_diff_array[db_diff_array > epsilon], drop_bottom_x_percentile) # lower is better
+    note_dist_threshold = np.percentile(note_dist_array[note_dist_array > epsilon], drop_bottom_x_percentile) # lower is better
 
     indicies_that_meet_cond = np.flatnonzero((db_diff_array < db_threshold) & (note_dist_array < note_dist_threshold))
     return [candidate_pairs[idx] for idx in indicies_that_meet_cond]
 
-def _prune_by_score(candidate_pairs, percentile=10, acceptable_score=80):
+def _prune_by_score(candidate_pairs, percentile=25, acceptable_score=80):
     candidate_pairs = sorted(candidate_pairs, key=lambda x: x.score)
 
     score_array = np.array(
