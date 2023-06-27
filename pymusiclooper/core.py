@@ -17,17 +17,23 @@ class MusicLooper:
                  filepath,
                  min_duration_multiplier=0.35,
                  min_loop_duration=None,
-                 max_loop_duration=None):
+                 max_loop_duration=None,
+                 approx_loop_start=None,
+                 approx_loop_end=None):
         self.min_duration_multiplier = min_duration_multiplier
         self.min_loop_duration = min_loop_duration
         self.max_loop_duration = max_loop_duration
+        self.approx_loop_start = approx_loop_start
+        self.approx_loop_end = approx_loop_end
         self.mlaudio = MLAudio(filepath=filepath)
 
     def find_loop_pairs(self):
         return find_best_loop_points(mlaudio=self.mlaudio,
                                      min_duration_multiplier=self.min_duration_multiplier,
                                      min_loop_duration=self.min_loop_duration,
-                                     max_loop_duration=self.max_loop_duration)
+                                     max_loop_duration=self.max_loop_duration,
+                                     approx_loop_start=self.approx_loop_start,
+                                     approx_loop_end=self.approx_loop_end)
     
     @property
     def filename(self):

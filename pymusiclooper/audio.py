@@ -55,7 +55,9 @@ class MLAudio:
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
-    def seconds_to_frames(self, seconds):
+    def seconds_to_frames(self, seconds, apply_trim_offset=False):
+        if apply_trim_offset:
+            seconds = seconds - librosa.core.samples_to_time(self.trim_offset, sr=self.rate)
         return librosa.core.time_to_frames(seconds, sr=self.rate)
 
     def frames_to_ftime(self, frame):

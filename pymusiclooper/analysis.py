@@ -24,7 +24,12 @@ class LoopPair:
         self.score = score
 
 
-def find_best_loop_points(mlaudio: MLAudio, min_duration_multiplier:float=0.35, min_loop_duration:int=None, max_loop_duration:int=None) -> list[LoopPair]:
+def find_best_loop_points(mlaudio: MLAudio,
+                          min_duration_multiplier:float=0.35,
+                          min_loop_duration:int=None,
+                          max_loop_duration:int=None,
+                          approx_loop_start=None,
+                          approx_loop_end=None) -> list[LoopPair]:
     runtime_start = time.perf_counter()
     min_loop_duration = (mlaudio.seconds_to_frames(min_loop_duration)
                         if min_loop_duration is not None else
@@ -35,14 +40,35 @@ def find_best_loop_points(mlaudio: MLAudio, min_duration_multiplier:float=0.35, 
                             if max_loop_duration is not None else
                             mlaudio.seconds_to_frames(mlaudio.total_duration))
 
-    chroma, power_db, bpm, beats = _analyze_audio(mlaudio)
+    if approx_loop_start is not None and approx_loop_end is not None:
+        # Skipping the unncessary beat analysis (in this case) speeds up the analysis runtime by ~2x
+        # and significantly reduces the total memory consumption
+        chroma, power_db, _, _ = _analyze_audio(mlaudio, skip_beat_analysis=True)
+        # Set bpm to a general average of 120
+        bpm = 120
+        approx_loop_start = mlaudio.seconds_to_frames(approx_loop_start, apply_trim_offset=True)
+        approx_loop_end = mlaudio.seconds_to_frames(approx_loop_end, apply_trim_offset=True)
+        n_frames_to_check = mlaudio.seconds_to_frames(2)
 
-    logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
+        # Correct min and max loop duration checks to the specified range
+        min_loop_duration = (approx_loop_end - n_frames_to_check) - (approx_loop_start + n_frames_to_check) - 1
+        max_loop_duration = (approx_loop_end + n_frames_to_check) - (approx_loop_start - n_frames_to_check) + 1
 
-    runtime_end = time.perf_counter()
-    prep_time = runtime_end - runtime_start
-    logging.info("Finished initial audio processing in {:.3}s".format(prep_time))
-    runtime_start = time.perf_counter()
+        # Override the beats to check with the specified approx points +/- 2 seconds
+        beats = np.concatenate([
+            np.arange(start=max(0, approx_loop_start - n_frames_to_check),
+                      stop=min(mlaudio.seconds_to_frames(mlaudio.total_duration), approx_loop_start + n_frames_to_check)),
+            np.arange(start=max(0, approx_loop_end - n_frames_to_check),
+                      stop=min(mlaudio.seconds_to_frames(mlaudio.total_duration), approx_loop_end + n_frames_to_check))
+            ])
+    else:
+        chroma, power_db, bpm, beats = _analyze_audio(mlaudio)
+        logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
+
+    logging.info("Finished initial audio processing in {:.3}s".format(time.perf_counter() - runtime_start))
+
+    initial_pairs_start_time = time.perf_counter()
+
 
     # Since numba jitclass cannot be cached, the pair data must be stored temporarily in a list of tuple
     # (instead of a list of LoopPairs directly) and then loaded into a list of LoopPair objects using list comprehension
@@ -52,8 +78,7 @@ def find_best_loop_points(mlaudio: MLAudio, min_duration_multiplier:float=0.35, 
     ]
 
     n_candidate_pairs = len(candidate_pairs) if candidate_pairs is not None else 0
-    initial_pairs_found_time = time.perf_counter()
-    logging.info(f"Found {n_candidate_pairs} possible loop points in {initial_pairs_found_time - runtime_start}")
+    logging.info(f"Found {n_candidate_pairs} possible loop points in {(time.perf_counter() - initial_pairs_start_time):.3}s")
 
     if not candidate_pairs:
         raise LoopNotFoundError(f'No loop points found for {mlaudio.filename} with current parameters.')
@@ -72,8 +97,8 @@ def find_best_loop_points(mlaudio: MLAudio, min_duration_multiplier:float=0.35, 
             pair.loop_end = int(mlaudio.apply_trim_offset(
                 pair.loop_end
             ))
-    runtime_end = time.perf_counter()
-    logging.info("Found {} best candidate loop points in {:.3}s".format(len(filtered_candidate_pairs), runtime_end-runtime_start))
+    logging.info(f"Filtered to {len(filtered_candidate_pairs)} best candidate loop points")
+    logging.info("Total analysis runtime: {:.3}s".format(time.perf_counter()-runtime_start))
 
     if not filtered_candidate_pairs:
         raise LoopNotFoundError(f'No loop points found for {mlaudio.filename} with current parameters.')
@@ -81,7 +106,7 @@ def find_best_loop_points(mlaudio: MLAudio, min_duration_multiplier:float=0.35, 
         return filtered_candidate_pairs
 
 
-def _analyze_audio(mlaudio: MLAudio):
+def _analyze_audio(mlaudio: MLAudio, skip_beat_analysis=False) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
     S = librosa.core.stft(y=mlaudio.audio)
     S_power = np.abs(S) ** 2
     S_weighed = librosa.core.perceptual_weighting(
@@ -90,6 +115,9 @@ def _analyze_audio(mlaudio: MLAudio):
     mel_spectrogram = librosa.feature.melspectrogram(S=S_weighed, sr=mlaudio.rate, n_mels=128, fmax=8000)
     chroma = librosa.feature.chroma_stft(S=S_power)
     power_db = librosa.power_to_db(S_weighed, ref=np.median)
+
+    if skip_beat_analysis:
+        return chroma, power_db, None, None
 
     onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
 
@@ -117,7 +145,17 @@ def _norm(a: np.ndarray) -> float:
 @njit(cache=True)
 def _find_candidate_pairs(chroma: np.ndarray, power_db: np.ndarray, beats: np.ndarray, min_loop_duration: int, max_loop_duration: int) -> list[tuple[int,int,float,float]]:
     candidate_pairs = []
-    deviation = _norm(chroma[..., beats] * 0.0875)
+
+    # Magic constants
+    ## Mainly found through trial and error,
+    ## higher values typically result in the inclusion of musically unrelated beats/notes
+    ACCEPTABLE_NOTE_DEVIATION = 0.0875
+    ## Since the _db_diff comparison is takes a perceptually weighted power_db frame,
+    ## the difference should be imperceptible (ideally, close to 0), but the min threshold is set to 0.75
+    ## Based on trial and error, values higher than ~1 have a jarring difference in loudness
+    ACCEPTABLE_LOUDNESS_DIFFERENCE = 0.75
+
+    deviation = _norm(chroma[..., beats] * ACCEPTABLE_NOTE_DEVIATION)
 
     for idx, loop_end in enumerate(beats):
         for loop_start in beats:
@@ -133,7 +171,7 @@ def _find_candidate_pairs(chroma: np.ndarray, power_db: np.ndarray, beats: np.nd
                     power_db[..., loop_end], power_db[..., loop_start]
                 )
                 loop_pair = (int(loop_start), int(loop_end), note_distance, loudness_difference)
-                if loudness_difference <= 1.5:
+                if loudness_difference <= ACCEPTABLE_LOUDNESS_DIFFERENCE:
                     candidate_pairs.append(loop_pair)
 
     return candidate_pairs

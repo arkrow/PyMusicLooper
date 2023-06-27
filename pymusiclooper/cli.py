@@ -10,7 +10,7 @@ from .handler import LoopHandler, LoopExportHandler, BatchHandler
 
 # CLI --help styling
 _basic_options = ["--path"]
-_loop_options = ["--min-duration-multiplier", "--min-loop-duration", "--max-loop-duration"]
+_loop_options = ["--min-duration-multiplier", "--min-loop-duration", "--max-loop-duration", "--approx-loop-position"]
 _export_options = ["--output-dir"]
 _batch_options = ["--recursive", "--flatten", "--n-jobs"]
 
@@ -73,8 +73,10 @@ def cli_main(verbose, interactive, samples):
 def common_loop_options(f):
     @click.option('--path', type=click.Path(exists=True), required=True, help='path to audio file (or directory if batch processing)')
     @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="specify minimum loop duration as a multiplier of the audio track's duration")
-    @click.option('--min-loop-duration', type=int, default=None, help='specify the minimum loop duration in seconds (Note: overrides the --min-duration-multiplier option if specified)')
-    @click.option('--max-loop-duration', type=int, default=None, help='specify the maximum loop duration in seconds')   
+    @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the minimum loop duration in seconds (Note: overrides the --min-duration-multiplier option if specified)')
+    @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the maximum loop duration in seconds')
+    @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='specify the approximate desired loop start and loop end in seconds (note: only those points will be checked, with a search window of +/- 2 seconds; ignored in batch mode)')
+
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
         return f(*args, **kwargs)
@@ -95,13 +97,14 @@ def common_export_options(f):
 
 @cli_main.command()
 @common_loop_options
-def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration):
+def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position):
     """Play an audio file on repeat from the terminal with the best discovered loop points (default), or a chosen point if interactive mode is active."""
     try:
         handler = LoopHandler(file_path=path,
                               min_duration_multiplier=min_duration_multiplier,
                               min_loop_duration=min_loop_duration,
-                              max_loop_duration=max_loop_duration)
+                              max_loop_duration=max_loop_duration,
+                              approx_loop_position=approx_loop_position)
 
         in_samples = (os.environ.get('PML_DISPLAY_SAMPLES', 'False') == 'True')
         interactive_mode = (os.environ.get('PML_INTERACTIVE_MODE', 'False') == 'True')
@@ -133,7 +136,7 @@ def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration):
 @common_loop_options
 @common_export_options
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
-def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, recursive, flatten, n_jobs):
+def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, n_jobs):
     """Split the input audio into intro, loop and outro sections (WAV format)"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -146,6 +149,7 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
                                            min_duration_multiplier=min_duration_multiplier,
                                            min_loop_duration=min_loop_duration,
                                            max_loop_duration=max_loop_duration,
+                                           approx_loop_position=approx_loop_position,
                                            output_dir=output_dir,
                                            split_audio=True,
                                            to_txt=False,
@@ -172,7 +176,7 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
 @common_loop_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", required=True, show_default=True, help="STDOUT: prints the loop points of a track in samples to the terminal's stdout (OR) TXT: export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).")
-def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, recursive, flatten, export_to):
+def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, export_to):
     """Export the best discovered or chosen loop points to a text file or to the terminal (stdout)"""
 
     to_stdout = export_to.upper() == 'STDOUT'
@@ -189,6 +193,7 @@ def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loo
                                            min_duration_multiplier=min_duration_multiplier,
                                            min_loop_duration=min_loop_duration,
                                            max_loop_duration=max_loop_duration,
+                                           approx_loop_position=approx_loop_position,
                                            output_dir=output_dir,
                                            split_audio=False,
                                            to_txt=to_txt,
@@ -219,7 +224,7 @@ def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loo
 @common_export_options
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
 @click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
-def tag(path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, recursive, flatten, n_jobs, tag_names):
+def tag(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, n_jobs, tag_names):
     """Adds metadata tags of loop points to a copy of the input audio file(s)"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -232,6 +237,7 @@ def tag(path, min_duration_multiplier, min_loop_duration, max_loop_duration, out
                                        min_duration_multiplier=min_duration_multiplier,
                                        min_loop_duration=min_loop_duration,
                                        max_loop_duration=max_loop_duration,
+                                       approx_loop_position=approx_loop_position,
                                        output_dir=output_dir,
                                        split_audio=False,
                                        to_txt=False,

@@ -14,12 +14,20 @@ from .exceptions import LoopNotFoundError, AudioLoadError
 
 
 class LoopHandler:
-    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration) -> None:
-        self.musiclooper = MusicLooper(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration)
+    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position:tuple=None) -> None:
+        self.approx_loop_start = approx_loop_position[0] if approx_loop_position is not None else None
+        self.approx_loop_end = approx_loop_position[1] if approx_loop_position is not None else None
+        self.musiclooper = MusicLooper(filepath=file_path,
+                                       min_duration_multiplier=min_duration_multiplier,
+                                       min_loop_duration=min_loop_duration,
+                                       max_loop_duration=max_loop_duration,
+                                       approx_loop_start=self.approx_loop_start,
+                                       approx_loop_end=self.approx_loop_end)
         logging.info(f"Loaded '{file_path}'. Analyzing...")
         self.loop_pair_list = self.musiclooper.find_loop_pairs()
         self.interactive_mode = (os.environ.get('PML_INTERACTIVE_MODE', 'False') == 'True')
         self.in_samples = (os.environ.get('PML_DISPLAY_SAMPLES', 'False') == 'True')
+
 
     def get_all_loop_pairs(self) -> list[LoopPair]:
         """
@@ -111,23 +119,22 @@ class LoopHandler:
                 click.echo(f"Please enter a number within the range [0,{len(self.loop_pair_list)-1}].")
                 return get_user_input()
 
-            except KeyboardInterrupt:
-                click.echo("\nOperation terminated by user. Exiting.")
-                sys.exit()
-            except Exception as e:
-                click.echo(f"An unexpected error has occured.\n{e}")
+        try:
+            selected_index = get_user_input()
+            
+            if selected_index is None:
+                click.echo('Please select a valid number.')
+                return get_user_input()
 
-        selected_index = get_user_input()
-        
-        if selected_index is None:
-            click.echo('Please select a valid number.')
-            return get_user_input()
-        
-        return selected_index
+            return selected_index
+        except KeyboardInterrupt:
+            click.echo("\nOperation terminated by user. Exiting.")
+            sys.exit()
+
 
 class LoopExportHandler(LoopHandler):
-    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, split_audio=True, to_txt=False, to_stdout=False, tag_names:tuple[str, str]=None, batch_mode=False, multiprocess=False) -> None:
-        super().__init__(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration)
+    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, approx_loop_position:tuple=None, split_audio=True, to_txt=False, to_stdout=False, tag_names:tuple[str, str]=None, batch_mode=False, multiprocess=False) -> None:
+        super().__init__(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position)
         self.output_directory = output_dir
         self.split_audio = split_audio
         self.to_txt = to_txt
@@ -238,12 +245,16 @@ class BatchHandler:
                     tag_names=self.tag_names)
         else:
             # Note: some arguments are disabled due to inherent incompatibility with the current multiprocessing implementation
-            self._batch_multiprocess(files, output_dirs, processes=[], file_idx=0, num_files=len(files))
+            self._batch_multiprocess(files, output_dirs)
 
-    def _batch_multiprocess(self, files, output_dirs, processes, file_idx, num_files):
+    def _batch_multiprocess(self, files, output_dirs):
+        processes = []
+        num_files = len(files)
+        file_idx = 0
+
         with tqdm(total=num_files) as pbar:
             while file_idx < num_files:
-                for pid in range(self.n_jobs):
+                for _ in range(self.n_jobs):
                     p = Process(
                             target=self._batch_export_helper,
                             kwargs={
@@ -260,7 +271,7 @@ class BatchHandler:
                                 "to_stdout": False,
                                 "tag_names":self.tag_names,
                                 "multiprocess": True,
-                                },
+                            },
                             daemon=True,
                         )
                     processes.append(p)
