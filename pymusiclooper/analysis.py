@@ -227,11 +227,23 @@ def _prune_candidates(candidate_pairs, drop_bottom_x_percentile=50):
 
     # Minimum value used to avoid issues with tracks with lots of silence
     epsilon = 1e-3
+    min_adjusted_db_diff_array = db_diff_array[db_diff_array > epsilon]
+    min_adjusted_note_dist_array = note_dist_array[note_dist_array > epsilon]
 
-    db_threshold = np.percentile(db_diff_array[db_diff_array > epsilon], drop_bottom_x_percentile) # lower is better
-    note_dist_threshold = np.percentile(note_dist_array[note_dist_array > epsilon], drop_bottom_x_percentile) # lower is better
+    # Avoid index errors by having at least 3 elements when performing percentile-based pruning
+    # Otherwise, skip by setting the value to the highest available
+    if min_adjusted_db_diff_array.size > 3:
+        db_threshold = np.percentile(min_adjusted_db_diff_array, drop_bottom_x_percentile) # lower is better
+    else:
+        db_threshold = np.max(db_diff_array)
 
-    indicies_that_meet_cond = np.flatnonzero((db_diff_array < db_threshold) & (note_dist_array < note_dist_threshold))
+    if min_adjusted_note_dist_array.size > 3:
+        note_dist_threshold = np.percentile(min_adjusted_note_dist_array, drop_bottom_x_percentile) # lower is better
+    else:
+        note_dist_threshold = np.max(note_dist_array)
+    
+
+    indicies_that_meet_cond = np.flatnonzero((db_diff_array <= db_threshold) & (note_dist_array <= note_dist_threshold))
     return [candidate_pairs[idx] for idx in indicies_that_meet_cond]
 
 def _prune_by_score(candidate_pairs, percentile=25, acceptable_score=80):
