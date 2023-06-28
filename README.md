@@ -32,19 +32,39 @@ The following software must be installed for `pymusiclooper` to function correct
 - [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
 - [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and many other audio formats)
 
-### Option 1: Installing using pip
+### Option 1: Installing using pipx [Recommended]
+
+This method of installation is strongly recommended, as it isolates PyMusicLooper's dependencies from the rest of your environment,
+making it the safest option and avoids dependency conflicts and breakage due to version upgrades.
+
+Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx`).
+
+```sh
+pipx install pymusiclooper
+```
+
+Alternatively, for the latest features from the v3 version currently in-development, it can be installed directly from Github
+
+```sh
+pipx install git+https://github.com/arkrow/PyMusicLooper.git@v3
+```
+
+This will install all the project dependencies and the project itself using `pipx` in its own isolated environment, however,
+PyMusicLooper can still be invoked as normal using the `pymusiclooper` command.
+
+Upgrading can be done using the `pipx upgrade` command, e.g. `pipx upgrade pymusiclooper`
+
+### Option 2: Installing using pip
 
 ```sh
 pip install pymusiclooper
 ```
 
-### Option 2: Installing directly from source
+### Option 3: Installing directly from source
 
-Required python packages: `pip` and `poetry`.
+Required python packages: `pip` and [`poetry`](https://python-poetry.org/).
 
 Clone the git repository to a directory of your choice and `cd` to inside the repo.
-
-(Optional): `git checkout` to the desired branch
 
 Then, run:
 
@@ -54,6 +74,8 @@ poetry install
 
 This will install all the project dependencies and the project itself.
 Using a virtual environment is usually recommended to avoid version conflicts with other packages.
+A virtual environment can be automatically handled by poetry by invoking the `poetry shell` command first to
+create and enter a virtual environment for the current working directory.
 
 ## Usage
 
