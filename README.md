@@ -17,10 +17,10 @@ A python-based program for repeating music seamlessly and endlessly, by automati
 Features:
 
 - Find loop points within any audio file (if they exist).
-- Supports a large set of different audio formats, including all the popular ones through ffmpeg (MP3, OGG, M4A, FLAC, WAV, etc).
+- Supports loading the most common audio formats (MP3, OGG, FLAC, WAV), with additional codec support available through ffmpeg (if installed).
 - Play the audio file endlessly and seamlessly with the best discovered loop.
 - Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
-- Export loop points in samples to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
+- Export loop points in samples directly to the terminal or to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
 - Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
 
 ## Pre-requisites
@@ -30,7 +30,7 @@ The following software must be installed for `pymusiclooper` to function correct
 - [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
 - (Optional) [ffmpeg](https://ffmpeg.org/download.html): adds support for loading additional audio formats and codecs such as M4A/AAC/ALAC/WMA/etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If support for these additional codecs is not necessary, this can be skipped.
 
-Supported audio formats **without** ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
+Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
 A full list can be found at [libsndfile's supported formats page](https://libsndfile.github.io/libsndfile/formats.html)
 
 ## Installation
@@ -103,7 +103,7 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 
 (a) play an audio track on repeat using the best discovered loop point;
 
-(b) export an audio track into intro/loop/outro sections (currently outputs as WAV-only; however you may convert them with [ffmpeg](https://ffmpeg.org/), [Audacity](https://www.audacityteam.org/), etc.);
+(b) export an audio track into intro/loop/outro sections
 
 (c) export the loop points (in samples) to the terminal directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
 
