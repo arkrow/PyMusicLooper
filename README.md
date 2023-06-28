@@ -5,14 +5,14 @@
 [![PyPI pyversions](https://img.shields.io/pypi/v/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
 
-## Note for the current v3 development branch
+## Note for the v3 dev branch
 
-Since PyMusicLooper v3.0 is still in development and carries several new features as well as many breaking changes especially to its CLI,
-use the built-in `--help` option for up-to-date interface options.
+PyMusicLooper v3.0 is still in development with a completely new CLI
+and different commands/options are still being added. As such, this README may not reflect all the features available. For up-to-date CLI commands and options, use the built-in `--help` option.
 
 ---
 
-A python script for repeating music seamlessly and endlessly, by automatically finding the best loop points.
+A python-based program for repeating music seamlessly and endlessly, by automatically finding the best loop points.
 
 Features:
 
@@ -23,14 +23,17 @@ Features:
 - Export loop points in samples to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
 - Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
 
-## Installation
-
-### Pre-requisites
+## Pre-requisites
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
 - [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
-- (Optional) [ffmpeg](https://ffmpeg.org/download.html) (adds support for loading additional proprietary audio codecs/formats, such as M4A/AAC/ALAC/WMA/etc. If support for such codecs is unnecessary, this can be skipped.)
+- (Optional) [ffmpeg](https://ffmpeg.org/download.html): adds support for loading additional audio formats and codecs such as M4A/AAC/ALAC/WMA/etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If support for these additional codecs is not necessary, this can be skipped.
+
+Supported audio formats **without** ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
+A full list can be found at [libsndfile's supported formats page](https://libsndfile.github.io/libsndfile/formats.html)
+
+## Installation
 
 ### Option 1: Installing using pipx [Recommended]
 
@@ -43,16 +46,11 @@ Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be install
 pipx install pymusiclooper
 ```
 
-Alternatively, for the latest features from the v3 version currently in-development, it can be installed directly from Github
+Alternatively, for the latest features from the v3 version currently in-development
 
 ```sh
 pipx install git+https://github.com/arkrow/PyMusicLooper.git@v3
 ```
-
-This will install all the project dependencies and the project itself using `pipx` in its own isolated environment, however,
-PyMusicLooper can still be invoked as normal using the `pymusiclooper` command.
-
-Upgrading can be done using the `pipx upgrade` command, e.g. `pipx upgrade pymusiclooper`
 
 ### Option 2: Installing using pip
 
@@ -72,10 +70,7 @@ Then, run:
 poetry install
 ```
 
-This will install all the project dependencies and the project itself.
-Using a virtual environment is usually recommended to avoid version conflicts with other packages.
-A virtual environment can be automatically handled by poetry by invoking the `poetry shell` command first to
-create and enter a virtual environment for the current working directory.
+A virtual environment can be setup through poetry by invoking the `poetry shell` command before installing.
 
 ## Usage
 
@@ -118,8 +113,6 @@ PyMusicLooper will find the best loop point it can detect, and will then, depend
 as that is difficult to calculate and score algorithmically
 
 ## Example Usage
-
-Side note: Most terminals support file drag-and-drop, which can be utilized instead of manual path navigation/selection.
 
 ### Play
 
