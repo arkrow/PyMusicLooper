@@ -98,7 +98,7 @@ create and enter a virtual environment for the current working directory.
                      terminal (stdout)
  play                Play an audio file on repeat from the terminal with the best discovered loop
                      points, or a chosen point if interactive mode is active
- split-audio         Split the input audio into intro, loop and outro sections (WAV format)
+ split-audio         Split the input audio into intro, loop and outro sections
  tag                 Adds metadata tags of loop points to a copy of the input audio file(s)
 ```
 

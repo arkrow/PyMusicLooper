@@ -138,7 +138,7 @@ def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, ap
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported audio files")
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
 def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, format, n_jobs):
-    """Split the input audio into intro, loop and outro sections (WAV format)"""
+    """Split the input audio into intro, loop and outro sections"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
 
