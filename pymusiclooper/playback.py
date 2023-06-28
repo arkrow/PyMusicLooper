@@ -44,7 +44,8 @@ class PlaybackHandler:
                 signal.signal(signal.SIGINT, self._loop_interrupt_handler)
                 # Workaround for python issue on Windows
                 # (threading.Event().wait() not interruptable with Ctrl-C on Windows): https://bugs.python.org/issue35935
-                while not self.event.wait(0.5): # 0.5 second timeout to handle interrupts in-between
+                # Set a 0.5 second timeout to handle interrupts in-between
+                while not self.event.wait(0.5): 
                     pass
         except Exception as e:
             logging.error(e)
@@ -58,4 +59,5 @@ class PlaybackHandler:
             self.stream.stop()
             self.stream.close()
             print('Playback interrupted by user.')
-            signal.signal(signal.SIGINT, signal.default_int_handler) # restore default SIGINT handler
+            # Restore default SIGINT handler
+            signal.signal(signal.SIGINT, signal.default_int_handler)
