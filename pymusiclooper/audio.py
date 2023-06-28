@@ -17,9 +17,7 @@ class MLAudio:
 
     def __init__(self, filepath) -> None:
         # Load the file if it exists
-        # dtype and subsequent type cast are workarounds for a libsnd bug; see https://github.com/librosa/librosa/issues/1622 and https://github.com/bastibe/python-soundfile/issues/349
-        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False, dtype=None)
-        raw_audio = raw_audio.astype(np.float32)
+        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
         self.total_duration = librosa.get_duration(y=raw_audio,
                                                    sr=sampling_rate)
 

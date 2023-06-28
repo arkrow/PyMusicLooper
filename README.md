@@ -30,7 +30,7 @@ Features:
 The following software must be installed for `pymusiclooper` to function correctly.
 
 - [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
-- [ffmpeg](https://ffmpeg.org/download.html) (adds support for MP3 and many other audio formats)
+- (Optional) [ffmpeg](https://ffmpeg.org/download.html) (adds support for loading additional proprietary audio codecs/formats, such as M4A/AAC/ALAC/WMA/etc. If support for such codecs is unnecessary, this can be skipped.)
 
 ### Option 1: Installing using pipx [Recommended]
 
