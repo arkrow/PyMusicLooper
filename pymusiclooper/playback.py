@@ -4,15 +4,18 @@ import logging
 import signal
 
 import sounddevice as sd
+import numpy as np
 
 class PlaybackHandler:
     def __init__(self) -> None:
         self.event = threading.Event()
 
-    def play_looping(self, playback_audio, samplerate, loop_start, loop_end, start_from=0):
+    def play_looping(self, playback_audio, samplerate, channels, loop_start, loop_end, start_from=0):
         self.loop_counter = 0
         self.looping = True
-        playback_data = playback_audio.T
+        # Correct the format of playback and make sure mono (1-D) audio is in the correct format
+        # i.e. (samples, n_channels)
+        playback_data = playback_audio.T if channels > 1 else playback_audio[:,np.newaxis]
         self.current_frame = start_from
         try:
             def callback(outdata, frames, time, status):
@@ -36,7 +39,7 @@ class PlaybackHandler:
                         raise sd.CallbackStop()                
 
             self.stream = sd.OutputStream(
-                samplerate=samplerate, channels=playback_data.shape[1],
+                samplerate=samplerate, channels=channels,
                 callback=callback, finished_callback=self.event.set)
 
             with self.stream:

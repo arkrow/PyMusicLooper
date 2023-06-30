@@ -36,8 +36,9 @@ class MLAudio:
 
         # Initialize parameters for playback
         self.playback_audio = raw_audio
-        self.channels = self.playback_audio.shape[0]
-    
+        # Mono if the loaded audio is 1-D, else get the number of channels from the shape (n_channels, samples)
+        self.channels = 1 if len(self.playback_audio.shape) == 1 else self.playback_audio.shape[0]
+
     def apply_trim_offset(self, frame):
         return (
             librosa.samples_to_frames(

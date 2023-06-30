@@ -60,6 +60,7 @@ class MusicLooper:
         playback_handler.play_looping(
             self.mlaudio.playback_audio,
             self.mlaudio.rate,
+            self.mlaudio.channels,
             self.frames_to_samples(loop_start),
             self.frames_to_samples(loop_end),
             self.frames_to_samples(start_from)
