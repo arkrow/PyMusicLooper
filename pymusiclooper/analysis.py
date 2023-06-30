@@ -1,5 +1,6 @@
 import logging
 import time
+from dataclasses import dataclass
 
 import librosa
 import numpy as np
@@ -9,19 +10,22 @@ from .audio import MLAudio
 from .exceptions import LoopNotFoundError
 
 
+@dataclass
 class LoopPair:
-    loop_start:int
-    loop_end:int
-    note_distance:float
-    loudness_difference:float
-    score:float
+    """A data class that encapsulates the loop point related data.
+    Contains:
+        loop_start: int
+        loop_end: int
+        note_distance: float
+        loudness_difference: float
+        score: float. Defaults to 0.
+    """
 
-    def __init__(self, loop_start:int, loop_end:int, note_distance:float, loudness_difference:float, score:float=None):
-        self.loop_start = loop_start
-        self.loop_end = loop_end
-        self.note_distance = note_distance
-        self.loudness_difference = loudness_difference
-        self.score = score
+    loop_start: int
+    loop_end: int
+    note_distance: float
+    loudness_difference: float
+    score: float = 0
 
 
 def find_best_loop_points(mlaudio: MLAudio,

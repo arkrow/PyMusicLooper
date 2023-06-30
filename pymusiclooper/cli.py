@@ -120,7 +120,7 @@ def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, ap
             "Playing with looping active from {} back to {}; similarity: {:.2%}".format(
                 end_time,
                 start_time,
-                chosen_loop_pair.score if chosen_loop_pair.score is not None else 0,
+                chosen_loop_pair.score,
             )
         )
         click.echo("(press Ctrl+C to stop looping.)")
