@@ -28,12 +28,30 @@ class LoopPair:
     score: float = 0
 
 
-def find_best_loop_points(mlaudio: MLAudio,
-                          min_duration_multiplier:float=0.35,
-                          min_loop_duration:int=None,
-                          max_loop_duration:int=None,
-                          approx_loop_start=None,
-                          approx_loop_end=None) -> list[LoopPair]:
+def find_best_loop_points(
+    mlaudio: MLAudio,
+    min_duration_multiplier: float = 0.35,
+    min_loop_duration: float = None,
+    max_loop_duration: float = None,
+    approx_loop_start: float = None,
+    approx_loop_end: float = None,
+) -> list[LoopPair]:
+    """Finds the best loop points for a given audio track, given the constraints specified
+
+    Args:
+        mlaudio (MLAudio): The MLAudio object to use for analysis
+        min_duration_multiplier (float, optional): The minimum duration of a loop as a multiplier of track duration. Defaults to 0.35.
+        min_loop_duration (float, optional): The minimum duration of a loop (in seconds). Defaults to None.
+        max_loop_duration (float, optional): The maximum duration of a loop (in seconds). Defaults to None.
+        approx_loop_start (float, optional): The approximate location of the desired loop start (in seconds). If specified, must specify approx_loop_end as well. Defaults to None.
+        approx_loop_end (float, optional): The approximate location of the desired loop end (in seconds). If specified, must specify approx_loop_start as well. Defaults to None.
+
+    Raises:
+        LoopNotFoundError: raised in case no loops were found
+
+    Returns:
+        list[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
+    """
     runtime_start = time.perf_counter()
     min_loop_duration = (mlaudio.seconds_to_frames(min_loop_duration)
                         if min_loop_duration is not None else
@@ -110,7 +128,18 @@ def find_best_loop_points(mlaudio: MLAudio,
         return filtered_candidate_pairs
 
 
-def _analyze_audio(mlaudio: MLAudio, skip_beat_analysis=False) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+def _analyze_audio(
+    mlaudio: MLAudio, skip_beat_analysis=False
+) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+    """Performs the main audio analysis required
+
+    Args:
+        mlaudio (MLAudio): the MLAudio object to perform analysis on
+        skip_beat_analysis (bool, optional): Skips beat analysis if true and returns None for bpm and beats. Defaults to False.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indicies of detected beats)
+    """
     S = librosa.core.stft(y=mlaudio.audio)
     S_power = np.abs(S) ** 2
     S_weighed = librosa.core.perceptual_weighting(
@@ -147,7 +176,26 @@ def _norm(a: np.ndarray) -> float:
 
 
 @njit(cache=True)
-def _find_candidate_pairs(chroma: np.ndarray, power_db: np.ndarray, beats: np.ndarray, min_loop_duration: int, max_loop_duration: int) -> list[tuple[int,int,float,float]]:
+def _find_candidate_pairs(
+    chroma: np.ndarray,
+    power_db: np.ndarray,
+    beats: np.ndarray,
+    min_loop_duration: int,
+    max_loop_duration: int,
+) -> list[tuple[int, int, float, float]]:
+    """Generates a list of all valid candidate loop pairs using combinations of beat indicies,
+    by comparing the notes using the chroma spectrogram and their loudness difference
+
+    Args:
+        chroma (np.ndarray): The chroma spectrogram
+        power_db (np.ndarray): The power spectrogram in dB
+        beats (np.ndarray): The frame indicies of detected beats
+        min_loop_duration (int): Minimum loop duration (in frames)
+        max_loop_duration (int): Maximum loop duration (in frames)
+
+    Returns:
+        list[tuple[int, int, float, float]]: A list of tuples containing each candidate loop pair data in the following format (loop_start, loop_end, note_distance, loudness_difference)
+    """
     candidate_pairs = []
 
     # Magic constants
@@ -181,7 +229,20 @@ def _find_candidate_pairs(chroma: np.ndarray, power_db: np.ndarray, beats: np.nd
     return candidate_pairs
 
 
-def _assess_and_filter_loop_pairs(mlaudio: MLAudio, chroma: np.ndarray, bpm:float, candidate_pairs: list[LoopPair]):
+def _assess_and_filter_loop_pairs(
+    mlaudio: MLAudio, chroma: np.ndarray, bpm: float, candidate_pairs: list[LoopPair]
+) -> list[LoopPair]:
+    """Assigns the scores to each loop pair and prunes the list of candidate loop pairs
+
+    Args:
+        mlaudio (MLAudio): MLAudio object of the track being analyzed
+        chroma (np.ndarray): The chroma spectrogram
+        bpm (float): The estimated bpm/tempo of the track
+        candidate_pairs (list[LoopPair]): The list of candidate loop pairs found
+
+    Returns:
+        list[LoopPair]: A scored and filtered list of valid loop candidate pairs
+    """
     beats_per_second = bpm / 60
     num_test_beats = 12
     seconds_to_test = num_test_beats / beats_per_second
@@ -303,7 +364,25 @@ def _calculate_loop_score(b1, b2, chroma, test_duration, weights=None):
     return max(lookahead_score, lookbehind_score)
 
 
-def _calculate_subseq_beat_similarity(b1_start, b2_start, chroma, test_duration, weights=None):
+def _calculate_subseq_beat_similarity(
+    b1_start: int,
+    b2_start: int,
+    chroma: np.ndarray,
+    test_duration: int,
+    weights: np.ndarray = None,
+) -> float:
+    """Calculates the similarity of subsequent notes of the two specified indicies (b1_start, b2_start) using cosine similarity
+
+    Args:
+        b1_start (int): Frame index of the first beat to compare
+        b2_start (int): Frame index of the second beat to compare
+        chroma (np.ndarray): The chroma spectrogram of the audio
+        test_duration (int): How many frames along the chroma spectrogram to test. If negative, will be testing the preceding frames instead of the subsequent frames.
+        weights (np.ndarray, optional): If specified, will provide a weighted average of the note scores according to the weight array provided. Defaults to None.
+
+    Returns:
+        float: the weighted average of the cosine similarity of the notes along the tested region
+    """
     if test_duration < 0:
         max_negative_offset = max(test_duration, -b1_start, -b2_start)
         b1_start = b1_start + max_negative_offset

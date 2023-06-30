@@ -7,6 +7,8 @@ from .exceptions import AudioLoadError
 
 
 class MLAudio:
+    """Wrapper class for loading audio files and containing the necessary audio data for PyMusicLooper."""
+
     total_duration: int
     filepath: str
     filename: str
@@ -16,7 +18,15 @@ class MLAudio:
     playback_audio: np.ndarray
     channels: int
 
-    def __init__(self, filepath) -> None:
+    def __init__(self, filepath: str) -> None:
+        """Initializes the MLAudio object and its data by loading the audio using the filepath provided.
+
+        Args:
+            filepath (str): path to the audio file
+
+        Raises:
+            AudioLoadError: If the file could not be loaded.
+        """
         # Load the file if it exists
         raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
         self.total_duration = librosa.get_duration(y=raw_audio,
