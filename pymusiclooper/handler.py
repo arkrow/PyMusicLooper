@@ -14,20 +14,37 @@ from .exceptions import AudioLoadError, LoopNotFoundError
 
 
 class LoopHandler:
-    def __init__(self, file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position:tuple=None) -> None:
-        self.approx_loop_start = approx_loop_position[0] if approx_loop_position is not None else None
-        self.approx_loop_end = approx_loop_position[1] if approx_loop_position is not None else None
-        self.musiclooper = MusicLooper(filepath=file_path,
-                                       min_duration_multiplier=min_duration_multiplier,
-                                       min_loop_duration=min_loop_duration,
-                                       max_loop_duration=max_loop_duration,
-                                       approx_loop_start=self.approx_loop_start,
-                                       approx_loop_end=self.approx_loop_end)
-        logging.info(f"Loaded '{file_path}'. Analyzing...")
-        self.loop_pair_list = self.musiclooper.find_loop_pairs()
-        self.interactive_mode = (os.environ.get('PML_INTERACTIVE_MODE', 'False') == 'True')
-        self.in_samples = (os.environ.get('PML_DISPLAY_SAMPLES', 'False') == 'True')
+    def __init__(
+        self,
+        file_path,
+        min_duration_multiplier,
+        min_loop_duration,
+        max_loop_duration,
+        approx_loop_position: tuple = None,
+    ):
+        if approx_loop_position is not None:
+            self.approx_loop_start = approx_loop_position[0]
+            self.approx_loop_end = approx_loop_position[1]
+        else:
+            self.approx_loop_start = None
+            self.approx_loop_end = None
 
+        self.musiclooper = MusicLooper(
+            filepath=file_path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_start=self.approx_loop_start,
+            approx_loop_end=self.approx_loop_end,
+        )
+
+        logging.info(f"Loaded '{file_path}'. Analyzing...")
+
+        self.loop_pair_list = self.musiclooper.find_loop_pairs()
+        self.interactive_mode = (
+            os.environ.get("PML_INTERACTIVE_MODE", "False") == "True"
+        )
+        self.in_samples = os.environ.get("PML_DISPLAY_SAMPLES", "False") == "True"
 
     def get_all_loop_pairs(self) -> list[LoopPair]:
         """
@@ -40,10 +57,10 @@ class LoopHandler:
         Returns the *best* discovered loop point of an audio file as a LoopPair object
         """
         return self._return_loop_pair_score_tuple(0)
-    
+
     def get_musiclooper_obj(self):
         return self.musiclooper
-    
+
     def play_looping(self, loop_start, loop_end):
         self.musiclooper.play_looping(loop_start, loop_end)
 
@@ -68,13 +85,28 @@ class LoopHandler:
         table.add_column("Score", justify="right", style="red")
 
         for idx, pair in enumerate(self.loop_pair_list[:show_top]):
-            start_time = preview_looper.frames_to_samples(pair.loop_start) if self.in_samples else preview_looper.frames_to_ftime(pair.loop_start) 
-            end_time = preview_looper.frames_to_samples(pair.loop_end) if self.in_samples else preview_looper.frames_to_ftime(pair.loop_end) 
+            start_time = (
+                preview_looper.frames_to_samples(pair.loop_start)
+                if self.in_samples
+                else preview_looper.frames_to_ftime(pair.loop_start)
+            )
+            end_time = (
+                preview_looper.frames_to_samples(pair.loop_end)
+                if self.in_samples
+                else preview_looper.frames_to_ftime(pair.loop_end)
+            )
             score = pair.score
             loudness_difference = pair.loudness_difference
             note_distance = pair.note_distance
-            table.add_row(str(idx), str(start_time), str(end_time), f"{note_distance:.4f}", f"{loudness_difference:.4f}", f"{score:.2%}")
-        
+            table.add_row(
+                str(idx),
+                str(start_time),
+                str(end_time),
+                f"{note_distance:.4f}",
+                f"{loudness_difference:.4f}",
+                f"{score:.2%}",
+            )
+
         console = Console()
         console.print(table)
         click.echo()
@@ -85,11 +117,11 @@ class LoopHandler:
                 idx = 0
                 preview = False
 
-                if num_input == 'more':
-                    self.interactive_handler(show_top=show_top*2)
-                if num_input == 'all':
+                if num_input == "more":
+                    self.interactive_handler(show_top=show_top * 2)
+                if num_input == "all":
                     self.interactive_handler(show_top=total_candidates)
-                if num_input == 'reset':
+                if num_input == "reset":
                     self.interactive_handler()
 
                 if num_input[-1] == "p":
@@ -105,7 +137,8 @@ class LoopHandler:
                     click.echo(f"Previewing loop #{idx} (Press Ctrl+C to stop looping):")
                     loop_start = self.loop_pair_list[idx].loop_start
                     loop_end = self.loop_pair_list[idx].loop_end
-                    offset = preview_looper.seconds_to_frames(5) # start preview 5 seconds before the looping point 
+                    # start preview 5 seconds before the looping point
+                    offset = preview_looper.seconds_to_frames(5)
                     preview_offset = loop_end - offset if loop_end - offset > 0 else 0
                     preview_looper.play_looping(
                         loop_start, loop_end, start_from=preview_offset
@@ -120,9 +153,9 @@ class LoopHandler:
 
         try:
             selected_index = get_user_input()
-            
+
             if selected_index is None:
-                click.echo('Please select a valid number.')
+                click.echo("Please select a valid number.")
                 return get_user_input()
 
             return selected_index
@@ -132,21 +165,29 @@ class LoopHandler:
 
 
 class LoopExportHandler(LoopHandler):
-    def __init__(self,
-                 file_path,
-                 min_duration_multiplier,
-                 min_loop_duration,
-                 max_loop_duration,
-                 output_dir,
-                 approx_loop_position:tuple=None,
-                 split_audio=True,
-                 split_audio_format="WAV",
-                 to_txt=False,
-                 to_stdout=False,
-                 tag_names:tuple[str, str]=None,
-                 batch_mode=False,
-                 multiprocess=False) -> None:
-        super().__init__(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position)
+    def __init__(
+        self,
+        file_path,
+        min_duration_multiplier,
+        min_loop_duration,
+        max_loop_duration,
+        output_dir,
+        approx_loop_position: tuple = None,
+        split_audio=True,
+        split_audio_format="WAV",
+        to_txt=False,
+        to_stdout=False,
+        tag_names: tuple[str, str] = None,
+        batch_mode=False,
+        multiprocess=False,
+    ):
+        super().__init__(
+            file_path,
+            min_duration_multiplier,
+            min_loop_duration,
+            max_loop_duration,
+            approx_loop_position,
+        )
         self.output_directory = output_dir
         self.split_audio = split_audio
         self.split_audio_format = split_audio_format
@@ -160,7 +201,7 @@ class LoopExportHandler(LoopHandler):
             self.interactive_mode = False
             self.in_samples = False
             self.to_txt = False
-            self.to_stdout = False 
+            self.to_stdout = False
 
     def run(self):
         try:
@@ -178,15 +219,21 @@ class LoopExportHandler(LoopHandler):
         chosen_loop_pair = self.choose_loop_pair(self.interactive_mode)
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
+        score = chosen_loop_pair.score
 
         music_looper = self.get_musiclooper_obj()
 
         if self.tag_names is not None:
             loop_start_tag, loop_end_tag = self.tag_names
-            music_looper.export_tags(loop_start, loop_end, loop_start_tag, loop_end_tag, output_dir=self.output_directory)
-
-            loop_start_samples, loop_end_samples = music_looper.frames_to_samples(loop_start), music_looper.frames_to_samples(loop_end)
-            
+            music_looper.export_tags(
+                loop_start,
+                loop_end,
+                loop_start_tag,
+                loop_end_tag,
+                output_dir=self.output_directory,
+            )
+            loop_start_samples = music_looper.frames_to_samples(loop_start)
+            loop_end_samples = music_looper.frames_to_samples(loop_end)
             message = f"Exported {loop_start_tag}:{loop_start_samples} and {loop_end_tag}:{loop_end_samples} to a copy in {self.output_directory}"
             if self.batch_mode:
                 logging.info(message)
@@ -199,7 +246,7 @@ class LoopExportHandler(LoopHandler):
             click.echo(f"\nLoop points for [{music_looper.filename}]:\nLOOP_START: {loop_start_samples}\nLOOP_END: {loop_end_samples}\n")
         if self.to_txt:
             music_looper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
-            out_path = os.path.join(self.output_directory, 'loop.txt')
+            out_path = os.path.join(self.output_directory, "loop.txt")
             message = f"Successfully added '{music_looper.filename}' loop points to '{out_path}'"
             if self.batch_mode:
                 logging.info(message)
@@ -222,21 +269,24 @@ class LoopExportHandler(LoopHandler):
             except ValueError as e:
                 logging.error(e)
 
+
 class BatchHandler:
-    def __init__(self,
-                 directory_path,
-                 min_duration_multiplier,
-                 min_loop_duration,
-                 max_loop_duration,
-                 output_dir,
-                 split_audio,
-                 split_audio_format="WAV",
-                 to_txt=False,
-                 to_stdout=False,
-                 recursive=False,
-                 flatten=False,
-                 n_jobs=1,
-                 tag_names:tuple[str, str]=None) -> None:
+    def __init__(
+        self,
+        directory_path,
+        min_duration_multiplier,
+        min_loop_duration,
+        max_loop_duration,
+        output_dir,
+        split_audio,
+        split_audio_format="WAV",
+        to_txt=False,
+        to_stdout=False,
+        recursive=False,
+        flatten=False,
+        n_jobs=1,
+        tag_names: tuple[str, str] = None,
+    ):
         self.directory_path = os.path.abspath(directory_path)
         self.min_duration_multiplier = min_duration_multiplier
         self.min_loop_duration = min_loop_duration
@@ -252,9 +302,15 @@ class BatchHandler:
         self.tag_names = tag_names
 
     def run(self):
-        files = self.get_files_in_directory(self.directory_path, recursive=self.recursive)
-        
-        output_dirs = None if self.flatten else self.clone_file_tree_structure(files, self.output_directory)
+        files = self.get_files_in_directory(
+            self.directory_path, recursive=self.recursive
+        )
+
+        output_dirs = (
+            None
+            if self.flatten
+            else self.clone_file_tree_structure(files, self.output_directory)
+        )
 
         if not files:
             logging.error(f"No files found in '{self.directory_path}'")
@@ -274,7 +330,8 @@ class BatchHandler:
                     split_audio=self.split_audio,
                     to_txt=self.to_txt,
                     to_stdout=self.to_stdout,
-                    tag_names=self.tag_names)
+                    tag_names=self.tag_names,
+                )
         else:
             # Note: some arguments are disabled due to inherent incompatibility with the current multiprocessing implementation
             self._batch_multiprocess(files, output_dirs)
@@ -288,25 +345,26 @@ class BatchHandler:
             while file_idx < num_files:
                 for _ in range(self.n_jobs):
                     p = Process(
-                            target=self._batch_export_helper,
-                            kwargs={
-                                "file_path": files[file_idx],
-                                "output_dir":
-                                    self.output_directory
-                                    if self.flatten
-                                    else output_dirs[file_idx],
-                                "min_duration_multiplier": self.min_duration_multiplier,
-                                "min_loop_duration": self.min_loop_duration,
-                                "max_loop_duration": self.max_loop_duration,
-                                "split_audio": self.split_audio,
-                                "split_audio_format": self.split_audio_format,
-                                "to_txt": False,
-                                "to_stdout": False,
-                                "tag_names":self.tag_names,
-                                "multiprocess": True,
-                            },
-                            daemon=True,
-                        )
+                        target=self._batch_export_helper,
+                        kwargs={
+                            "file_path": files[file_idx],
+                            "output_dir": (
+                                self.output_directory
+                                if self.flatten
+                                else output_dirs[file_idx]
+                            ),
+                            "min_duration_multiplier": self.min_duration_multiplier,
+                            "min_loop_duration": self.min_loop_duration,
+                            "max_loop_duration": self.max_loop_duration,
+                            "split_audio": self.split_audio,
+                            "split_audio_format": self.split_audio_format,
+                            "to_txt": False,
+                            "to_stdout": False,
+                            "tag_names": self.tag_names,
+                            "multiprocess": True,
+                        },
+                        daemon=True,
+                    )
                     processes.append(p)
                     p.start()
                     file_idx += 1
@@ -325,10 +383,12 @@ class BatchHandler:
     def clone_file_tree_structure(in_files, output_directory):
         common_path = os.path.commonpath(in_files)
         output_dirs = [
-                os.path.join(
-                    os.path.abspath(output_directory),
-                    os.path.dirname(os.path.relpath(file, start=common_path))
-                    ) for file in in_files]
+            os.path.join(
+                os.path.abspath(output_directory),
+                os.path.dirname(os.path.relpath(file, start=common_path)),
+            )
+            for file in in_files
+        ]
         for out_dir in output_dirs:
             if not os.path.isdir(out_dir):
                 os.makedirs(out_dir, exist_ok=True)
@@ -349,19 +409,33 @@ class BatchHandler:
                 if os.path.isfile(os.path.join(dir_path, f))
             ]
         )
-    
+
     @staticmethod
-    def _batch_export_helper(file_path, min_duration_multiplier, min_loop_duration, max_loop_duration, output_dir, split_audio, split_audio_format, to_txt, to_stdout, tag_names, multiprocess=False):
-            export_handler = LoopExportHandler(file_path=file_path,
-                                           min_duration_multiplier=min_duration_multiplier,
-                                           min_loop_duration=min_loop_duration,
-                                           max_loop_duration=max_loop_duration,
-                                           output_dir=output_dir,
-                                           split_audio=split_audio,
-                                           split_audio_format=split_audio_format,
-                                           to_txt=to_txt,
-                                           to_stdout=to_stdout,
-                                           tag_names=tag_names,
-                                           batch_mode=True,
-                                           multiprocess=multiprocess)
-            export_handler.run()
+    def _batch_export_helper(
+        file_path,
+        min_duration_multiplier,
+        min_loop_duration,
+        max_loop_duration,
+        output_dir,
+        split_audio,
+        split_audio_format,
+        to_txt,
+        to_stdout,
+        tag_names,
+        multiprocess=False,
+    ):
+        export_handler = LoopExportHandler(
+            file_path=file_path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            output_dir=output_dir,
+            split_audio=split_audio,
+            split_audio_format=split_audio_format,
+            to_txt=to_txt,
+            to_stdout=to_stdout,
+            tag_names=tag_names,
+            batch_mode=True,
+            multiprocess=multiprocess,
+        )
+        export_handler.run()

@@ -29,11 +29,14 @@ class MLAudio:
         """
         # Load the file if it exists
         raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
-        self.total_duration = librosa.get_duration(y=raw_audio,
-                                                   sr=sampling_rate)
+        self.total_duration = librosa.get_duration(y=raw_audio, sr=sampling_rate)
 
         if raw_audio.size == 0:
-            raise AudioLoadError('The audio file could not be loaded for analysis. The file may be corrupted, or the current environment may be lacking the necessary tools to open this file format.')
+            raise AudioLoadError(
+                "The audio file could not be loaded for analysis. The file may be"
+                " corrupted, or the current environment may be lacking the necessary"
+                " tools to open this file format."
+            )
 
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
@@ -48,7 +51,9 @@ class MLAudio:
         # Initialize parameters for playback
         self.playback_audio = raw_audio
         # Mono if the loaded audio is 1-D, else get the number of channels from the shape (n_channels, samples)
-        self.channels = 1 if len(self.playback_audio.shape) == 1 else self.playback_audio.shape[0]
+        self.channels = (
+            1 if len(self.playback_audio.shape) == 1 else self.playback_audio.shape[0]
+        )
 
     def apply_trim_offset(self, frame):
         return (
@@ -67,7 +72,9 @@ class MLAudio:
 
     def seconds_to_frames(self, seconds, apply_trim_offset=False):
         if apply_trim_offset:
-            seconds = seconds - librosa.core.samples_to_time(self.trim_offset, sr=self.rate)
+            seconds = seconds - librosa.core.samples_to_time(
+                self.trim_offset, sr=self.rate
+            )
         return librosa.core.time_to_frames(seconds, sr=self.rate)
 
     def frames_to_ftime(self, frame):

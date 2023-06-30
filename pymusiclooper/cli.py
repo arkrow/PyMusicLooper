@@ -10,11 +10,17 @@ from .handler import BatchHandler, LoopExportHandler, LoopHandler
 
 # CLI --help styling
 _basic_options = ["--path"]
-_loop_options = ["--min-duration-multiplier", "--min-loop-duration", "--max-loop-duration", "--approx-loop-position"]
+_loop_options = [
+    "--min-duration-multiplier",
+    "--min-loop-duration",
+    "--max-loop-duration",
+    "--approx-loop-position",
+]
 _export_options = ["--output-dir", "--format"]
 _batch_options = ["--recursive", "--flatten", "--n-jobs"]
 
-def _option_groups(additional_basic_options: list[str]=None):
+
+def _option_groups(additional_basic_options: list[str] = None):
     if additional_basic_options is not None:
         combined_basic_options = _basic_options + additional_basic_options
     else:
@@ -38,15 +44,17 @@ def _option_groups(additional_basic_options: list[str]=None):
         },
     ]
 
+
 _common_option_groups = _option_groups()
 click.rich_click.OPTION_GROUPS = {
     "pymusiclooper play": _common_option_groups,
     "pymusiclooper split-audio": _common_option_groups,
-    "pymusiclooper tag": _option_groups(['--tag-names']),
-    "pymusiclooper export-loop-points": _option_groups(['--export-to']),
+    "pymusiclooper tag": _option_groups(["--tag-names"]),
+    "pymusiclooper export-loop-points": _option_groups(["--export-to"]),
 }
 
 # End CLI styling
+
 
 @click.group("pymusiclooper")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Enables verbose logging output.")
@@ -56,13 +64,13 @@ click.rich_click.OPTION_GROUPS = {
 def cli_main(verbose, interactive, samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
     # Store flags in environ instead of passing them as parameters
-    os.environ['PML_VERBOSE'] = str(verbose)
-    os.environ['PML_INTERACTIVE_MODE'] = str(interactive)
-    os.environ['PML_DISPLAY_SAMPLES'] = str(samples)
-
+    os.environ["PML_VERBOSE"] = str(verbose)
+    os.environ["PML_INTERACTIVE_MODE"] = str(interactive)
+    os.environ["PML_DISPLAY_SAMPLES"] = str(samples)
 
     warnings.filterwarnings("ignore")
-    os.environ["PYTHONWARNINGS"] = "ignore" # to suppress warnings in batch mode's subprocesses
+    # To suppress warnings in batch mode's subprocesses
+    os.environ["PYTHONWARNINGS"] = "ignore"
 
     if verbose:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -97,24 +105,40 @@ def common_export_options(f):
 
 @cli_main.command()
 @common_loop_options
-def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position):
+def play(
+    path,
+    min_duration_multiplier,
+    min_loop_duration,
+    max_loop_duration,
+    approx_loop_position,
+):
     """Play an audio file on repeat from the terminal with the best discovered loop points (default), or a chosen point if interactive mode is active."""
     try:
-        handler = LoopHandler(file_path=path,
-                              min_duration_multiplier=min_duration_multiplier,
-                              min_loop_duration=min_loop_duration,
-                              max_loop_duration=max_loop_duration,
-                              approx_loop_position=approx_loop_position)
+        handler = LoopHandler(
+            file_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_position=approx_loop_position,
+        )
 
-        in_samples = (os.environ.get('PML_DISPLAY_SAMPLES', 'False') == 'True')
-        interactive_mode = (os.environ.get('PML_INTERACTIVE_MODE', 'False') == 'True')
+        in_samples = os.environ.get("PML_DISPLAY_SAMPLES", "False") == "True"
+        interactive_mode = os.environ.get("PML_INTERACTIVE_MODE", "False") == "True"
 
         chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
 
         looper = handler.get_musiclooper_obj()
 
-        start_time = looper.frames_to_samples(chosen_loop_pair.loop_start) if in_samples else looper.frames_to_ftime(chosen_loop_pair.loop_start)
-        end_time = looper.frames_to_samples(chosen_loop_pair.loop_end) if in_samples else looper.frames_to_ftime(chosen_loop_pair.loop_end)
+        start_time = (
+            looper.frames_to_samples(chosen_loop_pair.loop_start)
+            if in_samples
+            else looper.frames_to_ftime(chosen_loop_pair.loop_start)
+        )
+        end_time = (
+            looper.frames_to_samples(chosen_loop_pair.loop_end)
+            if in_samples
+            else looper.frames_to_ftime(chosen_loop_pair.loop_end)
+        )
 
         click.echo(
             "Playing with looping active from {} back to {}; similarity: {:.2%}".format(
@@ -137,7 +161,18 @@ def play(path, min_duration_multiplier, min_loop_duration, max_loop_duration, ap
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported audio files")
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
-def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, format, n_jobs):
+def split_audio(
+    path,
+    min_duration_multiplier,
+    min_loop_duration,
+    max_loop_duration,
+    approx_loop_position,
+    output_dir,
+    recursive,
+    flatten,
+    format,
+    n_jobs,
+):
     """Split the input audio into intro, loop and outro sections"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -146,32 +181,36 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
         os.mkdir(output_dir)
 
     if os.path.isfile(path):
-        export_handler = LoopExportHandler(file_path=path,
-                                           min_duration_multiplier=min_duration_multiplier,
-                                           min_loop_duration=min_loop_duration,
-                                           max_loop_duration=max_loop_duration,
-                                           approx_loop_position=approx_loop_position,
-                                           output_dir=output_dir,
-                                           split_audio=True,
-                                           split_audio_format=format,
-                                           to_txt=False,
-                                           to_stdout=False,
-                                           tag_names=None)
+        export_handler = LoopExportHandler(
+            file_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_position=approx_loop_position,
+            output_dir=output_dir,
+            split_audio=True,
+            split_audio_format=format,
+            to_txt=False,
+            to_stdout=False,
+            tag_names=None,
+        )
         export_handler.run()
     else:
-        batch_handler = BatchHandler(directory_path=path,
-                                     min_duration_multiplier=min_duration_multiplier,
-                                     min_loop_duration=min_loop_duration,
-                                     max_loop_duration=max_loop_duration,
-                                     output_dir=output_dir,
-                                     split_audio=True,
-                                     split_audio_format=format,
-                                     to_txt=False,
-                                     to_stdout=False,
-                                     recursive=recursive,
-                                     flatten=flatten,
-                                     n_jobs=n_jobs,
-                                     tag_names=None)
+        batch_handler = BatchHandler(
+            directory_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            output_dir=output_dir,
+            split_audio=True,
+            split_audio_format=format,
+            to_txt=False,
+            to_stdout=False,
+            recursive=recursive,
+            flatten=flatten,
+            n_jobs=n_jobs,
+            tag_names=None,
+        )
         batch_handler.run()
 
 
@@ -179,11 +218,21 @@ def split_audio(path, min_duration_multiplier, min_loop_duration, max_loop_durat
 @common_loop_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", required=True, show_default=True, help="STDOUT: prints the loop points of a track in samples to the terminal's stdout (OR) TXT: export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).")
-def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, export_to):
+def export_loop_points(
+    path,
+    min_duration_multiplier,
+    min_loop_duration,
+    max_loop_duration,
+    approx_loop_position,
+    output_dir,
+    recursive,
+    flatten,
+    export_to,
+):
     """Export the best discovered or chosen loop points to a text file or to the terminal (stdout)"""
 
-    to_stdout = export_to.upper() == 'STDOUT'
-    to_txt = export_to.upper() == 'TXT'
+    to_stdout = export_to.upper() == "STDOUT"
+    to_txt = export_to.upper() == "TXT"
 
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -192,33 +241,37 @@ def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loo
         os.mkdir(output_dir)
 
     if os.path.isfile(path):
-        export_handler = LoopExportHandler(file_path=path,
-                                           min_duration_multiplier=min_duration_multiplier,
-                                           min_loop_duration=min_loop_duration,
-                                           max_loop_duration=max_loop_duration,
-                                           approx_loop_position=approx_loop_position,
-                                           output_dir=output_dir,
-                                           split_audio=False,
-                                           to_txt=to_txt,
-                                           to_stdout=to_stdout,
-                                           tag_names=None)
+        export_handler = LoopExportHandler(
+            file_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_position=approx_loop_position,
+            output_dir=output_dir,
+            split_audio=False,
+            to_txt=to_txt,
+            to_stdout=to_stdout,
+            tag_names=None,
+        )
         export_handler.run()
     else:
-        # Disable multiprocessing until a thread-safe multiprocessing queue is implemented 
+        # Disable multiprocessing until a thread-safe multiprocessing queue is implemented
         n_jobs = 1
 
-        batch_handler = BatchHandler(directory_path=path,
-                                     min_duration_multiplier=min_duration_multiplier,
-                                     min_loop_duration=min_loop_duration,
-                                     max_loop_duration=max_loop_duration,
-                                     output_dir=output_dir,
-                                     split_audio=False,
-                                     to_txt=to_txt,
-                                     to_stdout=to_stdout,
-                                     recursive=recursive,
-                                     flatten=flatten,
-                                     n_jobs=n_jobs,
-                                     tag_names=None)
+        batch_handler = BatchHandler(
+            directory_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            output_dir=output_dir,
+            split_audio=False,
+            to_txt=to_txt,
+            to_stdout=to_stdout,
+            recursive=recursive,
+            flatten=flatten,
+            n_jobs=n_jobs,
+            tag_names=None,
+        )
         batch_handler.run()
 
 
@@ -227,7 +280,18 @@ def export_loop_points(path, min_duration_multiplier, min_loop_duration, max_loo
 @common_export_options
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
 @click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
-def tag(path, min_duration_multiplier, min_loop_duration, max_loop_duration, approx_loop_position, output_dir, recursive, flatten, n_jobs, tag_names):
+def tag(
+    path,
+    min_duration_multiplier,
+    min_loop_duration,
+    max_loop_duration,
+    approx_loop_position,
+    output_dir,
+    recursive,
+    flatten,
+    n_jobs,
+    tag_names,
+):
     """Adds metadata tags of loop points to a copy of the input audio file(s)"""
     default_out = os.path.join(os.path.dirname(path), "Loops")
     output_dir = output_dir if output_dir is not None else default_out
@@ -236,30 +300,34 @@ def tag(path, min_duration_multiplier, min_loop_duration, max_loop_duration, app
         os.mkdir(output_dir)
 
     if os.path.isfile(path):
-        export_handler = LoopExportHandler(file_path=path,
-                                       min_duration_multiplier=min_duration_multiplier,
-                                       min_loop_duration=min_loop_duration,
-                                       max_loop_duration=max_loop_duration,
-                                       approx_loop_position=approx_loop_position,
-                                       output_dir=output_dir,
-                                       split_audio=False,
-                                       to_txt=False,
-                                       to_stdout=False,
-                                       tag_names=tag_names)
+        export_handler = LoopExportHandler(
+            file_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_position=approx_loop_position,
+            output_dir=output_dir,
+            split_audio=False,
+            to_txt=False,
+            to_stdout=False,
+            tag_names=tag_names,
+        )
         export_handler.run()
     else:
-        batch_handler = BatchHandler(directory_path=path,
-                                     min_duration_multiplier=min_duration_multiplier,
-                                     min_loop_duration=min_loop_duration,
-                                     max_loop_duration=max_loop_duration,
-                                     output_dir=output_dir,
-                                     split_audio=False,
-                                     to_txt=False,
-                                     to_stdout=False,
-                                     recursive=recursive,
-                                     flatten=flatten,
-                                     n_jobs=n_jobs,
-                                     tag_names=tag_names)
+        batch_handler = BatchHandler(
+            directory_path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            output_dir=output_dir,
+            split_audio=False,
+            to_txt=False,
+            to_stdout=False,
+            recursive=recursive,
+            flatten=flatten,
+            n_jobs=n_jobs,
+            tag_names=tag_names,
+        )
         batch_handler.run()
 
 
