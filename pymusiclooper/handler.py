@@ -65,7 +65,6 @@ class LoopHandler:
         table.add_column("Loop End", style="green")
         table.add_column("Note Distance", style="yellow")
         table.add_column("Loudness Difference (dB)", style="blue")
-        
         table.add_column("Score", justify="right", style="red")
 
         for idx, pair in enumerate(self.loop_pair_list[:show_top]):
@@ -179,7 +178,6 @@ class LoopExportHandler(LoopHandler):
         chosen_loop_pair = self.choose_loop_pair(self.interactive_mode)
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
-        score = chosen_loop_pair.score
 
         music_looper = self.get_musiclooper_obj()
 

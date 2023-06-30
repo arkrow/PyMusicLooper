@@ -385,8 +385,8 @@ def _calculate_subseq_beat_similarity(
     """
     if test_duration < 0:
         max_negative_offset = max(test_duration, -b1_start, -b2_start)
-        b1_start = b1_start + max_negative_offset
-        b2_start = b2_start + max_negative_offset
+        b1_start += max_negative_offset
+        b2_start += max_negative_offset
 
     chroma_len = chroma.shape[-1]
     test_offset = np.abs(test_duration)
