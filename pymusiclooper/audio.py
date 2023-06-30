@@ -5,6 +5,7 @@ import numpy as np
 
 from .exceptions import AudioLoadError
 
+
 class MLAudio:
     total_duration: int
     filepath: str

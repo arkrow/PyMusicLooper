@@ -1,16 +1,16 @@
-import os
 import logging
-import click
+import os
 import sys
 from multiprocessing import Process
 
-from tqdm import tqdm
+import rich_click as click
 from rich.console import Console
 from rich.table import Table
+from tqdm import tqdm
 
-from .core import MusicLooper
 from .analysis import LoopPair
-from .exceptions import LoopNotFoundError, AudioLoadError
+from .core import MusicLooper
+from .exceptions import AudioLoadError, LoopNotFoundError
 
 
 class LoopHandler:

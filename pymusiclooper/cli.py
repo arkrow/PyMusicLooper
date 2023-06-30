@@ -6,7 +6,7 @@ import warnings
 import rich_click as click
 
 from . import __version__
-from .handler import LoopHandler, LoopExportHandler, BatchHandler
+from .handler import BatchHandler, LoopExportHandler, LoopHandler
 
 # CLI --help styling
 _basic_options = ["--path"]

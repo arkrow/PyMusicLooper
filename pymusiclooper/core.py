@@ -7,9 +7,10 @@ import shutil
 import soundfile
 import taglib
 
-from .playback import PlaybackHandler
-from .audio import MLAudio
 from .analysis import find_best_loop_points
+from .audio import MLAudio
+from .playback import PlaybackHandler
+
 
 class MusicLooper:
 

@@ -1,10 +1,10 @@
-import threading
-import signal
 import logging
 import signal
+import threading
 
-import sounddevice as sd
 import numpy as np
+import sounddevice as sd
+
 
 class PlaybackHandler:
     def __init__(self) -> None:
