@@ -1,6 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import librosa
 import numpy as np
@@ -31,10 +32,10 @@ class LoopPair:
 def find_best_loop_points(
     mlaudio: MLAudio,
     min_duration_multiplier: float = 0.35,
-    min_loop_duration: float = None,
-    max_loop_duration: float = None,
-    approx_loop_start: float = None,
-    approx_loop_end: float = None,
+    min_loop_duration: Optional[float] = None,
+    max_loop_duration: Optional[float] = None,
+    approx_loop_start: Optional[float] = None,
+    approx_loop_end: Optional[float] = None,
 ) -> list[LoopPair]:
     """Finds the best loop points for a given audio track, given the constraints specified
 
@@ -71,7 +72,7 @@ def find_best_loop_points(
         # and significantly reduces the total memory consumption
         chroma, power_db, _, _ = _analyze_audio(mlaudio, skip_beat_analysis=True)
         # Set bpm to a general average of 120
-        bpm = 120
+        bpm = 120.0
 
         approx_loop_start = mlaudio.seconds_to_frames(
             approx_loop_start, apply_trim_offset=True
@@ -304,7 +305,7 @@ def _assess_and_filter_loop_pairs(
     beats_per_second = bpm / 60
     num_test_beats = 12
     seconds_to_test = num_test_beats / beats_per_second
-    test_offset = librosa.samples_to_frames(int(seconds_to_test * mlaudio.rate))
+    test_offset = mlaudio.samples_to_frames(int(seconds_to_test * mlaudio.rate))
 
     # adjust offset for very short tracks to 25% of its length
     if test_offset > chroma.shape[-1]:
@@ -430,7 +431,7 @@ def _calculate_subseq_beat_similarity(
     b2_start: int,
     chroma: np.ndarray,
     test_duration: int,
-    weights: np.ndarray = None,
+    weights: Optional[np.ndarray] = None,
 ) -> float:
     """Calculates the similarity of subsequent notes of the two specified indicies (b1_start, b2_start) using cosine similarity
 
