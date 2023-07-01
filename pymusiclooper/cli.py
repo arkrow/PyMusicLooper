@@ -6,6 +6,7 @@ import warnings
 import rich_click as click
 
 from . import __version__
+from .core import MusicLooper
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
 
 # CLI --help styling
@@ -59,7 +60,7 @@ click.rich_click.OPTION_GROUPS = {
 @click.group("pymusiclooper")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Enables verbose logging output.")
 @click.option("--interactive", "-i", is_flag=True, default=False, help="Enables interactive mode to manually preview/choose the desired loop point.")
-@click.option("--samples", "-s", is_flag=True, default=False, help="Display all loop points in interactive mode in sample points instead of the default mm:ss.sss format.") 
+@click.option("--samples", "-s", is_flag=True, default=False, help="Display all loop points in interactive mode in sample points instead of the default mm:ss.sss format.")
 @click.version_option(__version__, prog_name="pymusiclooper")
 def cli_main(verbose, interactive, samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
@@ -155,6 +156,36 @@ def play(
         logging.error(e)
         return
 
+@cli_main.command()
+@click.option('--path', type=click.Path(exists=True), required=True, help='path to audio file')
+@click.option("--tag-names", type=str, required=True, nargs=2, help="The name of the metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be in samples and integer values)")
+def play_tagged(path, tag_names):
+    """Skips loop analysis and reads the loop points directly from the tags present in the file."""
+    try:
+        looper = MusicLooper(path)
+        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1])
+
+        in_samples = os.environ.get("PML_DISPLAY_SAMPLES", "False") == "True"
+
+        start_time = (
+            loop_start
+            if in_samples
+            else looper.samples_to_ftime(loop_start)
+        )
+        end_time = (
+            loop_end
+            if in_samples
+            else looper.samples_to_ftime(loop_end)
+        )
+
+        click.echo(f"Playing with looping active from {end_time} back to {start_time}")
+        click.echo("(press Ctrl+C to stop looping.)")
+
+        looper.play_looping(loop_start, loop_end, is_sample_units=True)
+
+    except Exception as e:
+        logging.error(e)
+        return
 
 @cli_main.command()
 @common_loop_options

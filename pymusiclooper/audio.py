@@ -80,3 +80,7 @@ class MLAudio:
     def frames_to_ftime(self, frame):
         time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
         return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
+    
+    def samples_to_ftime(self, samples):
+        time_sec = librosa.core.samples_to_time(samples, sr=self.rate)
+        return "{:02.0f}:{:06.3f}".format(time_sec // 60, time_sec % 60)
