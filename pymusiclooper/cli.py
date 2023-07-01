@@ -6,6 +6,7 @@ import warnings
 
 import rich_click as click
 from rich_click.cli import patch as rich_click_patch
+from yt_dlp.utils import YoutubeDLError
 
 rich_click_patch()
 from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
@@ -85,10 +86,11 @@ def cli_main(verbose, interactive, samples):
     else:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
 
+
 def common_path_options(f):
     @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup,
                 help='the path to the audio track to load')
-    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to audio file (or directory if batch processing) [dim cyan]\[mutually exclusive with --url[/], [dim red]at least one required][/]')
+    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to audio file, or directory if batch processing [dim cyan]\[mutually exclusive with --url[/], [dim red]at least one required][/]')
     @optgroup.option('--url',type=UrlParamType, default=None, help='url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use [dim cyan]\[mutually exclusive with --path[/], [dim red]at least one required][/]')
 
     @functools.wraps(f)
@@ -96,6 +98,7 @@ def common_path_options(f):
         return f(*args, **kwargs)
 
     return wrapper_common_options
+
 
 def common_loop_options(f):
     @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="specify minimum loop duration as a multiplier of the audio track's duration")
@@ -174,9 +177,12 @@ def play(
 
         handler.play_looping(chosen_loop_pair.loop_start, chosen_loop_pair.loop_end)
 
+    except YoutubeDLError:
+        # Already logged from youtube.py
+        pass
     except Exception as e:
         logging.error(e)
-        return
+
 
 @cli_main.command()
 @click.option('--path', type=click.Path(exists=True), required=True, help='path to audio file')
@@ -207,7 +213,7 @@ def play_tagged(path, tag_names):
 
     except Exception as e:
         logging.error(e)
-        return
+
 
 @cli_main.command()
 @common_path_options
@@ -229,45 +235,50 @@ def split_audio(
     n_jobs,
 ):
     """Split the input audio into intro, loop and outro sections"""
+    try:
+        if url is not None:
+            output_dir = mk_outputdir(os.getcwd(), output_dir)
+            path = download_audio(url, output_dir)
+        else:
+            output_dir = mk_outputdir(path, output_dir)
 
-    if url is not None:
-        output_dir = mk_outputdir(os.getcwd(), output_dir)
-        path = download_audio(url, output_dir)
-    else:
-        output_dir = mk_outputdir(path, output_dir)
-
-    if os.path.isfile(path):
-        export_handler = LoopExportHandler(
-            file_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            approx_loop_position=approx_loop_position,
-            output_dir=output_dir,
-            split_audio=True,
-            split_audio_format=format,
-            to_txt=False,
-            to_stdout=False,
-            tag_names=None,
-        )
-        export_handler.run()
-    else:
-        batch_handler = BatchHandler(
-            directory_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            output_dir=output_dir,
-            split_audio=True,
-            split_audio_format=format,
-            to_txt=False,
-            to_stdout=False,
-            recursive=recursive,
-            flatten=flatten,
-            n_jobs=n_jobs,
-            tag_names=None,
-        )
-        batch_handler.run()
+        if os.path.isfile(path):
+            export_handler = LoopExportHandler(
+                file_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                approx_loop_position=approx_loop_position,
+                output_dir=output_dir,
+                split_audio=True,
+                split_audio_format=format,
+                to_txt=False,
+                to_stdout=False,
+                tag_names=None,
+            )
+            export_handler.run()
+        else:
+            batch_handler = BatchHandler(
+                directory_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                output_dir=output_dir,
+                split_audio=True,
+                split_audio_format=format,
+                to_txt=False,
+                to_stdout=False,
+                recursive=recursive,
+                flatten=flatten,
+                n_jobs=n_jobs,
+                tag_names=None,
+            )
+            batch_handler.run()
+    except YoutubeDLError:
+        # Already logged from youtube.py
+        pass
+    except Exception as e:
+        logging.error(e)
 
 
 @cli_main.command()
@@ -288,49 +299,54 @@ def export_loop_points(
     export_to,
 ):
     """Export the best discovered or chosen loop points to a text file or to the terminal (stdout)"""
+    try:
+        to_stdout = export_to.upper() == "STDOUT"
+        to_txt = export_to.upper() == "TXT"
 
-    to_stdout = export_to.upper() == "STDOUT"
-    to_txt = export_to.upper() == "TXT"
+        if url is not None:
+            output_dir = mk_outputdir(os.getcwd(), output_dir)
+            path = download_audio(url, output_dir)
+        else:
+            output_dir = mk_outputdir(path, output_dir)
 
-    if url is not None:
-        output_dir = mk_outputdir(os.getcwd(), output_dir)
-        path = download_audio(url, output_dir)
-    else:
-        output_dir = mk_outputdir(path, output_dir)
+        if os.path.isfile(path):
+            export_handler = LoopExportHandler(
+                file_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                approx_loop_position=approx_loop_position,
+                output_dir=output_dir,
+                split_audio=False,
+                to_txt=to_txt,
+                to_stdout=to_stdout,
+                tag_names=None,
+            )
+            export_handler.run()
+        else:
+            # Disable multiprocessing until a thread-safe multiprocessing queue is implemented
+            n_jobs = 1
 
-    if os.path.isfile(path):
-        export_handler = LoopExportHandler(
-            file_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            approx_loop_position=approx_loop_position,
-            output_dir=output_dir,
-            split_audio=False,
-            to_txt=to_txt,
-            to_stdout=to_stdout,
-            tag_names=None,
-        )
-        export_handler.run()
-    else:
-        # Disable multiprocessing until a thread-safe multiprocessing queue is implemented
-        n_jobs = 1
-
-        batch_handler = BatchHandler(
-            directory_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            output_dir=output_dir,
-            split_audio=False,
-            to_txt=to_txt,
-            to_stdout=to_stdout,
-            recursive=recursive,
-            flatten=flatten,
-            n_jobs=n_jobs,
-            tag_names=None,
-        )
-        batch_handler.run()
+            batch_handler = BatchHandler(
+                directory_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                output_dir=output_dir,
+                split_audio=False,
+                to_txt=to_txt,
+                to_stdout=to_stdout,
+                recursive=recursive,
+                flatten=flatten,
+                n_jobs=n_jobs,
+                tag_names=None,
+            )
+            batch_handler.run()
+    except YoutubeDLError:
+        # Already logged from youtube.py
+        pass
+    except Exception as e:
+        logging.error
 
 
 @cli_main.command()
@@ -353,42 +369,48 @@ def tag(
     tag_names,
 ):
     """Adds metadata tags of loop points to a copy of the input audio file(s)"""
-    if url is not None:
-        output_dir = mk_outputdir(os.getcwd(), output_dir)
-        path = download_audio(url, output_dir)
-    else:
-        output_dir = mk_outputdir(path, output_dir)
+    try:
+        if url is not None:
+            output_dir = mk_outputdir(os.getcwd(), output_dir)
+            path = download_audio(url, output_dir)
+        else:
+            output_dir = mk_outputdir(path, output_dir)
 
-    if os.path.isfile(path):
-        export_handler = LoopExportHandler(
-            file_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            approx_loop_position=approx_loop_position,
-            output_dir=output_dir,
-            split_audio=False,
-            to_txt=False,
-            to_stdout=False,
-            tag_names=tag_names,
-        )
-        export_handler.run()
-    else:
-        batch_handler = BatchHandler(
-            directory_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            output_dir=output_dir,
-            split_audio=False,
-            to_txt=False,
-            to_stdout=False,
-            recursive=recursive,
-            flatten=flatten,
-            n_jobs=n_jobs,
-            tag_names=tag_names,
-        )
-        batch_handler.run()
+        if os.path.isfile(path):
+            export_handler = LoopExportHandler(
+                file_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                approx_loop_position=approx_loop_position,
+                output_dir=output_dir,
+                split_audio=False,
+                to_txt=False,
+                to_stdout=False,
+                tag_names=tag_names,
+            )
+            export_handler.run()
+        else:
+            batch_handler = BatchHandler(
+                directory_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                output_dir=output_dir,
+                split_audio=False,
+                to_txt=False,
+                to_stdout=False,
+                recursive=recursive,
+                flatten=flatten,
+                n_jobs=n_jobs,
+                tag_names=tag_names,
+            )
+            batch_handler.run()
+    except YoutubeDLError:
+        # Already logged from youtube.py
+        pass
+    except Exception as e:
+        logging.error(e)
 
 
 def mk_outputdir(path, output_dir):
