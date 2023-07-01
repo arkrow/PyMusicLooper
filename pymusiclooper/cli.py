@@ -65,7 +65,7 @@ click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
 
-@click.group("pymusiclooper")
+@click.group("pymusiclooper", epilog="Full documentation and examples can be found at https://github.com/arkrow/PyMusicLooper")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Enables verbose logging output.")
 @click.option("--interactive", "-i", is_flag=True, default=False, help="Enables interactive mode to manually preview/choose the desired loop point.")
 @click.option("--samples", "-s", is_flag=True, default=False, help="Display all loop points in interactive mode in sample points instead of the default mm:ss.sss format.")
@@ -88,10 +88,9 @@ def cli_main(verbose, interactive, samples):
 
 
 def common_path_options(f):
-    @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup,
-                help='the path to the audio track to load')
-    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to audio file, or directory if batch processing [dim cyan]\[mutually exclusive with --url[/], [dim red]at least one required][/]')
-    @optgroup.option('--url',type=UrlParamType, default=None, help='url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use [dim cyan]\[mutually exclusive with --path[/], [dim red]at least one required][/]')
+    @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup, help='the path to the audio track(s) to load')
+    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to the audio file(s). [dim]\[[/][dim cyan]mutually exclusive with --url;[/] [dim red]at least one required[/][dim]][/]')
+    @optgroup.option('--url',type=UrlParamType, default=None, help='url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim]\[[/][dim cyan]mutually exclusive with --path;[/] [dim red]at least one required[/][dim]][/]')
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -101,10 +100,10 @@ def common_path_options(f):
 
 
 def common_loop_options(f):
-    @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="specify minimum loop duration as a multiplier of the audio track's duration")
-    @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the minimum loop duration in seconds (Note: overrides the --min-duration-multiplier option if specified)')
-    @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the maximum loop duration in seconds')
-    @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='specify the approximate desired loop start and loop end in seconds (note: only those points will be checked, with a search window of +/- 2 seconds; ignored in batch mode)')
+    @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="the minimum loop duration as a multiplier of the audio track's total duration.")
+    @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='the minimum loop duration in seconds (note: overrides --min-duration-multiplier if specified).')
+    @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='the maximum loop duration in seconds.')
+    @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='the approximate desired loop start and loop end in seconds for a specific audio track (note: only those points will be checked, with a search window of +/- 2 seconds).')
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -114,8 +113,8 @@ def common_loop_options(f):
 
 
 def common_export_options(f):
-    @click.option('--output-dir', '-o', type=click.Path(exists=False, writable=True, file_okay=False), help="specify the output directory for exports (defaults to a new 'Loops' folder in the audio file's directory).")
-    @click.option("--recursive", "-r", is_flag=True, default=False, help="process directories and their contents recursively (has an effect only if the given path is a directory).")
+    @click.option('--output-dir', '-o', type=click.Path(exists=False, writable=True, file_okay=False), help="the output directory to use for the exported files.")
+    @click.option("--recursive", "-r", is_flag=True, default=False, help="process directories recursively.")
     @click.option("--flatten", "-f", is_flag=True, default=False, help="flatten the output directory structure instead of preserving it when using the --recursive flag (note: files with identical filenames are silently overwritten).")
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -219,8 +218,8 @@ def play_tagged(path, tag_names):
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported audio files")
-@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
+@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported split audio files")
+@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time [yellow](warning: memory intensive)[/].")
 def split_audio(
     path,
     url,
@@ -353,7 +352,7 @@ def export_loop_points(
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
+@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time [yellow](warning: memory intensive)[/].")
 @click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
 def tag(
     path,
