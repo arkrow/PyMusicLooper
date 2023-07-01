@@ -36,7 +36,7 @@ class YoutubeDownloader:
     def __init__(self, url, output_path):
         ydl_opts = {
             "logger": YtdLogger(),
-            "format": "ogg/bestaudio/best",
+            "format": "bestaudio/best",
             "postprocessors": [
                 {"key": "SponsorBlock", "when": "pre_process"},
                 {  # Skips all unrelated/non-music sections for youtube
@@ -54,7 +54,6 @@ class YoutubeDownloader:
                 },
                 {  # Extracts audio using ffmpeg
                     "key": "FFmpegExtractAudio",
-                    "preferredcodec": "vorbis",
                 },
             ],
             "paths": {"home": output_path, "temp": output_path},
