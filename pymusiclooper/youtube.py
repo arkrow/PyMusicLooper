@@ -38,12 +38,25 @@ class YoutubeDownloader:
             "logger": YtdLogger(),
             "format": "ogg/bestaudio/best",
             "postprocessors": [
+                {"key": "SponsorBlock", "when": "pre_process"},
+                {  # Skips all unrelated/non-music sections for youtube
+                    "key": "ModifyChapters",
+                    "remove_sponsor_segments": [
+                        "sponsor",
+                        "selfpromo",
+                        "interaction",
+                        "intro",
+                        "outro",
+                        "preview",
+                        "music_offtopic",
+                        "filler",
+                    ],
+                },
                 {  # Extracts audio using ffmpeg
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "vorbis",
-                }
+                },
             ],
-            "sponsorblock-remove": "all",
             "paths": {"home": output_path, "temp": output_path},
             "progress_hooks": [self.progress_hook],
             "postprocessor_hooks": [self.postprocessor_hook],
