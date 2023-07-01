@@ -1,16 +1,23 @@
 import functools
 import logging
 import os
+import tempfile
 import warnings
 
 import rich_click as click
+from rich_click.cli import patch as rich_click_patch
+
+rich_click_patch()
+from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
+from click_params import PUBLIC_URL as UrlParamType
 
 from . import __version__
 from .core import MusicLooper
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
+from .youtube import YoutubeDownloader
 
 # CLI --help styling
-_basic_options = ["--path"]
+_basic_options = ["--path", "--url"]
 _loop_options = [
     "--min-duration-multiplier",
     "--min-loop-duration",
@@ -53,7 +60,7 @@ click.rich_click.OPTION_GROUPS = {
     "pymusiclooper tag": _option_groups(["--tag-names"]),
     "pymusiclooper export-loop-points": _option_groups(["--export-to"]),
 }
-
+click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
 
@@ -78,9 +85,19 @@ def cli_main(verbose, interactive, samples):
     else:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
 
+def common_path_options(f):
+    @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup,
+                help='the path to the audio track to load')
+    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to audio file (or directory if batch processing) [dim cyan]\[mutually exclusive with --url[/], [dim red]at least one required][/]')
+    @optgroup.option('--url',type=UrlParamType, default=None, help='url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use [dim cyan]\[mutually exclusive with --path[/], [dim red]at least one required][/]')
+
+    @functools.wraps(f)
+    def wrapper_common_options(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    return wrapper_common_options
 
 def common_loop_options(f):
-    @click.option('--path', type=click.Path(exists=True), required=True, help='path to audio file (or directory if batch processing)')
     @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="specify minimum loop duration as a multiplier of the audio track's duration")
     @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the minimum loop duration in seconds (Note: overrides the --min-duration-multiplier option if specified)')
     @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='specify the maximum loop duration in seconds')
@@ -105,9 +122,11 @@ def common_export_options(f):
 
 
 @cli_main.command()
+@common_path_options
 @common_loop_options
 def play(
     path,
+    url,
     min_duration_multiplier,
     min_loop_duration,
     max_loop_duration,
@@ -115,6 +134,9 @@ def play(
 ):
     """Play an audio file on repeat from the terminal with the best discovered loop points (default), or a chosen point if interactive mode is active."""
     try:
+        if url is not None:
+            path = download_audio(url, tempfile.gettempdir())
+
         handler = LoopHandler(
             file_path=path,
             min_duration_multiplier=min_duration_multiplier,
@@ -188,12 +210,14 @@ def play_tagged(path, tag_names):
         return
 
 @cli_main.command()
+@common_path_options
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported audio files")
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
 def split_audio(
     path,
+    url,
     min_duration_multiplier,
     min_loop_duration,
     max_loop_duration,
@@ -205,11 +229,12 @@ def split_audio(
     n_jobs,
 ):
     """Split the input audio into intro, loop and outro sections"""
-    default_out = os.path.join(os.path.dirname(path), "Loops")
-    output_dir = output_dir if output_dir is not None else default_out
 
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    if url is not None:
+        output_dir = mk_outputdir(os.getcwd(), output_dir)
+        path = download_audio(url, output_dir)
+    else:
+        output_dir = mk_outputdir(path, output_dir)
 
     if os.path.isfile(path):
         export_handler = LoopExportHandler(
@@ -246,11 +271,13 @@ def split_audio(
 
 
 @cli_main.command()
+@common_path_options
 @common_loop_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", required=True, show_default=True, help="STDOUT: prints the loop points of a track in samples to the terminal's stdout (OR) TXT: export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).")
 def export_loop_points(
     path,
+    url,
     min_duration_multiplier,
     min_loop_duration,
     max_loop_duration,
@@ -265,11 +292,11 @@ def export_loop_points(
     to_stdout = export_to.upper() == "STDOUT"
     to_txt = export_to.upper() == "TXT"
 
-    default_out = os.path.join(os.path.dirname(path), "Loops")
-    output_dir = output_dir if output_dir is not None else default_out
-
-    if not os.path.exists(output_dir) and to_txt:
-        os.mkdir(output_dir)
+    if url is not None:
+        output_dir = mk_outputdir(os.getcwd(), output_dir)
+        path = download_audio(url, output_dir)
+    else:
+        output_dir = mk_outputdir(path, output_dir)
 
     if os.path.isfile(path):
         export_handler = LoopExportHandler(
@@ -307,12 +334,14 @@ def export_loop_points(
 
 
 @cli_main.command()
+@common_path_options
 @common_loop_options
 @common_export_options
 @click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time. WARNING: greater values result in higher memory consumption.")
 @click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
 def tag(
     path,
+    url,
     min_duration_multiplier,
     min_loop_duration,
     max_loop_duration,
@@ -324,11 +353,11 @@ def tag(
     tag_names,
 ):
     """Adds metadata tags of loop points to a copy of the input audio file(s)"""
-    default_out = os.path.join(os.path.dirname(path), "Loops")
-    output_dir = output_dir if output_dir is not None else default_out
-
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    if url is not None:
+        output_dir = mk_outputdir(os.getcwd(), output_dir)
+        path = download_audio(url, output_dir)
+    else:
+        output_dir = mk_outputdir(path, output_dir)
 
     if os.path.isfile(path):
         export_handler = LoopExportHandler(
@@ -361,6 +390,22 @@ def tag(
         )
         batch_handler.run()
 
+
+def mk_outputdir(path, output_dir):
+    if os.path.isdir(path):
+        default_out = os.path.join(path, "LooperOutput")
+    else:
+        default_out = os.path.join(os.path.dirname(path), "LooperOutput")
+    output_dir_to_use = default_out if output_dir is None else output_dir
+
+    if not os.path.exists(output_dir_to_use):
+        os.mkdir(output_dir_to_use)
+    return output_dir_to_use
+
+
+def download_audio(url, output_dir):
+    yt = YoutubeDownloader(url, output_dir)
+    return yt.filepath
 
 if __name__ == "__main__":
     cli_main()
