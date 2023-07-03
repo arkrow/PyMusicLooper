@@ -10,14 +10,9 @@ class PlaybackHandler:
     def __init__(self) -> None:
         self.event = threading.Event()
 
-    def play_looping(self, playback_audio, samplerate, channels, loop_start, loop_end, start_from=0):
+    def play_looping(self, playback_data, samplerate, channels, loop_start, loop_end, start_from=0):
         self.loop_counter = 0
         self.looping = True
-        # Correct the format of playback and make sure mono (1-D) audio is in the correct format
-        # i.e. (samples, n_channels)
-        playback_data = (
-            playback_audio.T if channels > 1 else playback_audio[:, np.newaxis]
-        )
         self.current_frame = start_from
         try:
 

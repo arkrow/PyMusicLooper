@@ -97,19 +97,19 @@ class MusicLooper:
 
         soundfile.write(
             f"{out_path}-intro.{format.lower()}",
-            self.mlaudio.playback_audio[..., :loop_start].T,
+            self.mlaudio.playback_audio[:loop_start],
             self.mlaudio.rate,
             format=format,
         )
         soundfile.write(
             f"{out_path}-loop.{format.lower()}",
-            self.mlaudio.playback_audio[..., loop_start:loop_end].T,
+            self.mlaudio.playback_audio[loop_start:loop_end],
             self.mlaudio.rate,
             format=format,
         )
         soundfile.write(
             f"{out_path}-outro.{format.lower()}",
-            self.mlaudio.playback_audio[..., loop_end:].T,
+            self.mlaudio.playback_audio[loop_end:],
             self.mlaudio.rate,
             format=format,
         )

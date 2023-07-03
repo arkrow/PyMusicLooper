@@ -56,6 +56,10 @@ class MLAudio:
         self.channels = (
             1 if len(self.playback_audio.shape) == 1 else self.playback_audio.shape[0]
         )
+        # Convert the audio array into one suitable for playback
+        # New shape: (samples, n_channels)
+        self.playback_audio = self.playback_audio.T if self.channels > 1 else self.playback_audio[:, np.newaxis]
+        self.length = self.playback_audio.shape[0]
 
     def apply_trim_offset(self, frame):
         return (
