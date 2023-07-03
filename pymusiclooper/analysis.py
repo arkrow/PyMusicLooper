@@ -479,3 +479,54 @@ def _calculate_subseq_beat_similarity(
 
 def _weights(length: int, start: int = 100, stop: int = 1):
     return np.geomspace(start, stop, num=length)
+
+
+def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int):
+    # Reimplementation of Audacity's NearestZeroCrossing function in Python
+    # https://github.com/audacity/audacity/blob/057bf4ee6f71962cd8ecc6dbccf0852695340758/src/menus/SelectMenus.cpp#L30
+    # Original credit goes to the Audacity team and contributors
+    audio = mlaudio.playback_audio
+    rate = mlaudio.rate
+    channels = mlaudio.channels
+    # Window is 1/100th of a second
+    window_size = int(max(1, rate/100))
+
+    sample_window = _slice_centered_around_offset(audio, sample_idx, window_size=window_size)
+    sample_window_length = sample_window.shape[0]
+    dist = np.zeros(sample_window_length)
+
+    for channel in range(channels):
+        prev = 2.0
+        # one_dist = np.zeros(sample_window_length)
+        one_dist = sample_window[..., channel].copy()
+        for i in range(sample_window_length):
+            fdist = np.abs(one_dist[i])
+            if prev * one_dist[i] > 0: # both same sign? No good.
+                fdist += 0.4 # No good if same sign.
+            elif prev > 0.0:
+                fdist += 0.1 # medium penalty for downward crossing.
+            prev = one_dist[i]
+            one_dist[i] = fdist
+
+        for i in range(sample_window_length):
+            dist[i] += one_dist[i]
+            dist[i] += 0.1 * abs(i - (window_size // 2)) / (window_size/2)
+    
+    argmin = np.argmin(dist)
+    minimum_dist = dist[argmin]
+
+    # If we're worse than 0.2 on average, on one track, then no good.
+    if (channels == 1) and (minimum_dist > (0.2*channels)):
+      return sample_idx
+    # If we're worse than 0.6 on average, on multi-track, then no good.
+    if (channels > 1) and (minimum_dist > (0.6*channels)):
+        return sample_idx
+    # breakpoint()
+    return int(sample_idx + argmin - (window_size//2))
+
+
+def _slice_centered_around_offset(audio, index, window_size=256):
+    offset = window_size // 2
+    neg_offset = max(0, index - offset)
+    pos_offset = min(audio.shape[0], index + offset)
+    return audio[neg_offset:pos_offset]
