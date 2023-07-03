@@ -496,23 +496,56 @@ def _weights(length: int, start: int = 100, stop: int = 1):
     return np.geomspace(start, stop, num=length)
 
 
-def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int):
+def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int) -> int:
+    """Implementation of Audacity's `At Zero Crossings` feature. https://manual.audacityteam.org/man/select_menu_at_zero_crossings.html
+    Description is based on the relevant Audacity manual page, due to identical behaviour.
+
+    Returns the best closest sample point that is at a rising zero crossing point.
+    This is a point where a line joining the audio samples rises from left to right and crosses the zero horizontal line that represents silence.
+    The shift in audio position is not itself detectable to the ear, but the fact that the joins in the waveform are now of matching height helps avoid clicks in audio. 
+
+    This feature does not necessarily find the nearest zero crossing to the current position. It aims to find the crossing where the average amplitude of samples in the vicinity is lowest.
+
+    Args:
+        mlaudio (MLAudio): The MLAudio object which contains the relevant audio
+        sample_idx (int): The starting sample point to return the nearest zero crossing to
+
+    Returns:
+        int: the index of the best sample point that is at a rising zero crossing point closest to the `sample_idx` provided, returns `sample_idx` if none where found
+    """
     # Reimplementation of Audacity's NearestZeroCrossing function in Python
     # https://github.com/audacity/audacity/blob/057bf4ee6f71962cd8ecc6dbccf0852695340758/src/menus/SelectMenus.cpp#L30
     # Original credit goes to the Audacity team and contributors
     audio = mlaudio.playback_audio
     rate = mlaudio.rate
-    channels = mlaudio.channels
+    n_channels = mlaudio.n_channels
     # Window is 1/100th of a second
     window_size = int(max(1, rate/100))
 
     sample_window = _slice_centered_around_offset(audio, sample_idx, window_size=window_size)
+
+    dist = _nb_nearest_zcr_helper(sample_window, n_channels, window_size)
+
+    argmin = np.argmin(dist)
+    minimum_dist = dist[argmin]
+
+    # If we're worse than 0.2 on average, on one track, then no good.
+    if (n_channels == 1) and (minimum_dist > (0.2 * n_channels)):
+      return sample_idx
+    # If we're worse than 0.6 on average, on multi-track, then no good.
+    if (n_channels > 1) and (minimum_dist > (0.6 * n_channels)):
+        return sample_idx
+
+    return int(sample_idx + argmin - (window_size//2))
+
+
+@njit(cache=True)
+def _nb_nearest_zcr_helper(sample_window: np.ndarray, n_channels: int, window_size: int) -> np.ndarray:
     sample_window_length = sample_window.shape[0]
     dist = np.zeros(sample_window_length)
 
-    for channel in range(channels):
+    for channel in range(n_channels):
         prev = 2.0
-        # one_dist = np.zeros(sample_window_length)
         one_dist = sample_window[..., channel].copy()
         for i in range(sample_window_length):
             fdist = np.abs(one_dist[i])
@@ -526,18 +559,8 @@ def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int):
         for i in range(sample_window_length):
             dist[i] += one_dist[i]
             dist[i] += 0.1 * abs(i - (window_size // 2)) / (window_size/2)
-    
-    argmin = np.argmin(dist)
-    minimum_dist = dist[argmin]
 
-    # If we're worse than 0.2 on average, on one track, then no good.
-    if (channels == 1) and (minimum_dist > (0.2*channels)):
-      return sample_idx
-    # If we're worse than 0.6 on average, on multi-track, then no good.
-    if (channels > 1) and (minimum_dist > (0.6*channels)):
-        return sample_idx
-    # breakpoint()
-    return int(sample_idx + argmin - (window_size//2))
+    return dist
 
 
 def _slice_centered_around_offset(audio, index, window_size=256):
