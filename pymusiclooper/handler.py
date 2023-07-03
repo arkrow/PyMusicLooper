@@ -86,14 +86,14 @@ class LoopHandler:
 
         for idx, pair in enumerate(self.loop_pair_list[:show_top]):
             start_time = (
-                preview_looper.frames_to_samples(pair.loop_start)
+                pair.loop_start
                 if self.in_samples
-                else preview_looper.frames_to_ftime(pair.loop_start)
+                else preview_looper.samples_to_ftime(pair.loop_start)
             )
             end_time = (
-                preview_looper.frames_to_samples(pair.loop_end)
+                pair.loop_end
                 if self.in_samples
-                else preview_looper.frames_to_ftime(pair.loop_end)
+                else preview_looper.samples_to_ftime(pair.loop_end)
             )
             score = pair.score
             loudness_difference = pair.loudness_difference
@@ -138,11 +138,9 @@ class LoopHandler:
                     loop_start = self.loop_pair_list[idx].loop_start
                     loop_end = self.loop_pair_list[idx].loop_end
                     # start preview 5 seconds before the looping point
-                    offset = preview_looper.seconds_to_frames(5)
+                    offset = preview_looper.seconds_to_samples(5)
                     preview_offset = loop_end - offset if loop_end - offset > 0 else 0
-                    preview_looper.play_looping(
-                        loop_start, loop_end, start_from=preview_offset
-                    )
+                    preview_looper.play_looping(loop_start, loop_end, start_from=preview_offset)
                     return get_user_input()
                 else:
                     return idx

@@ -155,14 +155,14 @@ def play(
         looper = handler.get_musiclooper_obj()
 
         start_time = (
-            looper.frames_to_samples(chosen_loop_pair.loop_start)
+            chosen_loop_pair.loop_start
             if in_samples
-            else looper.frames_to_ftime(chosen_loop_pair.loop_start)
+            else looper.samples_to_ftime(chosen_loop_pair.loop_start)
         )
         end_time = (
-            looper.frames_to_samples(chosen_loop_pair.loop_end)
+            chosen_loop_pair.loop_start
             if in_samples
-            else looper.frames_to_ftime(chosen_loop_pair.loop_end)
+            else looper.samples_to_ftime(chosen_loop_pair.loop_end)
         )
 
         click.echo(
@@ -208,7 +208,7 @@ def play_tagged(path, tag_names):
         click.echo(f"Playing with looping active from {end_time} back to {start_time}")
         click.echo("(press Ctrl+C to stop looping.)")
 
-        looper.play_looping(loop_start, loop_end, is_sample_units=True)
+        looper.play_looping(loop_start, loop_end)
 
     except Exception as e:
         logging.error(e)

@@ -15,18 +15,20 @@ from .exceptions import LoopNotFoundError
 class LoopPair:
     """A data class that encapsulates the loop point related data.
     Contains:
-        loop_start: int
-        loop_end: int
+        loop_start: int (exact loop start position in samples)
+        loop_end: int (exact loop end position in samples)
         note_distance: float
         loudness_difference: float
         score: float. Defaults to 0.
     """
 
-    loop_start: int
-    loop_end: int
+    _loop_start_frame_idx: int
+    _loop_end_frame_idx: int
     note_distance: float
     loudness_difference: float
     score: float = 0
+    loop_start: int = 0
+    loop_end: int = 0
 
 
 def find_best_loop_points(
@@ -133,8 +135,8 @@ def find_best_loop_points(
     )
     candidate_pairs = [
         LoopPair(
-            loop_start=tup[0],
-            loop_end=tup[1],
+            _loop_start_frame_idx=tup[0],
+            _loop_end_frame_idx=tup[1],
             note_distance=tup[2],
             loudness_difference=tup[3],
         )
@@ -160,10 +162,23 @@ def find_best_loop_points(
     if len(filtered_candidate_pairs) > 1:
         _prioritize_duration(filtered_candidate_pairs)
 
-    if mlaudio.trim_offset > 0:
-        for pair in filtered_candidate_pairs:
-            pair.loop_start = int(mlaudio.apply_trim_offset(pair.loop_start))
-            pair.loop_end = int(mlaudio.apply_trim_offset(pair.loop_end))
+    # Set the exact loop start and end in samples and adjust them
+    # to the nearest zero crossing. Avoids audio popping/clicking while looping
+    # as much as possible.
+    for pair in filtered_candidate_pairs:
+        if mlaudio.trim_offset > 0:
+            pair._loop_start_frame_idx = int(
+                mlaudio.apply_trim_offset(pair._loop_start_frame_idx)
+            )
+            pair._loop_end_frame_idx = int(
+                mlaudio.apply_trim_offset(pair._loop_end_frame_idx)
+            )
+        pair.loop_start = nearest_zero_crossing(
+            mlaudio, mlaudio.frames_to_samples(pair._loop_start_frame_idx)
+        )
+        pair.loop_end = nearest_zero_crossing(
+            mlaudio, mlaudio.frames_to_samples(pair._loop_end_frame_idx)
+        )
 
     if not filtered_candidate_pairs:
         raise LoopNotFoundError(
@@ -321,8 +336,8 @@ def _assess_and_filter_loop_pairs(
 
     pair_score_list = [
         _calculate_loop_score(
-            int(pair.loop_start),
-            int(pair.loop_end),
+            int(pair._loop_start_frame_idx),
+            int(pair._loop_end_frame_idx),
             chroma,
             test_duration=test_offset,
             weights=weights,

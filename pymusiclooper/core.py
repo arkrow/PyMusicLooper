@@ -49,6 +49,9 @@ class MusicLooper:
 
     def samples_to_frames(self, samples):
         return self.mlaudio.samples_to_frames(samples)
+    
+    def samples_to_seconds(self, samples):
+        return self.mlaudio.samples_to_seconds(samples)
 
     def frames_to_samples(self, frame):
         return self.mlaudio.frames_to_samples(frame)
@@ -56,27 +59,24 @@ class MusicLooper:
     def seconds_to_frames(self, seconds):
         return self.mlaudio.seconds_to_frames(seconds)
 
+    def seconds_to_samples(self, seconds):
+        return self.mlaudio.seconds_to_samples(seconds)
+
     def frames_to_ftime(self, frame):
         return self.mlaudio.frames_to_ftime(frame)
     
     def samples_to_ftime(self, samples):
         return self.mlaudio.samples_to_ftime(samples)
 
-    def play_looping(self, loop_start: int, loop_end: int, start_from=0, is_sample_units=False):
+    def play_looping(self, loop_start: int, loop_end: int, start_from=0):
         """Plays an audio file with a loop active at the points specified
 
         Args:
-            loop_start (int): Index of the loop start (in frames)
-            loop_end (int): Index of the loop end (in frames)
-            start_from (int, optional): Index of the frame to start from. Defaults to 0.
-            is_sample_units (bool, optional): If True, will handle all parameters as raw sample units instead of frame indices. Defaults to False.
+            loop_start (int): Index of the loop start (in samples)
+            loop_end (int): Index of the loop end (in samples)
+            start_from (int, optional): Index of the sample point to start from. Defaults to 0.
         """
         playback_handler = PlaybackHandler()
-        if not is_sample_units:
-            loop_start = self.frames_to_samples(loop_start)
-            loop_end = self.frames_to_samples(loop_end)
-            start_from = self.frames_to_samples(start_from)
-
         playback_handler.play_looping(
             self.mlaudio.playback_audio,
             self.mlaudio.rate,

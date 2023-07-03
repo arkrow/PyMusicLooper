@@ -73,6 +73,9 @@ class MLAudio:
     def samples_to_frames(self, samples):
         return librosa.core.samples_to_frames(samples)
 
+    def samples_to_seconds(self, samples):
+        return librosa.core.samples_to_time(samples, sr=self.rate)
+
     def frames_to_samples(self, frame):
         return librosa.core.frames_to_samples(frame)
 
@@ -82,6 +85,9 @@ class MLAudio:
                 self.trim_offset, sr=self.rate
             )
         return librosa.core.time_to_frames(seconds, sr=self.rate)
+
+    def seconds_to_samples(self, seconds):
+        return librosa.core.time_to_samples(seconds, sr=self.rate)
 
     def frames_to_ftime(self, frame):
         time_sec = librosa.core.frames_to_time(frame, sr=self.rate)
