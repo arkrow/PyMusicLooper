@@ -42,6 +42,8 @@ class MLAudio:
         self.filename = os.path.basename(filepath)
 
         mono_signal = librosa.core.to_mono(raw_audio)
+        # Normalize audio channels to between -1.0 and +1.0 before analysis
+        mono_signal /= np.max(np.abs(mono_signal))
 
         self.audio, self.trim_offset = librosa.effects.trim(mono_signal, top_db=40)
         self.trim_offset = self.trim_offset[0]
