@@ -80,7 +80,7 @@ class MusicLooper:
         playback_handler.play_looping(
             self.mlaudio.playback_audio,
             self.mlaudio.rate,
-            self.mlaudio.channels,
+            self.mlaudio.n_channels,
             loop_start,
             loop_end,
             start_from,

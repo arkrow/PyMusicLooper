@@ -16,7 +16,8 @@ class MLAudio:
     trim_offset: int
     rate: int
     playback_audio: np.ndarray
-    channels: int
+    n_channels: int
+    length: int
 
     def __init__(self, filepath: str) -> None:
         """Initializes the MLAudio object and its data by loading the audio using the filepath provided.
@@ -53,12 +54,12 @@ class MLAudio:
         # Initialize parameters for playback
         self.playback_audio = raw_audio
         # Mono if the loaded audio is 1-D, else get the number of channels from the shape (n_channels, samples)
-        self.channels = (
+        self.n_channels = (
             1 if len(self.playback_audio.shape) == 1 else self.playback_audio.shape[0]
         )
         # Convert the audio array into one suitable for playback
         # New shape: (samples, n_channels)
-        self.playback_audio = self.playback_audio.T if self.channels > 1 else self.playback_audio[:, np.newaxis]
+        self.playback_audio = self.playback_audio.T if self.n_channels > 1 else self.playback_audio[:, np.newaxis]
         self.length = self.playback_audio.shape[0]
 
     def apply_trim_offset(self, frame):

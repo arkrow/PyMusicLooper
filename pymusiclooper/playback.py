@@ -10,7 +10,7 @@ class PlaybackHandler:
     def __init__(self) -> None:
         self.event = threading.Event()
 
-    def play_looping(self, playback_data, samplerate, channels, loop_start, loop_end, start_from=0):
+    def play_looping(self, playback_data, samplerate, n_channels, loop_start, loop_end, start_from=0):
         self.loop_counter = 0
         self.looping = True
         self.current_frame = start_from
@@ -38,7 +38,7 @@ class PlaybackHandler:
 
             self.stream = sd.OutputStream(
                 samplerate=samplerate,
-                channels=channels,
+                channels=n_channels,
                 callback=callback,
                 finished_callback=self.event.set,
             )
