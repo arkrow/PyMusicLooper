@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import Tuple
 
 import soundfile
 import taglib
@@ -135,7 +136,7 @@ class MusicLooper:
             audio_file.tags[loop_end_tag] = [str(loop_end)]
 
 
-    def read_tags(self, loop_start_tag: str, loop_end_tag: str) -> tuple[int, int]:
+    def read_tags(self, loop_start_tag: str, loop_end_tag: str) -> Tuple[int, int]:
         """Reads the tags provided from the file and returns the read loop points
 
         Args:
@@ -143,7 +144,7 @@ class MusicLooper:
             loop_end_tag (str): The name of the metadata tag containing the loop_end value
 
         Returns:
-            tuple[int, int]: A tuple containing (loop_start, loop_end)
+            Tuple[int, int]: A tuple containing (loop_start, loop_end)
         """
         loop_start = None
         loop_end = None

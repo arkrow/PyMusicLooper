@@ -3,6 +3,7 @@ import logging
 import os
 import tempfile
 import warnings
+from typing import List
 
 import rich_click as click
 from rich.logging import RichHandler
@@ -32,7 +33,7 @@ _export_options = ["--output-dir", "--format"]
 _batch_options = ["--recursive", "--flatten", "--n-jobs"]
 
 
-def _option_groups(additional_basic_options: list[str] = None):
+def _option_groups(additional_basic_options: List[str] = None):
     if additional_basic_options is not None:
         combined_basic_options = _basic_options + additional_basic_options
     else:

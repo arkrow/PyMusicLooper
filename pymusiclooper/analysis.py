@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import librosa
 import numpy as np
@@ -38,7 +38,7 @@ def find_best_loop_points(
     max_loop_duration: Optional[float] = None,
     approx_loop_start: Optional[float] = None,
     approx_loop_end: Optional[float] = None,
-) -> list[LoopPair]:
+) -> List[LoopPair]:
     """Finds the best loop points for a given audio track, given the constraints specified
 
     Args:
@@ -53,7 +53,7 @@ def find_best_loop_points(
         LoopNotFoundError: raised in case no loops were found
 
     Returns:
-        list[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
+        List[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
     """
     runtime_start = time.perf_counter()
     min_loop_duration = (
@@ -154,7 +154,7 @@ def find_best_loop_points(
 
     if not candidate_pairs:
         raise LoopNotFoundError(
-            f"No loop points found for {mlaudio.filename} with current parameters."
+            f"No loop points found for '{mlaudio.filename}' with current parameters."
         )
 
     filtered_candidate_pairs = _assess_and_filter_loop_pairs(
@@ -200,7 +200,7 @@ def find_best_loop_points(
 
 def _analyze_audio(
     mlaudio: MLAudio, skip_beat_analysis=False
-) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
     """Performs the main audio analysis required
 
     Args:
@@ -208,7 +208,7 @@ def _analyze_audio(
         skip_beat_analysis (bool, optional): Skips beat analysis if true and returns None for bpm and beats. Defaults to False.
 
     Returns:
-        tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indicies of detected beats)
+        Tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indicies of detected beats)
     """
     S = librosa.core.stft(y=mlaudio.audio)
     S_power = np.abs(S) ** 2
@@ -258,7 +258,7 @@ def _find_candidate_pairs(
     beats: np.ndarray,
     min_loop_duration: int,
     max_loop_duration: int,
-) -> list[tuple[int, int, float, float]]:
+) -> List[Tuple[int, int, float, float]]:
     """Generates a list of all valid candidate loop pairs using combinations of beat indicies,
     by comparing the notes using the chroma spectrogram and their loudness difference
 
@@ -270,7 +270,7 @@ def _find_candidate_pairs(
         max_loop_duration (int): Maximum loop duration (in frames)
 
     Returns:
-        list[tuple[int, int, float, float]]: A list of tuples containing each candidate loop pair data in the following format (loop_start, loop_end, note_distance, loudness_difference)
+        List[Tuple[int, int, float, float]]: A list of tuples containing each candidate loop pair data in the following format (loop_start, loop_end, note_distance, loudness_difference)
     """
     candidate_pairs = []
 
@@ -311,18 +311,18 @@ def _find_candidate_pairs(
 
 
 def _assess_and_filter_loop_pairs(
-    mlaudio: MLAudio, chroma: np.ndarray, bpm: float, candidate_pairs: list[LoopPair]
-) -> list[LoopPair]:
+    mlaudio: MLAudio, chroma: np.ndarray, bpm: float, candidate_pairs: List[LoopPair]
+) -> List[LoopPair]:
     """Assigns the scores to each loop pair and prunes the list of candidate loop pairs
 
     Args:
         mlaudio (MLAudio): MLAudio object of the track being analyzed
         chroma (np.ndarray): The chroma spectrogram
         bpm (float): The estimated bpm/tempo of the track
-        candidate_pairs (list[LoopPair]): The list of candidate loop pairs found
+        candidate_pairs (List[LoopPair]): The list of candidate loop pairs found
 
     Returns:
-        list[LoopPair]: A scored and filtered list of valid loop candidate pairs
+        List[LoopPair]: A scored and filtered list of valid loop candidate pairs
     """
     beats_per_second = bpm / 60
     num_test_beats = 12
@@ -368,8 +368,8 @@ def _assess_and_filter_loop_pairs(
 
 
 def _prune_candidates(
-    candidate_pairs: list[LoopPair], drop_bottom_x_percentile: float = 50.0
-) -> list[LoopPair]:
+    candidate_pairs: List[LoopPair], drop_bottom_x_percentile: float = 50.0
+) -> List[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in candidate_pairs])
     note_dist_array = np.array([pair.note_distance for pair in candidate_pairs])
 
@@ -402,10 +402,10 @@ def _prune_candidates(
 
 
 def _prune_by_score(
-    candidate_pairs: list[LoopPair],
+    candidate_pairs: List[LoopPair],
     percentile: float = 25.0,
     acceptable_score: float = 80.0,
-) -> list[LoopPair]:
+) -> List[LoopPair]:
     candidate_pairs = sorted(candidate_pairs, key=lambda x: x.score)
 
     score_array = np.array([pair.score for pair in candidate_pairs])
@@ -417,7 +417,7 @@ def _prune_by_score(
     return candidate_pairs[min(percentile_idx, acceptable_idx) :]
 
 
-def _prioritize_duration(pair_list: list[LoopPair]) -> list[LoopPair]:
+def _prioritize_duration(pair_list: List[LoopPair]) -> List[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in pair_list])
     db_threshold = np.median(db_diff_array)
 

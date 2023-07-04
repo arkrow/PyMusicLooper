@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from multiprocessing import Process
+from typing import List, Tuple
 
 import rich_click as click
 from rich.console import Console
@@ -44,7 +45,7 @@ class LoopHandler:
         self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
         self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 
-    def get_all_loop_pairs(self) -> list[LoopPair]:
+    def get_all_loop_pairs(self) -> List[LoopPair]:
         """
         Returns the discovered loop points of an audio file as a list of LoopPair objects
         """
@@ -167,7 +168,7 @@ class LoopExportHandler(LoopHandler):
         split_audio_format="WAV",
         to_txt=False,
         to_stdout=False,
-        tag_names: tuple[str, str] = None,
+        tag_names: Tuple[str, str] = None,
         batch_mode=False,
         multiprocess=False,
     ):
@@ -259,7 +260,7 @@ class BatchHandler:
         recursive=False,
         flatten=False,
         n_jobs=1,
-        tag_names: tuple[str, str] = None,
+        tag_names: Tuple[str, str] = None,
     ):
         self.directory_path = os.path.abspath(directory_path)
         self.min_duration_multiplier = min_duration_multiplier
