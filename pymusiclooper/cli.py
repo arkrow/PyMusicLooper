@@ -6,6 +6,7 @@ import warnings
 
 import rich_click as click
 from rich.logging import RichHandler
+from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 from rich_click.cli import patch as rich_click_patch
 from yt_dlp.utils import YoutubeDLError
 
@@ -144,13 +145,20 @@ def play(
         if url is not None:
             path = download_audio(url, tempfile.gettempdir())
 
-        handler = LoopHandler(
-            file_path=path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            approx_loop_position=approx_loop_position,
-        )
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+            transient=True
+        ) as progress:
+            progress.add_task("Processing", total=None)
+            handler = LoopHandler(
+                file_path=path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                approx_loop_position=approx_loop_position,
+            )
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
         interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
@@ -249,19 +257,26 @@ def split_audio(
             output_dir = mk_outputdir(path, output_dir)
 
         if os.path.isfile(path):
-            export_handler = LoopExportHandler(
-                file_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                approx_loop_position=approx_loop_position,
-                output_dir=output_dir,
-                split_audio=True,
-                split_audio_format=format,
-                to_txt=False,
-                to_stdout=False,
-                tag_names=None,
-            )
+            with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                TimeElapsedColumn(),
+                transient=True
+            ) as progress:
+                progress.add_task("Processing", total=None)
+                export_handler = LoopExportHandler(
+                    file_path=path,
+                    min_duration_multiplier=min_duration_multiplier,
+                    min_loop_duration=min_loop_duration,
+                    max_loop_duration=max_loop_duration,
+                    approx_loop_position=approx_loop_position,
+                    output_dir=output_dir,
+                    split_audio=True,
+                    split_audio_format=format,
+                    to_txt=False,
+                    to_stdout=False,
+                    tag_names=None,
+                )
             export_handler.run()
         else:
             batch_handler = BatchHandler(
@@ -318,18 +333,25 @@ def export_loop_points(
             output_dir = mk_outputdir(path, output_dir)
 
         if os.path.isfile(path):
-            export_handler = LoopExportHandler(
-                file_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                approx_loop_position=approx_loop_position,
-                output_dir=output_dir,
-                split_audio=False,
-                to_txt=to_txt,
-                to_stdout=to_stdout,
-                tag_names=None,
-            )
+            with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                TimeElapsedColumn(),
+                transient=True
+            ) as progress:
+                progress.add_task("Processing", total=None)
+                export_handler = LoopExportHandler(
+                    file_path=path,
+                    min_duration_multiplier=min_duration_multiplier,
+                    min_loop_duration=min_loop_duration,
+                    max_loop_duration=max_loop_duration,
+                    approx_loop_position=approx_loop_position,
+                    output_dir=output_dir,
+                    split_audio=False,
+                    to_txt=to_txt,
+                    to_stdout=to_stdout,
+                    tag_names=None,
+                )
             export_handler.run()
         else:
             # Disable multiprocessing until a thread-safe multiprocessing queue is implemented
@@ -387,18 +409,25 @@ def tag(
             output_dir = mk_outputdir(path, output_dir)
 
         if os.path.isfile(path):
-            export_handler = LoopExportHandler(
-                file_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                approx_loop_position=approx_loop_position,
-                output_dir=output_dir,
-                split_audio=False,
-                to_txt=False,
-                to_stdout=False,
-                tag_names=tag_names,
-            )
+            with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                TimeElapsedColumn(),
+                transient=True
+            ) as progress:
+                progress.add_task("Processing", total=None)
+                export_handler = LoopExportHandler(
+                    file_path=path,
+                    min_duration_multiplier=min_duration_multiplier,
+                    min_loop_duration=min_loop_duration,
+                    max_loop_duration=max_loop_duration,
+                    approx_loop_position=approx_loop_position,
+                    output_dir=output_dir,
+                    split_audio=False,
+                    to_txt=False,
+                    to_stdout=False,
+                    tag_names=tag_names,
+                )
             export_handler.run()
         else:
             batch_handler = BatchHandler(

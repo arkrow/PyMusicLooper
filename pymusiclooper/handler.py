@@ -5,8 +5,8 @@ from multiprocessing import Process
 
 import rich_click as click
 from rich.console import Console
+from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 from rich.table import Table
-from tqdm import tqdm
 
 from .analysis import LoopPair
 from .core import MusicLooper
@@ -289,26 +289,31 @@ class BatchHandler:
             else self.clone_file_tree_structure(files, self.output_directory)
         )
 
-        if not files:
-            logging.error(f"No files found in '{self.directory_path}'")
-            return
-
         if self.n_jobs == 1:
-            tqdm_files = tqdm(files)
-            for file_idx, file in enumerate(tqdm_files):
-                tqdm_files.set_description(f"Processing '{file}'")
-                self._batch_export_helper(
-                    file_path=file,
-                    min_duration_multiplier=self.min_duration_multiplier,
-                    min_loop_duration=self.min_loop_duration,
-                    max_loop_duration=self.max_loop_duration,
-                    split_audio_format=self.split_audio_format,
-                    output_dir=self.output_directory if self.flatten else output_dirs[file_idx],
-                    split_audio=self.split_audio,
-                    to_txt=self.to_txt,
-                    to_stdout=self.to_stdout,
-                    tag_names=self.tag_names,
-                )
+            with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                MofNCompleteColumn(),
+            ) as progress:
+                pbar = progress.add_task("Processing...", total=len(files))
+                for file_idx, file in enumerate(files):
+                    progress.update(
+                        pbar,
+                        advance=1,
+                        description=f"Processing '{os.path.relpath(file, self.directory_path)}'"
+                    )
+                    self._batch_export_helper(
+                        file_path=file,
+                        min_duration_multiplier=self.min_duration_multiplier,
+                        min_loop_duration=self.min_loop_duration,
+                        max_loop_duration=self.max_loop_duration,
+                        split_audio_format=self.split_audio_format,
+                        output_dir=self.output_directory if self.flatten else output_dirs[file_idx],
+                        split_audio=self.split_audio,
+                        to_txt=self.to_txt,
+                        to_stdout=self.to_stdout,
+                        tag_names=self.tag_names,
+                    )
         else:
             # Note: some arguments are disabled due to inherent incompatibility with the current multiprocessing implementation
             self._batch_multiprocess(files, output_dirs)
@@ -318,7 +323,12 @@ class BatchHandler:
         num_files = len(files)
         file_idx = 0
 
-        with tqdm(total=num_files) as pbar:
+        with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                MofNCompleteColumn(),
+        ) as progress:
+            pbar = progress.add_task("Processing...", total=num_files)
             while file_idx < num_files:
                 for _ in range(self.n_jobs):
                     p = Process(
@@ -352,7 +362,7 @@ class BatchHandler:
                 for process in processes:
                     process.join()
                     process.terminate()
-                    pbar.update()
+                    progress.update(pbar, completed=file_idx)
 
                 processes = []
 
