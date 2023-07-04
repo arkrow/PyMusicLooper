@@ -50,12 +50,6 @@ class LoopHandler:
         """
         return self.loop_pair_list
 
-    def get_best_loop_pair(self) -> LoopPair:
-        """
-        Returns the *best* discovered loop point of an audio file as a LoopPair object
-        """
-        return self._return_loop_pair_score_tuple(0)
-
     def get_musiclooper_obj(self):
         return self.musiclooper
 
