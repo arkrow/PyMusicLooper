@@ -69,6 +69,9 @@ def find_best_loop_points(
         else mlaudio.seconds_to_frames(mlaudio.total_duration)
     )
 
+    # Loop points must be at least 1 frame apart
+    min_loop_duration = max(1, min_loop_duration)
+
     if approx_loop_start is not None and approx_loop_end is not None:
         # Skipping the unncessary beat analysis (in this case) speeds up the analysis runtime by ~2x
         # and significantly reduces the total memory consumption
@@ -221,14 +224,18 @@ def _analyze_audio(
     if skip_beat_analysis:
         return chroma, power_db, None, None
 
-    onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
+    try:
+        onset_env = librosa.onset.onset_strength(S=mel_spectrogram)
 
-    pulse = librosa.beat.plp(onset_envelope=onset_env)
-    beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-    bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+        pulse = librosa.beat.plp(onset_envelope=onset_env)
+        beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+        bpm, beats = librosa.beat.beat_track(onset_envelope=onset_env)
 
-    beats = np.union1d(beats, beats_plp)
-    beats = np.sort(beats)
+        beats = np.union1d(beats, beats_plp)
+        beats = np.sort(beats)
+    except Exception as e:
+        raise LoopNotFoundError(f"Beat analysis failed for '{mlaudio.filename}'. Cannot continue.") from e
+
     return chroma, power_db, bpm, beats
 
 
