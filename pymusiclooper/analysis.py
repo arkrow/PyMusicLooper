@@ -527,7 +527,7 @@ def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int) -> int:
 
     Returns the best closest sample point that is at a rising zero crossing point.
     This is a point where a line joining the audio samples rises from left to right and crosses the zero horizontal line that represents silence.
-    The shift in audio position is not itself detectable to the ear, but the fact that the joins in the waveform are now of matching height helps avoid clicks in audio. 
+    The shift in audio position is not itself detectable to the ear, but the fact that the joins in the waveform are now of matching height helps avoid clicks in audio.
 
     This feature does not necessarily find the nearest zero crossing to the current position. It aims to find the crossing where the average amplitude of samples in the vicinity is lowest.
 
@@ -545,9 +545,11 @@ def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int) -> int:
     rate = mlaudio.rate
     n_channels = mlaudio.n_channels
     # Window is 1/100th of a second
-    window_size = int(max(1, rate/100))
+    window_size = int(max(1, rate / 100))
 
-    sample_window = _slice_centered_around_offset(audio, sample_idx, window_size=window_size)
+    sample_window = _slice_centered_around_offset(
+        audio, sample_idx, window_size=window_size
+    )
 
     dist = _nb_nearest_zcr_helper(sample_window, n_channels, window_size)
 
@@ -556,16 +558,18 @@ def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int) -> int:
 
     # If we're worse than 0.2 on average, on one track, then no good.
     if (n_channels == 1) and (minimum_dist > (0.2 * n_channels)):
-      return sample_idx
+        return sample_idx
     # If we're worse than 0.6 on average, on multi-track, then no good.
     if (n_channels > 1) and (minimum_dist > (0.6 * n_channels)):
         return sample_idx
 
-    return int(sample_idx + argmin - (window_size//2))
+    return int(sample_idx + argmin - (window_size // 2))
 
 
 @njit(cache=True)
-def _nb_nearest_zcr_helper(sample_window: np.ndarray, n_channels: int, window_size: int) -> np.ndarray:
+def _nb_nearest_zcr_helper(
+    sample_window: np.ndarray, n_channels: int, window_size: int
+) -> np.ndarray:
     sample_window_length = sample_window.shape[0]
     dist = np.zeros(sample_window_length)
 
@@ -574,16 +578,16 @@ def _nb_nearest_zcr_helper(sample_window: np.ndarray, n_channels: int, window_si
         one_dist = sample_window[..., channel].copy()
         for i in range(sample_window_length):
             fdist = np.abs(one_dist[i])
-            if prev * one_dist[i] > 0: # both same sign? No good.
-                fdist += 0.4 # No good if same sign.
+            if prev * one_dist[i] > 0:  # both same sign? No good.
+                fdist += 0.4  # No good if same sign.
             elif prev > 0.0:
-                fdist += 0.1 # medium penalty for downward crossing.
+                fdist += 0.1  # medium penalty for downward crossing.
             prev = one_dist[i]
             one_dist[i] = fdist
 
         for i in range(sample_window_length):
             dist[i] += one_dist[i]
-            dist[i] += 0.1 * abs(i - (window_size // 2)) / (window_size/2)
+            dist[i] += 0.1 * abs(i - (window_size // 2)) / (window_size / 2)
 
     return dist
 
