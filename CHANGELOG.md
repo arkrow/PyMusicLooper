@@ -23,6 +23,10 @@
 - Much nicer formatting and interface in interactive mode thanks to the `rich` python package
 - Increased the minimum Python requirement to Python 64-bit >=3.9
 
+### Removed
+
+- Multiprocessing option (`--n-jobs`). Batch mode operations are otherwise unaffected and work as if `--n-jobs` was fixed to 1.
+
 ## [2.5.3] - 2023-01-13
 
 - Completely removed defunct preserve tags function and its associated errors

@@ -77,29 +77,34 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 ```raw
  Usage: pymusiclooper [OPTIONS] COMMAND [ARGS]...
 
- A program for repeating music seamlessly and endlessly, by automatically finding the best loop       
- points.
+ A program for repeating music seamlessly and endlessly, by automatically
+ finding the best loop points.
 
- Options
- --verbose      -v    Enables verbose logging output.
- --interactive  -i    Enables interactive mode to manually preview/choose
-                      the desired loop point.
- --in-samples   -s    Display all loop points in interactive mode in sample points
-                      instead of the default mm:ss.sss format.
- --version            Show the version and exit.
- --help               Show this message and exit.
-
- Commands
- export-loop-points  Export the best discovered or chosen loop points to a text file
-                     or to the terminal (stdout)
- play                Play an audio file on repeat from the terminal with the
-                     best discovered loop
-                     points, or a chosen point if interactive mode is active
- play-tagged         Skips loop analysis and reads the loop points directly from
-                     the tags present in the file.
- split-audio         Split the input audio into intro, loop and outro sections
- tag                 Adds metadata tags of loop points to a copy of the input
-                     audio file(s)
+╭─ Options ────────────────────────────────────────────────────────────────╮
+│ --verbose      -v    Enables verbose logging output.                     │
+│ --interactive  -i    Enables interactive mode to manually preview/choose │
+│                      the desired loop point.                             │
+│ --samples      -s    Display all the loop points shown in interactive    │
+│                      mode in sample points instead of the default        │
+│                      mm:ss.sss format.                                   │
+│ --version            Show the version and exit.                          │
+│ --help               Show this message and exit.                         │
+╰──────────────────────────────────────────────────────────────────────────╯
+╭─ Play Commands ──────────────────────────────────────────────────────────╮
+│ play         Play an audio file on repeat from the terminal with the     │
+│              best discovered loop points, or a chosen point if           │
+│              interactive mode is active.                                 │
+│ play-tagged  Skips loop analysis and reads the loop points directly from │
+│              the tags present in the file.                               │
+╰──────────────────────────────────────────────────────────────────────────╯
+╭─ Export Commands ────────────────────────────────────────────────────────╮
+│ export-loop-points  Export the best discovered or chosen loop points to  │
+│                     a text file or to the terminal (stdout)              │
+│ split-audio         Split the input audio into intro, loop and outro     │
+│                     sections                                             │
+│ tag                 Adds metadata tags of loop points to a copy of the   │
+│                     input audio file(s)                                  │
+╰──────────────────────────────────────────────────────────────────────────╯
 ```
 
 Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-loop-points --help`)
@@ -140,6 +145,8 @@ pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 ### Export
+
+*Note: batch processing is available for all export subcommands. Simply specify a directory instead of a file as the path to be used.*
 
 Split the audio track into intro, loop and outro files.
 
@@ -195,21 +202,7 @@ If a desired loop point is already known, and you would like to extract the best
 pymusiclooper -i export-loop-points --path "/path/to/track.mp3" --export-to stdout --approx-loop-position 20 210
 ```
 
-`--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark (i.e. 3:30).
-
-### Batch processing example
-
-Export intro/loop/outro sections and loop points of all the songs in the current directory and its subdirectories, to a folder called "Music Loops", processing 4 tracks concurrently.
-
-```sh
-pymusiclooper split-audio --path "./" --recursive --output-dir "Music Loops" --n-jobs 4
-```
-
-Generally, concurrent batch processing (i.e. when `--n-jobs` is set >1) is not encouraged as interactive mode cannot be used, however, it is relatively reliable with tracks that have clear and distinct repetition.
-
-(Note: due to current limitations, concurrent processing is very memory intensive and scales multiplicatively with `--n-jobs`. Long tracks (~10 mins) can consume upwards of 3GBs of memory during processing, with typical shorter tracks (2-6 mins) using 1-2 GBs each.)
-
-(Additional Note: when using parallel processing (i.e. n-jobs > 1), certain functionalities are disabled, namely: interactive mode, export to txt, export to stdout)
+`--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark.
 
 ## Acknowledgement
 
