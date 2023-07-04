@@ -235,7 +235,6 @@ def play_tagged(path, tag_names):
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported split audio files")
-@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time [yellow](warning: memory intensive)[/].")
 def split_audio(
     path,
     url,
@@ -247,7 +246,6 @@ def split_audio(
     recursive,
     flatten,
     format,
-    n_jobs,
 ):
     """Split the input audio into intro, loop and outro sections"""
     try:
@@ -292,7 +290,6 @@ def split_audio(
                 to_stdout=False,
                 recursive=recursive,
                 flatten=flatten,
-                n_jobs=n_jobs,
                 tag_names=None,
             )
             batch_handler.run()
@@ -355,9 +352,6 @@ def export_loop_points(
                 )
             export_handler.run()
         else:
-            # Disable multiprocessing until a thread-safe multiprocessing queue is implemented
-            n_jobs = 1
-
             batch_handler = BatchHandler(
                 directory_path=path,
                 min_duration_multiplier=min_duration_multiplier,
@@ -369,7 +363,6 @@ def export_loop_points(
                 to_stdout=to_stdout,
                 recursive=recursive,
                 flatten=flatten,
-                n_jobs=n_jobs,
                 tag_names=None,
             )
             batch_handler.run()
@@ -386,7 +379,6 @@ def export_loop_points(
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option('--n-jobs', '-n', type=click.IntRange(min=1), default=1, show_default=True, help="number of files to batch process at a time [yellow](warning: memory intensive)[/].")
 @click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
 def tag(
     path,
@@ -398,7 +390,6 @@ def tag(
     output_dir,
     recursive,
     flatten,
-    n_jobs,
     tag_names,
 ):
     """Adds metadata tags of loop points to a copy of the input audio file(s)"""
@@ -442,7 +433,6 @@ def tag(
                 to_stdout=False,
                 recursive=recursive,
                 flatten=flatten,
-                n_jobs=n_jobs,
                 tag_names=tag_names,
             )
             batch_handler.run()

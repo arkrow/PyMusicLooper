@@ -1,7 +1,6 @@
 import logging
 import os
 import sys
-from multiprocessing import Process
 from typing import List, Tuple
 
 import rich_click as click
@@ -170,7 +169,6 @@ class LoopExportHandler(LoopHandler):
         to_stdout=False,
         tag_names: Tuple[str, str] = None,
         batch_mode=False,
-        multiprocess=False,
     ):
         super().__init__(
             file_path,
@@ -186,13 +184,6 @@ class LoopExportHandler(LoopHandler):
         self.to_stdout = to_stdout
         self.tag_names = tag_names
         self.batch_mode = batch_mode
-
-        # Disable thread-unsafe options if files are being processed concurrently
-        if multiprocess:
-            self.interactive_mode = False
-            self.in_samples = False
-            self.to_txt = False
-            self.to_stdout = False
 
     def run(self):
         self.loop_pair_list = self.get_all_loop_pairs()
@@ -259,7 +250,6 @@ class BatchHandler:
         to_stdout=False,
         recursive=False,
         flatten=False,
-        n_jobs=1,
         tag_names: Tuple[str, str] = None,
     ):
         self.directory_path = os.path.abspath(directory_path)
@@ -273,7 +263,6 @@ class BatchHandler:
         self.to_stdout = to_stdout
         self.recursive = recursive
         self.flatten = flatten
-        self.n_jobs = max(n_jobs, 1)
         self.tag_names = tag_names
 
     def run(self):
@@ -290,82 +279,34 @@ class BatchHandler:
             else self.clone_file_tree_structure(files, self.output_directory)
         )
 
-        if self.n_jobs == 1:
-            with Progress(
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                MofNCompleteColumn(),
-            ) as progress:
-                pbar = progress.add_task("Processing...", total=len(files))
-                for file_idx, file in enumerate(files):
-                    progress.update(
-                        pbar,
-                        advance=1,
-                        description=f"Processing '{os.path.relpath(file, self.directory_path)}'"
-                    )
-                    self._batch_export_helper(
-                        file_path=file,
-                        min_duration_multiplier=self.min_duration_multiplier,
-                        min_loop_duration=self.min_loop_duration,
-                        max_loop_duration=self.max_loop_duration,
-                        split_audio_format=self.split_audio_format,
-                        output_dir=self.output_directory if self.flatten else output_dirs[file_idx],
-                        split_audio=self.split_audio,
-                        to_txt=self.to_txt,
-                        to_stdout=self.to_stdout,
-                        tag_names=self.tag_names,
-                    )
-        else:
-            # Note: some arguments are disabled due to inherent incompatibility with the current multiprocessing implementation
-            self._batch_multiprocess(files, output_dirs)
-
-    def _batch_multiprocess(self, files, output_dirs):
-        processes = []
-        num_files = len(files)
-        file_idx = 0
-
         with Progress(
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                MofNCompleteColumn(),
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            MofNCompleteColumn(),
         ) as progress:
-            pbar = progress.add_task("Processing...", total=num_files)
-            while file_idx < num_files:
-                for _ in range(self.n_jobs):
-                    p = Process(
-                        target=self._batch_export_helper,
-                        kwargs={
-                            "file_path": files[file_idx],
-                            "output_dir": (
-                                self.output_directory
-                                if self.flatten
-                                else output_dirs[file_idx]
-                            ),
-                            "min_duration_multiplier": self.min_duration_multiplier,
-                            "min_loop_duration": self.min_loop_duration,
-                            "max_loop_duration": self.max_loop_duration,
-                            "split_audio": self.split_audio,
-                            "split_audio_format": self.split_audio_format,
-                            "to_txt": False,
-                            "to_stdout": False,
-                            "tag_names": self.tag_names,
-                            "multiprocess": True,
-                        },
-                        daemon=True,
-                    )
-                    processes.append(p)
-                    p.start()
-                    file_idx += 1
-                    if file_idx >= num_files:
-                        break
-
-                # Wait till current batch finishes
-                for process in processes:
-                    process.join()
-                    process.terminate()
-                    progress.update(pbar, completed=file_idx)
-
-                processes = []
+            pbar = progress.add_task("Processing...", total=len(files))
+            for file_idx, file in enumerate(files):
+                progress.update(
+                    pbar,
+                    advance=1,
+                    description=(
+                        f"Processing '{os.path.relpath(file, self.directory_path)}'"
+                    ),
+                )
+                self._batch_export_helper(
+                    file_path=file,
+                    min_duration_multiplier=self.min_duration_multiplier,
+                    min_loop_duration=self.min_loop_duration,
+                    max_loop_duration=self.max_loop_duration,
+                    split_audio_format=self.split_audio_format,
+                    output_dir=(
+                        self.output_directory if self.flatten else output_dirs[file_idx]
+                    ),
+                    split_audio=self.split_audio,
+                    to_txt=self.to_txt,
+                    to_stdout=self.to_stdout,
+                    tag_names=self.tag_names,
+                )
 
     @staticmethod
     def clone_file_tree_structure(in_files, output_directory):
@@ -410,12 +351,8 @@ class BatchHandler:
         to_txt,
         to_stdout,
         tag_names,
-        multiprocess=False,
     ):
         try:
-            if multiprocess:
-                logging.basicConfig(format=" %(message)s", level=logging.ERROR)
-
             export_handler = LoopExportHandler(
                 file_path=file_path,
                 min_duration_multiplier=min_duration_multiplier,
@@ -428,7 +365,6 @@ class BatchHandler:
                 to_stdout=to_stdout,
                 tag_names=tag_names,
                 batch_mode=True,
-                multiprocess=multiprocess,
             )
             export_handler.run()
         except (AudioLoadError, LoopNotFoundError) as e:
