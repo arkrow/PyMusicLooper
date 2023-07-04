@@ -5,6 +5,7 @@ import tempfile
 import warnings
 
 import rich_click as click
+from rich.logging import RichHandler
 from rich_click.cli import patch as rich_click_patch
 from yt_dlp.utils import YoutubeDLError
 
@@ -85,9 +86,9 @@ def cli_main(verbose, interactive, samples):
     os.environ["PYTHONWARNINGS"] = "ignore"
 
     if verbose:
-        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+        logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, rich_tracebacks=True, show_time=False, tracebacks_suppress=[click])])
     else:
-        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.ERROR)
+        logging.basicConfig(format="%(message)s", level=logging.ERROR, handlers=[RichHandler(level=logging.ERROR, show_time=False, show_path=False)])
 
 
 def common_path_options(f):
