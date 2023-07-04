@@ -73,9 +73,12 @@ click.rich_click.USE_RICH_MARKUP = True
 def cli_main(verbose, interactive, samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
     # Store flags in environ instead of passing them as parameters
-    os.environ["PML_VERBOSE"] = str(verbose)
-    os.environ["PML_INTERACTIVE_MODE"] = str(interactive)
-    os.environ["PML_DISPLAY_SAMPLES"] = str(samples)
+    if verbose:
+        os.environ["PML_VERBOSE"] = "1"
+    if interactive:
+        os.environ["PML_INTERACTIVE_MODE"] = "1"
+    if samples:
+        os.environ["PML_DISPLAY_SAMPLES"] = "1"
 
     warnings.filterwarnings("ignore")
     # To suppress warnings in batch mode's subprocesses
@@ -147,8 +150,8 @@ def play(
             approx_loop_position=approx_loop_position,
         )
 
-        in_samples = os.environ.get("PML_DISPLAY_SAMPLES", "False") == "True"
-        interactive_mode = os.environ.get("PML_INTERACTIVE_MODE", "False") == "True"
+        in_samples = "PML_DISPLAY_SAMPLES" in os.environ
+        interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
 
         chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
 
@@ -192,7 +195,7 @@ def play_tagged(path, tag_names):
         looper = MusicLooper(path)
         loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1])
 
-        in_samples = os.environ.get("PML_DISPLAY_SAMPLES", "False") == "True"
+        in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 
         start_time = (
             loop_start

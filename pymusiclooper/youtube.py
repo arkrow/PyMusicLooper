@@ -5,7 +5,7 @@ import yt_dlp
 
 class YtdLogger:
     def __init__(self) -> None:
-        self.verbose = os.environ.get("PML_VERBOSE", "False") == "True"
+        self.verbose = "PML_VERBOSE" in os.environ
 
     def debug(self, msg):
         # For compatibility with youtube-dl, both debug and info are passed into debug
