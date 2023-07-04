@@ -25,13 +25,38 @@ class PlaybackHandler:
             playback_data (np.ndarray): A numpy array containing the playback audio. Must be in the shape (samples, channels).
             samplerate (int): The sample rate of the playback
             n_channels (int): The number of channels for playback
-            loop_start (int): The start point of the loop (in samples) 
+            loop_start (int): The start point of the loop (in samples)
             loop_end (int): The end point of the loop (in samples)
             start_from (int, optional): The offset to start from (in samples). Defaults to 0.
         """
         self.loop_counter = 0
         self.looping = True
         self.current_frame = start_from
+
+        total_samples = playback_data.shape[0]
+
+        if loop_start > loop_end:
+            raise ValueError(
+                "Loop parameters are in the wrong order. "
+                f"Loop start: {loop_start}; loop end: {loop_end}."
+            )
+
+        is_loop_invalid = (
+            loop_start < 0
+            or loop_start >= total_samples
+            or loop_end < 0
+            or loop_end >= total_samples
+            or loop_start >= loop_end
+        )
+
+        if is_loop_invalid:
+            raise ValueError(
+                "Loop parameters are out of bounds. "
+                f"Loop start: {loop_start}; "
+                f"loop end: {loop_end}; "
+                f"total number of samples in audio: {total_samples}."
+            )
+
         try:
 
             def callback(outdata, frames, time, status):
@@ -42,13 +67,13 @@ class PlaybackHandler:
                     pre_loop_index = loop_end - self.current_frame
                     remaining_frames = frames - (loop_end - self.current_frame)
                     adjusted_next_frame_idx = loop_start + remaining_frames
-                    outdata[:pre_loop_index]  = playback_data[self.current_frame:loop_end]
+                    outdata[:pre_loop_index] = playback_data[self.current_frame : loop_end]
                     outdata[pre_loop_index:frames] = playback_data[loop_start:adjusted_next_frame_idx]
                     self.current_frame = adjusted_next_frame_idx
                     self.loop_counter += 1
                     print(f"Currently on loop #{self.loop_counter}.", end="\r")
                 else:
-                    outdata[:chunksize] = playback_data[self.current_frame:self.current_frame + chunksize]
+                    outdata[:chunksize] = playback_data[self.current_frame : self.current_frame + chunksize]
                     self.current_frame += chunksize
                     if chunksize < frames:
                         outdata[chunksize:] = 0
