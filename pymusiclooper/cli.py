@@ -89,8 +89,8 @@ def cli_main(verbose, interactive, samples):
 
 def common_path_options(f):
     @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup, help='the path to the audio track(s) to load')
-    @optgroup.option('--path', type=click.Path(exists=True), default=None, help='path to the audio file(s). [dim]\[[/][dim cyan]mutually exclusive with --url;[/] [dim red]at least one required[/][dim]][/]')
-    @optgroup.option('--url',type=UrlParamType, default=None, help='url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim]\[[/][dim cyan]mutually exclusive with --path;[/] [dim red]at least one required[/][dim]][/]')
+    @optgroup.option('--path', type=click.Path(exists=True), default=None, help=r'path to the audio file(s). [dim]\[[/][dim cyan]mutually exclusive with --url;[/] [dim red]at least one required[/][dim]][/]')
+    @optgroup.option('--url',type=UrlParamType, default=None, help=r'url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim]\[[/][dim cyan]mutually exclusive with --path;[/] [dim red]at least one required[/][dim]][/]')
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
