@@ -200,22 +200,10 @@ class LoopExportHandler(LoopHandler):
             self.to_stdout = False
 
     def run(self):
-        try:
-            self.loop_pair_list = self.get_all_loop_pairs()
-        except (LoopNotFoundError, AudioLoadError, FileNotFoundError) as e:
-            logging.error(e)
-            return
-        except TypeError as e:
-            logging.error(f"Skipping '{self.file_path}'. {e}")
-            return
-        except Exception as e:
-            logging.error(e)
-            return
-
+        self.loop_pair_list = self.get_all_loop_pairs()
         chosen_loop_pair = self.choose_loop_pair(self.interactive_mode)
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
-        score = chosen_loop_pair.score
 
         music_looper = self.get_musiclooper_obj()
 
@@ -297,6 +285,9 @@ class BatchHandler:
         files = self.get_files_in_directory(
             self.directory_path, recursive=self.recursive
         )
+
+        if len(files) == 0:
+            raise FileNotFoundError(f"No files found in '{self.directory_path}'")
 
         output_dirs = (
             None

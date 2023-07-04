@@ -15,6 +15,7 @@ from click_params import PUBLIC_URL as UrlParamType
 
 from . import __version__
 from .core import MusicLooper
+from .exceptions import AudioLoadError, LoopNotFoundError
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
 from .youtube import YoutubeDownloader
 
@@ -183,6 +184,8 @@ def play(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
+    except (AudioLoadError, LoopNotFoundError) as e:
+        logging.error(e)
     except Exception as e:
         logging.error(e)
 
@@ -280,6 +283,8 @@ def split_audio(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
+    except (AudioLoadError, LoopNotFoundError) as e:
+        logging.error(e)
     except Exception as e:
         logging.error(e)
 
@@ -348,8 +353,10 @@ def export_loop_points(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
+    except (AudioLoadError, LoopNotFoundError) as e:
+        logging.error(e)
     except Exception as e:
-        logging.error
+        logging.error(e)
 
 
 @cli_main.command()
@@ -412,6 +419,8 @@ def tag(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
+    except (AudioLoadError, LoopNotFoundError) as e:
+        logging.error(e)
     except Exception as e:
         logging.error(e)
 

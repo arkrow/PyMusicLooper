@@ -29,20 +29,24 @@ class MLAudio:
             AudioLoadError: If the file could not be loaded.
         """
         # Load the file if it exists
-        raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
+        try:
+            raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
+        except Exception as e:
+            raise AudioLoadError(f"{os.path.basename(filepath)} could not be loaded. It might not contain valid audio data, or is in an supported format.") from e
+
         self.total_duration = librosa.get_duration(y=raw_audio, sr=sampling_rate)
 
         if raw_audio.size == 0:
-            raise AudioLoadError(
-                "The audio file could not be loaded for analysis. The file may be"
-                " corrupted, or the current environment may be lacking the necessary"
-                " tools to open this file format."
-            )
+            raise AudioLoadError(f"No audio data could be loaded from {filepath}.")
 
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
 
         mono_signal = librosa.core.to_mono(raw_audio)
+
+        if np.min(mono_signal) == 0 and np.max(mono_signal) == 0:
+            raise AudioLoadError(f"{filepath} only contains silence and cannot be analyzed.")
+
         # Normalize audio channels to between -1.0 and +1.0 before analysis
         mono_signal /= np.max(np.abs(mono_signal))
 
