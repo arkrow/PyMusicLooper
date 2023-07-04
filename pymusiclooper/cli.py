@@ -65,6 +65,26 @@ click.rich_click.OPTION_GROUPS = {
     "pymusiclooper tag": _option_groups(["--tag-names"]),
     "pymusiclooper export-loop-points": _option_groups(["--export-to"]),
 }
+click.rich_click.COMMAND_GROUPS = {
+    "pymusiclooper": [
+        {
+            "name": "Play Commands",
+            "commands": [
+                "play",
+                "play-tagged"
+            ],
+        },
+        {
+            "name": "Export Commands",
+            "commands": [
+                "export-loop-points",
+                "split-audio",
+                "tag"
+            ],
+        }
+    ]
+}
+
 click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
@@ -72,7 +92,7 @@ click.rich_click.USE_RICH_MARKUP = True
 @click.group("pymusiclooper", epilog="Full documentation and examples can be found at https://github.com/arkrow/PyMusicLooper")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Enables verbose logging output.")
 @click.option("--interactive", "-i", is_flag=True, default=False, help="Enables interactive mode to manually preview/choose the desired loop point.")
-@click.option("--samples", "-s", is_flag=True, default=False, help="Display all loop points in interactive mode in sample points instead of the default mm:ss.sss format.")
+@click.option("--samples", "-s", is_flag=True, default=False, help="Display all the loop points shown in interactive mode in sample points instead of the default mm:ss.sss format.")
 @click.version_option(__version__, prog_name="pymusiclooper")
 def cli_main(verbose, interactive, samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
