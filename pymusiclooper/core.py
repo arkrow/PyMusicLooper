@@ -89,9 +89,6 @@ class MusicLooper:
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
 
-        loop_start = self.frames_to_samples(loop_start)
-        loop_end = self.frames_to_samples(loop_end)
-
         soundfile.write(
             f"{out_path}-intro.{format.lower()}",
             self.mlaudio.playback_audio[:loop_start],
@@ -117,9 +114,6 @@ class MusicLooper:
         else:
             out_path = os.path.join(os.path.dirname(self.mlaudio.filepath), "loop.txt")
 
-        loop_start = int(self.frames_to_samples(loop_start))
-        loop_end = int(self.frames_to_samples(loop_end))
-
         with open(out_path, "a") as file:
             file.write(f"{loop_start} {loop_end} {self.mlaudio.filename}\n")
 
@@ -135,9 +129,6 @@ class MusicLooper:
             output_dir, f"{track_name}-tagged{file_extension}"
         )
         shutil.copyfile(self.mlaudio.filepath, exported_file_path)
-
-        loop_start = int(self.frames_to_samples(loop_start))
-        loop_end = int(self.frames_to_samples(loop_end))
 
         with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
             audio_file.tags[loop_start_tag] = [str(loop_start)]

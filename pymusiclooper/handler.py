@@ -230,18 +230,14 @@ class LoopExportHandler(LoopHandler):
                 loop_end_tag,
                 output_dir=self.output_directory,
             )
-            loop_start_samples = music_looper.frames_to_samples(loop_start)
-            loop_end_samples = music_looper.frames_to_samples(loop_end)
-            message = f"Exported {loop_start_tag}:{loop_start_samples} and {loop_end_tag}:{loop_end_samples} to a copy in {self.output_directory}"
+            message = f"Exported {loop_start_tag}:{loop_start} and {loop_end_tag}:{loop_end} to a copy in {self.output_directory}"
             if self.batch_mode:
                 logging.info(message)
             else:
                 click.echo(message)
 
         if self.to_stdout:
-            loop_start_samples = music_looper.frames_to_samples(loop_start)
-            loop_end_samples = music_looper.frames_to_samples(loop_end)
-            click.echo(f"\nLoop points for [{music_looper.filename}]:\nLOOP_START: {loop_start_samples}\nLOOP_END: {loop_end_samples}\n")
+            click.echo(f"\nLoop points for [{music_looper.filename}]:\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
         if self.to_txt:
             music_looper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
             out_path = os.path.join(self.output_directory, "loop.txt")
