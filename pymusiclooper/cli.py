@@ -134,7 +134,7 @@ def play(
     max_loop_duration,
     approx_loop_position,
 ):
-    """Play an audio file on repeat from the terminal with the best discovered loop points (default), or a chosen point if interactive mode is active."""
+    """Play an audio file on repeat from the terminal with the best discovered loop points, or a chosen point if interactive mode is active."""
     try:
         if url is not None:
             path = download_audio(url, tempfile.gettempdir())
