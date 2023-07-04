@@ -118,7 +118,7 @@ def find_best_loop_points(
         )
     else:
         chroma, power_db, bpm, beats = _analyze_audio(mlaudio)
-        logging.info("Detected {} beats at {:.0f} bpm".format(beats.size, bpm))
+        logging.info(f"Detected {beats.size} beats at {bpm:.0f} bpm")
 
     logging.info(
         "Finished initial audio processing in {:.3}s".format(
@@ -189,7 +189,7 @@ def find_best_loop_points(
         f"Filtered to {len(filtered_candidate_pairs)} best candidate loop points"
     )
     logging.info(
-        "Total analysis runtime: {:.3}s".format(time.perf_counter() - runtime_start)
+        f"Total analysis runtime: {time.perf_counter() - runtime_start:.3}s"
     )
 
     return filtered_candidate_pairs
