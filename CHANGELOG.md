@@ -5,16 +5,23 @@
 ### Added
 
 - New functionality: `tag`. Export metadata tags of loop points to a copy of the input audio file(s) - (Credit: some of the implementation code was based on/inspired by RemedyTwo's fork)
+- New functionality: `play-tagged`. Reads the metadata tags of loop points from an audio file and plays it looping
+- New audio source option: `--url`. Can now load and process audio from a youtube link (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp))
 - New loop point search options
   - `--min-loop-duration` , `--max-loop-duration` : added min loop duration and max loop duration (in seconds) as optional constraints to the CLI
   - `--approx-loop-position` : specify the approximate desired loop start and loop end in seconds, searching around those points only +/- 2 seconds
+
+- New export option for split-audio command: `--format`, to change the format of the exported split audio files (currently supported formats: WAV, FLAC, OGG, MP3)
+- Official Python 3.10 and 3.11 support
 
 ### Changed
 
 - Complete re-write of the CLI with much better interface and usability, use `pymuisclooper --help` for the new commands and options or consult the README
 - Reimplemented playback using the python sounddevice library instead of mpg123 for better cross-platform compatibility
 - Significant runtime improvement to the core loop search algorithm (now runs 10x faster).
+- Better loop point alignment thanks to an internal implementation of Audacity's "At Zero Crossings" functionality (less cases of audio popping/clicking due to misaligned loop points)
 - Much nicer formatting and interface in interactive mode thanks to the `rich` python package
+- Increased the minimum Python requirement to Python 64-bit >=3.9
 
 ## [2.5.3] - 2023-01-13
 

@@ -28,7 +28,7 @@ Features:
 The following software must be installed for `pymusiclooper` to function correctly.
 
 - [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
-- (Optional) [ffmpeg](https://ffmpeg.org/download.html): adds support for loading additional audio formats and codecs such as M4A/AAC/ALAC/WMA/etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If support for these additional codecs is not necessary, this can be skipped.
+- [ffmpeg](https://ffmpeg.org/download.html): required for loading audio from youtube (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and adds support for loading additional audio formats and codecs such as M4A/AAC, Apple Lossless (ALAC), WMA, ATRAC (.at9), etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If the aforementioned features are not required, can be skipped.
 
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
 A full list can be found at [libsndfile's supported formats page](https://libsndfile.github.io/libsndfile/formats.html)
@@ -82,19 +82,24 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 
  Options
  --verbose      -v    Enables verbose logging output.
- --interactive  -i    Enables interactive mode to manually preview/choose the desired loop point.
- --in-samples   -s    Display all loop points in interactive mode in sample points instead of the
-                      default mm:ss.sss format.
+ --interactive  -i    Enables interactive mode to manually preview/choose
+                      the desired loop point.
+ --in-samples   -s    Display all loop points in interactive mode in sample points
+                      instead of the default mm:ss.sss format.
  --version            Show the version and exit.
  --help               Show this message and exit.
 
  Commands
- export-loop-points  Export the best discovered or chosen loop points to a text file or to the
-                     terminal (stdout)
- play                Play an audio file on repeat from the terminal with the best discovered loop
+ export-loop-points  Export the best discovered or chosen loop points to a text file
+                     or to the terminal (stdout)
+ play                Play an audio file on repeat from the terminal with the
+                     best discovered loop
                      points, or a chosen point if interactive mode is active
+ play-tagged         Skips loop analysis and reads the loop points directly from
+                     the tags present in the file.
  split-audio         Split the input audio into intro, loop and outro sections
- tag                 Adds metadata tags of loop points to a copy of the input audio file(s)
+ tag                 Adds metadata tags of loop points to a copy of the input
+                     audio file(s)
 ```
 
 Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-loop-points --help`)
@@ -128,6 +133,12 @@ If the automatically chosen loop is undesirable, you can use pymusiclooper in in
 pymusiclooper -i play --path "TRACK_NAME.mp3"
 ```
 
+Audio can also be loaded from any stream supported by yt-dlp, e.g. youtube (also available for the `tag` and `split-audio` subcommands)
+
+```sh
+pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+```
+
 ### Export
 
 Split the audio track into intro, loop and outro files.
@@ -142,10 +153,16 @@ Export the discovered loop points directly to the terminal as sample points
 pymusiclooper export-loop-points --path "/path/to/track.wav" --export-to stdout
 ```
 
- Add metadata tags of the best discovered loop points to a copy of the input audio file (or all audio files in a directory, if a directory path is used instead)
+Add metadata tags of the best discovered loop points to a copy of the input audio file (or all audio files in a directory, if a directory path is used instead)
 
 ```sh
-pymusiclooper tag --path "TRACK_NAME.mp3"
+pymusiclooper tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
+```
+
+Reads the loop metadata tags from an audio file and play it with the loop active using the loop start and end specified in the file (must be stored as samples)
+
+```sh
+pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 ```
 
 Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
