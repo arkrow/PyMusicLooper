@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# coding=utf-8
-
 from .cli import cli_main
 
 
