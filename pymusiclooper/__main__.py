@@ -1,8 +1,13 @@
+import logging
+
 from .cli import cli_main
 
 
 def cli():
-    cli_main(prog_name="pymusiclooper")
+    try:
+        cli_main(prog_name="pymusiclooper")
+    except Exception as e:
+        logging.error(e)
 
 
 if __name__ == "__main__":
