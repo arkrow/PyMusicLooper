@@ -332,7 +332,7 @@ def _assess_and_filter_loop_pairs(
     else:
         pruned_candidate_pairs = candidate_pairs
 
-    weights = _weights(test_offset, start=test_offset // num_test_beats)
+    weights = _weights(test_offset, start=max(2, test_offset // num_test_beats), stop=1)
 
     pair_score_list = [
         _calculate_loop_score(
@@ -470,36 +470,38 @@ def _calculate_subseq_beat_similarity(
     b1_start: int,
     b2_start: int,
     chroma: np.ndarray,
-    test_duration: int,
+    test_end_offset: int,
     weights: Optional[np.ndarray] = None,
 ) -> float:
     """Calculates the similarity of subsequent notes of the two specified indicies (b1_start, b2_start) using cosine similarity
 
     Args:
-        b1_start (int): Frame index of the first beat to compare
-        b2_start (int): Frame index of the second beat to compare
+        b1_start (int): Starting frame index of the first beat to compare
+        b2_start (int): Starting frame index of the second beat to compare
         chroma (np.ndarray): The chroma spectrogram of the audio
-        test_duration (int): How many frames along the chroma spectrogram to test. If negative, will be testing the preceding frames instead of the subsequent frames.
+        test_end_offset (int): The number of frames to offset from the starting index. If negative, will be testing the preceding frames instead of the subsequent frames.
         weights (np.ndarray, optional): If specified, will provide a weighted average of the note scores according to the weight array provided. Defaults to None.
 
     Returns:
         float: the weighted average of the cosine similarity of the notes along the tested region
     """
-    if test_duration < 0:
-        max_negative_offset = max(test_duration, -b1_start, -b2_start)
+    chroma_len = chroma.shape[-1]
+    test_length = abs(test_end_offset)
+
+    if test_end_offset < 0:
+        b1_end = b1_start
+        b2_end = b2_start
+        max_negative_offset = max(test_end_offset, -b1_start, -b2_start)
         b1_start += max_negative_offset
         b2_start += max_negative_offset
-
-    chroma_len = chroma.shape[-1]
-    test_offset = np.abs(test_duration)
-
-    # clip to chroma len
-    b1_end = min(b1_start + test_offset, chroma_len)
-    b2_end = min(b2_start + test_offset, chroma_len)
-
-    # align testing lengths
-    max_offset = min(b1_end - b1_start, b2_end - b2_start)
-    b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
+        max_offset = abs(max_negative_offset)
+    else:
+        # clip to chroma len
+        b1_end = min(b1_start + test_length, chroma_len)
+        b2_end = min(b2_start + test_length, chroma_len)
+        # align testing lengths
+        max_offset = min(b1_end - b1_start, b2_end - b2_start)
+        b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
 
     dot_prod = np.einsum(
         "ij,ij->j", chroma[..., b1_start:b1_end], chroma[..., b2_start:b2_end]
@@ -508,9 +510,9 @@ def _calculate_subseq_beat_similarity(
     b2_norm = np.linalg.norm(chroma[..., b2_start:b2_end], axis=0)
     cosine_sim = dot_prod / (b1_norm * b2_norm)
 
-    if max_offset < test_offset:
+    if max_offset < test_length:
         return np.average(
-            np.pad(cosine_sim, (0, test_offset - max_offset), "minimum"),
+            np.pad(cosine_sim, pad_width=(0, test_length - max_offset), mode="minimum"),
             weights=weights,
         )
     else:
