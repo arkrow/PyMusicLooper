@@ -401,18 +401,26 @@ class BatchHandler:
         tag_names,
         multiprocess=False,
     ):
-        export_handler = LoopExportHandler(
-            file_path=file_path,
-            min_duration_multiplier=min_duration_multiplier,
-            min_loop_duration=min_loop_duration,
-            max_loop_duration=max_loop_duration,
-            output_dir=output_dir,
-            split_audio=split_audio,
-            split_audio_format=split_audio_format,
-            to_txt=to_txt,
-            to_stdout=to_stdout,
-            tag_names=tag_names,
-            batch_mode=True,
-            multiprocess=multiprocess,
-        )
-        export_handler.run()
+        try:
+            if multiprocess:
+                logging.basicConfig(format=" %(message)s", level=logging.ERROR)
+
+            export_handler = LoopExportHandler(
+                file_path=file_path,
+                min_duration_multiplier=min_duration_multiplier,
+                min_loop_duration=min_loop_duration,
+                max_loop_duration=max_loop_duration,
+                output_dir=output_dir,
+                split_audio=split_audio,
+                split_audio_format=split_audio_format,
+                to_txt=to_txt,
+                to_stdout=to_stdout,
+                tag_names=tag_names,
+                batch_mode=True,
+                multiprocess=multiprocess,
+            )
+            export_handler.run()
+        except (AudioLoadError, LoopNotFoundError) as e:
+            logging.error(e)
+        except Exception as e:
+            logging.error(e)
