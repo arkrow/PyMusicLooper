@@ -10,7 +10,25 @@ class PlaybackHandler:
     def __init__(self) -> None:
         self.event = threading.Event()
 
-    def play_looping(self, playback_data, samplerate, n_channels, loop_start, loop_end, start_from=0):
+    def play_looping(
+        self,
+        playback_data: np.ndarray,
+        samplerate: int,
+        n_channels: int,
+        loop_start: int,
+        loop_end: int,
+        start_from=0,
+    ) -> None:
+        """Plays an audio track through the terminal with a loop active between the `loop_start` and `loop_end` provided. Ctrl+C to interrupt.
+
+        Args:
+            playback_data (np.ndarray): A numpy array containing the playback audio. Must be in the shape (samples, channels).
+            samplerate (int): The sample rate of the playback
+            n_channels (int): The number of channels for playback
+            loop_start (int): The start point of the loop (in samples) 
+            loop_end (int): The end point of the loop (in samples)
+            start_from (int, optional): The offset to start from (in samples). Defaults to 0.
+        """
         self.loop_counter = 0
         self.looping = True
         self.current_frame = start_from
@@ -21,7 +39,7 @@ class PlaybackHandler:
 
                 # Audio looping logic
                 if self.looping and self.current_frame + frames > loop_end:
-                    pre_loop_index = (loop_end - self.current_frame)
+                    pre_loop_index = loop_end - self.current_frame
                     remaining_frames = frames - (loop_end - self.current_frame)
                     adjusted_next_frame_idx = loop_start + remaining_frames
                     outdata[:pre_loop_index]  = playback_data[self.current_frame:loop_end]

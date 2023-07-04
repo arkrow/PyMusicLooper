@@ -360,7 +360,9 @@ def _assess_and_filter_loop_pairs(
     return score_pruned_candidate_pairs
 
 
-def _prune_candidates(candidate_pairs, drop_bottom_x_percentile=50):
+def _prune_candidates(
+    candidate_pairs: list[LoopPair], drop_bottom_x_percentile: float = 50.0
+) -> list[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in candidate_pairs])
     note_dist_array = np.array([pair.note_distance for pair in candidate_pairs])
 
@@ -392,7 +394,11 @@ def _prune_candidates(candidate_pairs, drop_bottom_x_percentile=50):
     return [candidate_pairs[idx] for idx in indicies_that_meet_cond]
 
 
-def _prune_by_score(candidate_pairs, percentile=25, acceptable_score=80):
+def _prune_by_score(
+    candidate_pairs: list[LoopPair],
+    percentile: float = 25.0,
+    acceptable_score: float = 80.0,
+) -> list[LoopPair]:
     candidate_pairs = sorted(candidate_pairs, key=lambda x: x.score)
 
     score_array = np.array([pair.score for pair in candidate_pairs])
@@ -404,7 +410,7 @@ def _prune_by_score(candidate_pairs, percentile=25, acceptable_score=80):
     return candidate_pairs[min(percentile_idx, acceptable_idx) :]
 
 
-def _prioritize_duration(pair_list):
+def _prioritize_duration(pair_list: list[LoopPair]) -> list[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in pair_list])
     db_threshold = np.median(db_diff_array)
 
@@ -430,7 +436,26 @@ def _prioritize_duration(pair_list):
         pair_list.insert(0, pair_list.pop(duration_argmax))
 
 
-def _calculate_loop_score(b1, b2, chroma, test_duration, weights=None):
+def _calculate_loop_score(
+    b1: int,
+    b2: int,
+    chroma: np.ndarray,
+    test_duration: int,
+    weights: Optional[np.ndarray] = None,
+) -> float:
+    """Calculates the similarity of two sequences given the starting indicies `b1` and `b2` for the period of the `test_duration` specified.
+        Returns the best score based on the cosine similarity of subsequent (or preceeding) notes.
+
+    Args:
+        b1 (int): Frame index of the first beat to compare
+        b2 (int): Frame index of the second beat to compare
+        chroma (np.ndarray): The chroma spectrogram of the audio
+        test_duration (int): How many frames along the chroma spectrogram to test.
+        weights (np.ndarray, optional): If specified, will provide a weighted average of the note scores according to the weight array provided. Defaults to None.
+
+    Returns:
+        float: the weighted average of the cosine similarity of the notes along the tested region
+    """
     lookahead_score = _calculate_subseq_beat_similarity(
         b1, b2, chroma, test_duration, weights=weights
     )
