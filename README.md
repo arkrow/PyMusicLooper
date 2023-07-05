@@ -72,7 +72,7 @@ poetry install
 
 A virtual environment can be setup through poetry by invoking the `poetry shell` command before installing.
 
-## Usage
+## Available Commands
 
 ```raw
  Usage: pymusiclooper [OPTIONS] COMMAND [ARGS]...
@@ -109,27 +109,23 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 
 Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
 
-**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually.
+**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually. Interactive mode is also available when batch processing.
 
 ## Example Usage
 
 ### Play
 
-Play the song on repeat with the best discovered loop point.
-
 ```sh
+# Play the song on repeat with the best discovered loop point.
 pymusiclooper play --path "TRACK_NAME.mp3"
-```
 
-If the automatically chosen loop is undesirable, you can use pymusiclooper in interactive mode, e.g.
 
-```sh
+# pymusiclooper can be used in interactive mode to preview and choose alternative loop points, e.g.
 pymusiclooper -i play --path "TRACK_NAME.mp3"
-```
 
-Audio can also be loaded from any stream supported by yt-dlp, e.g. youtube (also available for the `tag` and `split-audio` subcommands)
 
-```sh
+# Audio can also be loaded from any stream supported by yt-dlp, e.g. youtube
+# (also available for the `tag` and `split-audio` subcommands)
 pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
@@ -137,76 +133,67 @@ pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 *Note: batch processing is available for all export subcommands. Simply specify a directory instead of a file as the path to be used.*
 
-Split the audio track into intro, loop and outro files.
-
 ```sh
-pymusiclooper split-audio "TRACK_NAME.ogg"
-```
+# Split the audio track into intro, loop and outro files.
+pymusiclooper split-audio --path "TRACK_NAME.ogg"
 
-Export the discovered loop points directly to the terminal as sample points
 
-```sh
+# Export the discovered loop points directly to the terminal as sample points
 pymusiclooper export-points --path "/path/to/track.wav" --export-to stdout
-```
 
-Add metadata tags of the best discovered loop points to a copy of the input audio file (or all audio files in a directory, if a directory path is used instead)
 
-```sh
+# Add metadata tags of the best discovered loop points to a copy of the input audio file
+# (or all audio files in a directory, if a directory path is used instead)
 pymusiclooper tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
-```
 
-Reads the loop metadata tags from an audio file and play it with the loop active using the loop start and end specified in the file (must be stored as samples)
 
-```sh
+# Reads the loop metadata tags from an audio file and play it with the loop active
+# using the loop start and end specified in the file (must be stored as samples)
 pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
-```
 
-Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
 
-```sh
+# Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file
+# (compatible with https://github.com/libertyernie/LoopingAudioConverter/)
+# Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
 pymusiclooper export-points --path "/path/to/dir/" --export-to txt
 ```
 
-Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
-
 ### Miscellaneous
 
-If the loop is very long (or very short), you may specify a different minimum duration for the algorithm to use, which is 0.35 (35%) by default.
-If the most of the track is the loop section, specifying a higher multiplier will also speed the algorithm up.
-Here `--min-duration-multiplier 0.85` means that, excluding trailing silence, the loop section is at least 85% of the music track.
-
 ```sh
-pymusiclooper split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
-```
-
-Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
-
-```sh
+# Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
 pymusiclooper -i export-points --path "TRACK_NAME.wav"
-```
 
-If the detected loop points are unsatisfactory, the brute force option `--brute-force` may yield better results.
-NOTE: brute force checks the entire audio track instead of the detected beats.
-This leads to much longer runtime (may take several minutes) and the program may appear frozen during this time while it is processing in the background.
 
-```sh
+# If the loop is very long (or very short), a different minimum loop duration can be specified.
+## --min-duration-multiplier 0.85 implies that the loop is at least 85% of the track,
+## excluding trailing silence.
+pymusiclooper split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
+
+# Alternatively, the loop length constraints can be specified in seconds
+pymusiclooper split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max-loop-duration 150
+
+
+# If the detected loop points are unsatisfactory, the brute force option `--brute-force`
+# may yield better results.
+## NOTE: brute force mode checks the entire audio track instead of the detected beats.
+## This leads to much longer runtime (may take several minutes). The program may appear frozen during this time while it is processing in the background.
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --brute-force
-```
 
-By default, the program filters the loop points to the top 50% (according to internal criteria) of the discovered loops when there are many.
-If that is undesirable, it can be disabled using the `--disable-pruning` flag.
 
-```sh
+# By default, the program filters the loop points to the top 50% (according to
+# internal criteria) of the discovered loops when there are many.
+# If that is undesirable, it can be disabled using the `--disable-pruning` flag.
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
+
+
+# If a desired loop point is already known, and you would like to extract the best loop
+# positions in samples, you can use the `--approx-loop-position` option,
+# which searches with +/- 2 seconds of the point specified.
+# Best used interactively. Example using the `export-points` subcommand:
+pymusiclooper -i export-points --path "/path/to/track.mp3" --approx-loop-position 20 210
+# `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark.
 ```
-
-If a desired loop point is already known, and you would like to extract the best loop positions in samples, you can use the `--approx-loop-position` option, which searches with +/- 2 seconds of the point specified. Best used interactively. Example using the `export-points` subcommand:
-
-```sh
-pymusiclooper -i export-points --path "/path/to/track.mp3" --export-to stdout --approx-loop-position 20 210
-```
-
-`--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark.
 
 ## Acknowledgement
 
