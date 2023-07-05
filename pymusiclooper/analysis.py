@@ -133,7 +133,7 @@ def find_best_loop_points(
         logging.info("**NOTICE** The program may appear frozen, but it will be continuing processing in the background. This operation may take several minutes to complete.")
 
     logging.info(
-        "Finished initial audio processing in {:.3}s".format(
+        "Finished initial audio processing in {:.3f}s".format(
             time.perf_counter() - runtime_start
         )
     )
@@ -158,7 +158,7 @@ def find_best_loop_points(
     n_candidate_pairs = len(candidate_pairs) if candidate_pairs is not None else 0
     logging.info(
         f"Found {n_candidate_pairs} possible loop points in"
-        f" {(time.perf_counter() - initial_pairs_start_time):.3}s"
+        f" {(time.perf_counter() - initial_pairs_start_time):.3f}s"
     )
 
     if not candidate_pairs:
@@ -201,7 +201,7 @@ def find_best_loop_points(
         f"Filtered to {len(filtered_candidate_pairs)} best candidate loop points"
     )
     logging.info(
-        f"Total analysis runtime: {time.perf_counter() - runtime_start:.3}s"
+        f"Total analysis runtime: {time.perf_counter() - runtime_start:.3f}s"
     )
 
     return filtered_candidate_pairs
