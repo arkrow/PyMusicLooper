@@ -76,7 +76,7 @@ def find_best_loop_points(
     min_loop_duration = max(1, min_loop_duration)
 
     if approx_loop_start is not None and approx_loop_end is not None:
-        # Skipping the unncessary beat analysis (in this case) speeds up the analysis runtime by ~2x
+        # Skipping the unnecessary beat analysis (in this case) speeds up the analysis runtime by ~2x
         # and significantly reduces the total memory consumption
         chroma, power_db, _, _ = _analyze_audio(mlaudio, skip_beat_analysis=True)
         # Set bpm to a general average of 120
@@ -217,7 +217,7 @@ def _analyze_audio(
         skip_beat_analysis (bool, optional): Skips beat analysis if true and returns None for bpm and beats. Defaults to False.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indicies of detected beats)
+        Tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indices of detected beats)
     """
     S = librosa.core.stft(y=mlaudio.audio)
     S_power = np.abs(S) ** 2
@@ -268,13 +268,13 @@ def _find_candidate_pairs(
     min_loop_duration: int,
     max_loop_duration: int,
 ) -> List[Tuple[int, int, float, float]]:
-    """Generates a list of all valid candidate loop pairs using combinations of beat indicies,
+    """Generates a list of all valid candidate loop pairs using combinations of beat indices,
     by comparing the notes using the chroma spectrogram and their loudness difference
 
     Args:
         chroma (np.ndarray): The chroma spectrogram
         power_db (np.ndarray): The power spectrogram in dB
-        beats (np.ndarray): The frame indicies of detected beats
+        beats (np.ndarray): The frame indices of detected beats
         min_loop_duration (int): Minimum loop duration (in frames)
         max_loop_duration (int): Maximum loop duration (in frames)
 
@@ -409,10 +409,10 @@ def _prune_candidates(
         note_dist_threshold = np.max(note_dist_array)
 
     # Lower values are better
-    indicies_that_meet_cond = np.flatnonzero(
+    indices_that_meet_cond = np.flatnonzero(
         (db_diff_array <= db_threshold) & (note_dist_array <= note_dist_threshold)
     )
-    return [candidate_pairs[idx] for idx in indicies_that_meet_cond]
+    return [candidate_pairs[idx] for idx in indices_that_meet_cond]
 
 
 def _prune_by_score(
@@ -464,8 +464,8 @@ def _calculate_loop_score(
     test_duration: int,
     weights: Optional[np.ndarray] = None,
 ) -> float:
-    """Calculates the similarity of two sequences given the starting indicies `b1` and `b2` for the period of the `test_duration` specified.
-        Returns the best score based on the cosine similarity of subsequent (or preceeding) notes.
+    """Calculates the similarity of two sequences given the starting indices `b1` and `b2` for the period of the `test_duration` specified.
+        Returns the best score based on the cosine similarity of subsequent (or preceding) notes.
 
     Args:
         b1 (int): Frame index of the first beat to compare
@@ -494,7 +494,7 @@ def _calculate_subseq_beat_similarity(
     test_end_offset: int,
     weights: Optional[np.ndarray] = None,
 ) -> float:
-    """Calculates the similarity of subsequent notes of the two specified indicies (b1_start, b2_start) using cosine similarity
+    """Calculates the similarity of subsequent notes of the two specified indices (b1_start, b2_start) using cosine similarity
 
     Args:
         b1_start (int): Starting frame index of the first beat to compare
@@ -561,7 +561,7 @@ def nearest_zero_crossing(mlaudio: MLAudio, sample_idx: int) -> int:
     Returns:
         int: the index of the best sample point that is at a rising zero crossing point closest to the `sample_idx` provided, returns `sample_idx` if none where found
     """
-    # Reimplementation of Audacity's NearestZeroCrossing function in Python
+    # Re-implementation of Audacity's NearestZeroCrossing function in Python
     # https://github.com/audacity/audacity/blob/057bf4ee6f71962cd8ecc6dbccf0852695340758/src/menus/SelectMenus.cpp#L30
     # Original credit goes to the Audacity team and contributors
     audio = mlaudio.playback_audio

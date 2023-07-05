@@ -14,7 +14,7 @@ class YtdLogger:
             self.info(msg)
 
     def info(self, msg):
-        # Supress misleading option (only applicable to yt-dlp)
+        # Suppress misleading option (only applicable to yt-dlp)
         if "(pass -k to keep)" in msg:
             pass
         elif msg.startswith("[download]"):
