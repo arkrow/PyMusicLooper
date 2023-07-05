@@ -73,7 +73,7 @@ class PlaybackHandler:
                     outdata[pre_loop_index:frames] = playback_data[loop_start:adjusted_next_frame_idx]
                     self.current_frame = adjusted_next_frame_idx
                     self.loop_counter += 1
-                    rich_console.print(f"Currently on loop #{self.loop_counter}.", end="\r")
+                    rich_console.print(f"[dim italic yellow]Currently on loop #{self.loop_counter}.[/]", end="\r")
                 else:
                     outdata[:chunksize] = playback_data[self.current_frame : self.current_frame + chunksize]
                     self.current_frame += chunksize
@@ -102,11 +102,11 @@ class PlaybackHandler:
     def _loop_interrupt_handler(self, *args):
         if self.looping:
             self.looping = False
-            rich_console.print("(Looping disabled. [red]Ctrl+C[/] again to stop playback.)")
+            rich_console.print("[dim italic yellow](Looping disabled. [red]Ctrl+C[/] again to stop playback.)[/]")
         else:
             self.event.set()
             self.stream.stop()
             self.stream.close()
-            rich_console.print("Playback interrupted by user.")
+            rich_console.print("[dim]Playback interrupted by user.[/]")
             # Restore default SIGINT handler
             signal.signal(signal.SIGINT, signal.default_int_handler)
