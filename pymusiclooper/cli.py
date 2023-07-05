@@ -59,8 +59,8 @@ def cli_main(debug, verbose, interactive, samples):
 
 def common_path_options(f):
     @optgroup.group("audio path", cls=RequiredMutuallyExclusiveOptionGroup, help="the path to the audio track(s) to load")
-    @optgroup.option("--path", type=click.Path(exists=True), default=None, help=r"path to the audio file(s). [dim cyan]\[mutually exclusive with --url][/] [dim red]\[at least one required][/]")
-    @optgroup.option("--url",type=UrlParamType, default=None, help=r"url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim cyan]\[mutually exclusive with --path][/] [dim red]\[at least one required][/]")
+    @optgroup.option("--path", type=click.Path(exists=True), default=None, help=r"Path to the audio file(s). [dim cyan]\[mutually exclusive with --url][/] [dim red]\[at least one required][/]")
+    @optgroup.option("--url",type=UrlParamType, default=None, help=r"Link to the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim cyan]\[mutually exclusive with --path][/] [dim red]\[at least one required][/]")
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -70,12 +70,12 @@ def common_path_options(f):
 
 
 def common_loop_options(f):
-    @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0), default=0.35, show_default=True, help="the minimum loop duration as a multiplier of the audio track's total duration.")
-    @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='the minimum loop duration in seconds (note: overrides --min-duration-multiplier if specified).')
-    @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='the maximum loop duration in seconds.')
-    @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='the approximate desired loop start and loop end in seconds for a specific audio track (note: only those points will be checked, with a search window of +/- 2 seconds).')
-    @click.option("--brute-force", is_flag=True, default=False, help=r"Checks the entire audio track instead of just the detected beats. Useful in case the initial results are unsatisfactory. [yellow](warning: may take several minutes to complete.)[/]")
-    @click.option("--disable-pruning", is_flag=True, default=False, help="Disables filtering of the detected loop points and returns all the discovered pairs from the initial pass.")
+    @click.option('--min-duration-multiplier', type=click.FloatRange(min=0.0, max=1.0, min_open=True, max_open=True), default=0.35, show_default=True, help="The minimum loop duration as a multiplier of the audio track's total duration.")
+    @click.option('--min-loop-duration', type=click.FloatRange(min=0, min_open=True), default=None, help='The minimum loop duration in seconds. [dim](overrides --min-duration-multiplier if set)[/]')
+    @click.option('--max-loop-duration', type=click.FloatRange(min=0, min_open=True), default=None, help='The maximum loop duration in seconds.')
+    @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='The approximate desired loop start and loop end in seconds. [dim](+/-2 second search window for each point)[/]')
+    @click.option("--brute-force", is_flag=True, default=False, help=r"Check the entire audio track instead of just the detected beats. [dim yellow](Warning: may take several minutes to complete.)[/]")
+    @click.option("--disable-pruning", is_flag=True, default=False, help="Disables filtering of the detected loop points from the initial pass.")
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -85,9 +85,9 @@ def common_loop_options(f):
 
 
 def common_export_options(f):
-    @click.option('--output-dir', '-o', type=click.Path(exists=False, writable=True, file_okay=False), help="the output directory to use for the exported files.")
-    @click.option("--recursive", "-r", is_flag=True, default=False, help="process directories recursively.")
-    @click.option("--flatten", "-f", is_flag=True, default=False, help="flatten the output directory structure instead of preserving it when using the --recursive flag (note: files with identical filenames are silently overwritten).")
+    @click.option('--output-dir', '-o', type=click.Path(exists=False, writable=True, file_okay=False), help="The output directory to use for the exported files.")
+    @click.option("--recursive", "-r", is_flag=True, default=False, help="Process directories recursively.")
+    @click.option("--flatten", "-f", is_flag=True, default=False, help="Flatten the output directory structure instead of preserving it when using the --recursive flag. [dim yellow](Note: files with identical filenames are silently overwritten.)[/]")
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
         return f(*args, **kwargs)
@@ -170,8 +170,8 @@ def play(
 
 
 @cli_main.command()
-@click.option('--path', type=click.Path(exists=True), required=True, help='path to audio file')
-@click.option("--tag-names", type=str, required=True, nargs=2, help="The name of the metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be in samples and integer values)")
+@click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
+@click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
 def play_tagged(path, tag_names):
     """Skips loop analysis and reads the loop points directly from the tags present in the file."""
     try:
@@ -204,7 +204,7 @@ def play_tagged(path, tag_names):
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="audio format of the exported split audio files")
+@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
 def split_audio(
     path,
     url,
@@ -219,7 +219,7 @@ def split_audio(
     flatten,
     format,
 ):
-    """Split the input audio into intro, loop and outro sections"""
+    """Split the input audio into intro, loop and outro sections."""
     try:
         if url is not None:
             output_dir = mk_outputdir(os.getcwd(), output_dir)
@@ -283,7 +283,7 @@ def split_audio(
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", required=True, show_default=True, help="STDOUT: prints the loop points of a track in samples to the terminal's stdout (OR) TXT: export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).")
+@click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", show_default=True, help="STDOUT: print the loop points of a track in samples to the terminal; TXT: export the loop points of a track in samples and append to a loop.txt file.")
 def export_points(
     path,
     url,
@@ -298,7 +298,7 @@ def export_points(
     flatten,
     export_to,
 ):
-    """Export the best discovered or chosen loop points to a text file or to the terminal (stdout)"""
+    """Export the best discovered or chosen loop points to a text file or to the terminal."""
     try:
         to_stdout = export_to.upper() == "STDOUT"
         to_txt = export_to.upper() == "TXT"
@@ -363,7 +363,7 @@ def export_points(
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option('--tag-names', type=str, required=True, nargs=2, help='the name to use for the metadata tags, e.g. --tag-names LOOP_START LOOP_END')
+@click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
 def tag(
     path,
     url,
@@ -378,7 +378,7 @@ def tag(
     flatten,
     tag_names,
 ):
-    """Adds metadata tags of loop points to a copy of the input audio file(s)"""
+    """Adds metadata tags of loop points to a copy of the input audio file(s)."""
     try:
         if url is not None:
             output_dir = mk_outputdir(os.getcwd(), output_dir)
