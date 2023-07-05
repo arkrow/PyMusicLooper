@@ -5,6 +5,8 @@ import threading
 import numpy as np
 import sounddevice as sd
 
+from .console import rich_console
+
 
 class PlaybackHandler:
     def __init__(self) -> None:
@@ -71,7 +73,7 @@ class PlaybackHandler:
                     outdata[pre_loop_index:frames] = playback_data[loop_start:adjusted_next_frame_idx]
                     self.current_frame = adjusted_next_frame_idx
                     self.loop_counter += 1
-                    print(f"Currently on loop #{self.loop_counter}.", end="\r")
+                    rich_console.print(f"Currently on loop #{self.loop_counter}.", end="\r")
                 else:
                     outdata[:chunksize] = playback_data[self.current_frame : self.current_frame + chunksize]
                     self.current_frame += chunksize
@@ -100,11 +102,11 @@ class PlaybackHandler:
     def _loop_interrupt_handler(self, *args):
         if self.looping:
             self.looping = False
-            print("(Looping disabled. Ctrl+C again to stop playback.)")
+            rich_console.print("(Looping disabled. [red]Ctrl+C[/] again to stop playback.)")
         else:
             self.event.set()
             self.stream.stop()
             self.stream.close()
-            print("Playback interrupted by user.")
+            rich_console.print("Playback interrupted by user.")
             # Restore default SIGINT handler
             signal.signal(signal.SIGINT, signal.default_int_handler)

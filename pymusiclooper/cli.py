@@ -52,9 +52,9 @@ def cli_main(debug, verbose, interactive, samples):
         warnings.filterwarnings("ignore")
 
     if verbose:
-        logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=debug, show_time=False, tracebacks_suppress=[click])])
+        logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, console=rich_console, rich_tracebacks=True, show_path=debug, show_time=False, tracebacks_suppress=[click])])
     else:
-        logging.basicConfig(format="%(message)s", level=logging.ERROR, handlers=[RichHandler(level=logging.ERROR, show_time=False, show_path=False)])
+        logging.basicConfig(format="%(message)s", level=logging.ERROR, handlers=[RichHandler(level=logging.ERROR, console=rich_console, show_time=False, show_path=False)])
 
 
 def common_path_options(f):
@@ -117,6 +117,7 @@ def play(
             SpinnerColumn(),
             *Progress.get_default_columns(),
             TimeElapsedColumn(),
+            console=rich_console,
             transient=True
         ) as progress:
             progress.add_task("Processing", total=None)
@@ -148,14 +149,14 @@ def play(
             else looper.samples_to_ftime(chosen_loop_pair.loop_end)
         )
 
-        click.echo(
-            "Playing with looping active from {} back to {}; similarity: {:.2%}".format(
+        rich_console.print(
+            "\nPlaying with looping active from [green]{}[/] back to [green]{}[/]; similarity: {:.2%}".format(
                 end_time,
                 start_time,
                 chosen_loop_pair.score,
             )
         )
-        click.echo("(press Ctrl+C to stop looping.)")
+        rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
 
         handler.play_looping(chosen_loop_pair.loop_start, chosen_loop_pair.loop_end)
 
@@ -190,8 +191,8 @@ def play_tagged(path, tag_names):
             else looper.samples_to_ftime(loop_end)
         )
 
-        click.echo(f"Playing with looping active from {end_time} back to {start_time}")
-        click.echo("(press Ctrl+C to stop looping.)")
+        rich_console.print(f"\nPlaying with looping active from [green]{end_time}[/] back to [green]{start_time}[/]")
+        rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
 
         looper.play_looping(loop_start, loop_end)
 
@@ -231,6 +232,7 @@ def split_audio(
                 SpinnerColumn(),
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
+                console=rich_console,
                 transient=True
             ) as progress:
                 progress.add_task("Processing", total=None)
@@ -312,6 +314,7 @@ def export_points(
                 SpinnerColumn(),
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
+                console=rich_console,
                 transient=True
             ) as progress:
                 progress.add_task("Processing", total=None)
@@ -388,6 +391,7 @@ def tag(
                 SpinnerColumn(),
                 *Progress.get_default_columns(),
                 TimeElapsedColumn(),
+                console=rich_console,
                 transient=True
             ) as progress:
                 progress.add_task("Processing", total=None)

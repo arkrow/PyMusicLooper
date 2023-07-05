@@ -3,12 +3,11 @@ import os
 import sys
 from typing import List, Tuple
 
-import rich_click as click
-from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 from rich.table import Table
 
 from .analysis import LoopPair
+from .console import rich_console
 from .core import MusicLooper
 from .exceptions import AudioLoadError, LoopNotFoundError
 
@@ -71,7 +70,7 @@ class LoopHandler:
         preview_looper = self.musiclooper
         total_candidates = len(self.loop_pair_list)
         more_prompt_message = "\nEnter 'more' to display additional loop points, 'all' to display all of them, or 'reset' to display the default amount." if show_top < total_candidates else ""
-        click.echo()
+        rich_console.print()
         table = Table(title=f"Discovered loop points ({min(show_top, total_candidates)}/{total_candidates} displayed)", caption=more_prompt_message)
         table.add_column("Index", justify="right", style="cyan", no_wrap=True)
         table.add_column("Loop Start", style="magenta")
@@ -103,13 +102,12 @@ class LoopHandler:
                 f"{score:.2%}",
             )
 
-        console = Console()
-        console.print(table)
-        click.echo()
+        rich_console.print(table)
+        rich_console.print()
 
         def get_user_input():
             try:
-                num_input = input("Enter the index number for the loop you'd like to use (append p to preview; e.g. 0p):")
+                num_input = rich_console.input("Enter the index number for the loop you'd like to use (append [cyan]p[/] to preview; e.g. [cyan]0p[/]):")
                 idx = 0
                 preview = False
 
@@ -130,7 +128,7 @@ class LoopHandler:
                     raise IndexError
 
                 if preview:
-                    click.echo(f"Previewing loop #{idx} (Press Ctrl+C to stop looping):")
+                    rich_console.print(f"Previewing loop [cyan]#{idx}[/] | (Press [red]Ctrl+C[/] to stop looping):")
                     loop_start = self.loop_pair_list[idx].loop_start
                     loop_end = self.loop_pair_list[idx].loop_end
                     # start preview 5 seconds before the looping point
@@ -142,19 +140,19 @@ class LoopHandler:
                     return idx
 
             except (ValueError, IndexError):
-                click.echo(f"Please enter a number within the range [0,{len(self.loop_pair_list)-1}].")
+                rich_console.print(f"Please enter a number within the range [0,{len(self.loop_pair_list)-1}].")
                 return get_user_input()
 
         try:
             selected_index = get_user_input()
 
             if selected_index is None:
-                click.echo("Please select a valid number.")
+                rich_console.print("[red]Please select a valid number.[/]")
                 return get_user_input()
 
             return selected_index
         except KeyboardInterrupt:
-            click.echo("\nOperation terminated by user. Exiting.")
+            rich_console.print("\n[red]Operation terminated by user. Exiting.[/]")
             sys.exit()
 
 
@@ -210,14 +208,14 @@ class LoopExportHandler(LoopHandler):
                 loop_end_tag,
                 output_dir=self.output_directory,
             )
-            message = f"Exported {loop_start_tag}:{loop_start} and {loop_end_tag}:{loop_end} to a copy in {self.output_directory}"
+            message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of '{music_looper.filename}' to a copy in '{self.output_directory}'"
             if self.batch_mode:
                 logging.info(message)
             else:
-                click.echo(message)
+                rich_console.print(message)
 
         if self.to_stdout:
-            click.echo(f"\nLoop points for [{music_looper.filename}]:\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
+            rich_console.print(f"\nLoop points for '{music_looper.filename}':\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
         if self.to_txt:
             music_looper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
             out_path = os.path.join(self.output_directory, "loop.txt")
@@ -225,7 +223,7 @@ class LoopExportHandler(LoopHandler):
             if self.batch_mode:
                 logging.info(message)
             else:
-                click.echo(message)
+                rich_console.print(message)
         if self.split_audio:
             try:
                 music_looper.export(
@@ -238,7 +236,7 @@ class LoopExportHandler(LoopHandler):
                 if self.batch_mode:
                     logging.info(message)
                 else:
-                    click.echo(message)
+                    rich_console.print(message)
             # Usually: unknown file format specified; raised by soundfile
             except ValueError as e:
                 logging.error(e)
@@ -295,6 +293,7 @@ class BatchHandler:
             SpinnerColumn(),
             *Progress.get_default_columns(),
             MofNCompleteColumn(),
+            console=rich_console,
         ) as progress:
             pbar = progress.add_task("Processing...", total=len(files))
             for file_idx, file in enumerate(files):
