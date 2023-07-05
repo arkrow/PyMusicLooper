@@ -10,6 +10,8 @@
 - New loop point search options
   - `--min-loop-duration` , `--max-loop-duration` : added min loop duration and max loop duration (in seconds) as optional constraints to the CLI
   - `--approx-loop-position` : specify the approximate desired loop start and loop end in seconds, searching around those points only +/- 2 seconds
+  - `--brute-force` : enables an alternative loop discovery mode that checks the entire audio track instead of the detected beats; useful in case the main algorithm does not yield the desired results.
+  - `--disable-pruning` : disables the internal filtering of potential loop points
 
 - New export option for split-audio command: `--format`, to change the format of the exported split audio files (currently supported formats: WAV, FLAC, OGG, MP3)
 - Official Python 3.10 and 3.11 support

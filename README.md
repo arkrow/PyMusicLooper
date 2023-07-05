@@ -196,6 +196,21 @@ Loop points can be chosen and previewed interactively before playback/export usi
 pymusiclooper -i export-loop-points --path "TRACK_NAME.wav"
 ```
 
+If the detected loop points are unsatisfactory, the brute force option `--brute-force` may yield better results.
+NOTE: brute force checks the entire audio track instead of the detected beats.
+This leads to much longer runtimes (may take several minutes) and the program may appear frozen during this time, however, it is processing in the background.
+
+```sh
+pymusiclooper -i export-loop-points --path "TRACK_NAME.wav" --brute-force
+```
+
+By default, the program filters the loop points to the top 50% (according to internal criteria) of the discovered loops when there are many.
+If that is undesirable, it can be disabled using the `--disable-pruning` flag.
+
+```sh
+pymusiclooper -i export-loop-points --path "TRACK_NAME.wav" --disable-pruning
+```
+
 If a desired loop point is already known, and you would like to extract the best loop positions in samples, you can use the `--approx-loop-position` option, which searches with +/- 2 seconds of the point specified. Best used interactively. Example using the `export-loop-points` subcommand:
 
 ```sh
