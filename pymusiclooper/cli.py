@@ -30,7 +30,7 @@ _loop_options = [
     "--approx-loop-position",
 ]
 _export_options = ["--output-dir", "--format"]
-_batch_options = ["--recursive", "--flatten", "--n-jobs"]
+_batch_options = ["--recursive", "--flatten"]
 
 
 def _option_groups(additional_basic_options: List[str] = None):
@@ -112,15 +112,15 @@ def cli_main(debug, verbose, interactive, samples):
         warnings.filterwarnings("ignore")
 
     if verbose:
-        logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, rich_tracebacks=True, show_time=False, tracebacks_suppress=[click])])
+        logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, rich_tracebacks=True, show_path=debug, show_time=False, tracebacks_suppress=[click])])
     else:
         logging.basicConfig(format="%(message)s", level=logging.ERROR, handlers=[RichHandler(level=logging.ERROR, show_time=False, show_path=False)])
 
 
 def common_path_options(f):
-    @optgroup.group('audio path', cls=RequiredMutuallyExclusiveOptionGroup, help='the path to the audio track(s) to load')
-    @optgroup.option('--path', type=click.Path(exists=True), default=None, help=r'path to the audio file(s). [dim]\[[/][dim cyan]mutually exclusive with --url;[/] [dim red]at least one required[/][dim]][/]')
-    @optgroup.option('--url',type=UrlParamType, default=None, help=r'url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim]\[[/][dim cyan]mutually exclusive with --path;[/] [dim red]at least one required[/][dim]][/]')
+    @optgroup.group("audio path", cls=RequiredMutuallyExclusiveOptionGroup, help="the path to the audio track(s) to load")
+    @optgroup.option("--path", type=click.Path(exists=True), default=None, help=r"path to the audio file(s). [dim cyan]\[mutually exclusive with --url][/] [dim red]\[at least one required][/]")
+    @optgroup.option("--url",type=UrlParamType, default=None, help=r"url of the youtube video (or any stream supported by yt-dlp) to extract audio from and use. [dim cyan]\[mutually exclusive with --path][/] [dim red]\[at least one required][/]")
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
