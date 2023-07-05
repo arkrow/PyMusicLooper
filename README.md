@@ -152,9 +152,9 @@ pymusiclooper tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 
 
-# Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file
+# Export the loop points (in samples) of all tracks in a particular directory to a loop.txt file
 # (compatible with https://github.com/libertyernie/LoopingAudioConverter/)
-# Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
+# Note: each line in loop.txt follows the following format: {loop-start} {loop-end} {filename}
 pymusiclooper export-points --path "/path/to/dir/" --export-to txt
 ```
 
@@ -177,7 +177,8 @@ pymusiclooper split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max
 # If the detected loop points are unsatisfactory, the brute force option `--brute-force`
 # may yield better results.
 ## NOTE: brute force mode checks the entire audio track instead of the detected beats.
-## This leads to much longer runtime (may take several minutes). The program may appear frozen during this time while it is processing in the background.
+## This leads to much longer runtime (may take several minutes).
+## The program may appear frozen during this time while it is processing in the background.
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --brute-force
 
 
@@ -192,7 +193,8 @@ pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
 # which searches with +/- 2 seconds of the point specified.
 # Best used interactively. Example using the `export-points` subcommand:
 pymusiclooper -i export-points --path "/path/to/track.mp3" --approx-loop-position 20 210
-# `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark.
+## `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds
+## and loops back at the 210 seconds mark.
 ```
 
 ## Acknowledgement
