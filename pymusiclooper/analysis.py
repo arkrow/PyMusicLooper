@@ -38,6 +38,8 @@ def find_best_loop_points(
     max_loop_duration: Optional[float] = None,
     approx_loop_start: Optional[float] = None,
     approx_loop_end: Optional[float] = None,
+    brute_force: bool = False,
+    disable_pruning: bool = False,
 ) -> List[LoopPair]:
     """Finds the best loop points for a given audio track, given the constraints specified
 
@@ -48,7 +50,8 @@ def find_best_loop_points(
         max_loop_duration (float, optional): The maximum duration of a loop (in seconds). Defaults to None.
         approx_loop_start (float, optional): The approximate location of the desired loop start (in seconds). If specified, must specify approx_loop_end as well. Defaults to None.
         approx_loop_end (float, optional): The approximate location of the desired loop end (in seconds). If specified, must specify approx_loop_start as well. Defaults to None.
-
+        brute_force (bool, optional): Checks the entire track instead of the detected beats (disclaimer: runtime may be significantly longer). Defaults to False.
+        disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
     Raises:
         LoopNotFoundError: raised in case no loops were found
 
@@ -122,6 +125,12 @@ def find_best_loop_points(
     else:
         chroma, power_db, bpm, beats = _analyze_audio(mlaudio)
         logging.info(f"Detected {beats.size} beats at {bpm:.0f} bpm")
+    
+    if brute_force:
+        beats = np.arange(start=0, stop=chroma.shape[-1], step=1, dtype=int)
+        logging.info(f"Overriding number of beats to check with: {beats.size}")
+        logging.info(f"Estimated iterations required using brute force: {int(beats.size*beats.size*(1-(min_loop_duration/chroma.shape[-1])))}")
+        logging.info("**NOTICE** The program may appear frozen, but it will be continuing processing in the background. This operation may take several minutes to complete.")
 
     logging.info(
         "Finished initial audio processing in {:.3}s".format(
@@ -158,7 +167,7 @@ def find_best_loop_points(
         )
 
     filtered_candidate_pairs = _assess_and_filter_loop_pairs(
-        mlaudio, chroma, bpm, candidate_pairs
+        mlaudio, chroma, bpm, candidate_pairs, disable_pruning
     )
 
     # prefer longer loops for highly similar sequences
@@ -311,7 +320,11 @@ def _find_candidate_pairs(
 
 
 def _assess_and_filter_loop_pairs(
-    mlaudio: MLAudio, chroma: np.ndarray, bpm: float, candidate_pairs: List[LoopPair]
+    mlaudio: MLAudio,
+    chroma: np.ndarray,
+    bpm: float,
+    candidate_pairs: List[LoopPair],
+    disable_pruning: bool = False,
 ) -> List[LoopPair]:
     """Assigns the scores to each loop pair and prunes the list of candidate loop pairs
 
@@ -320,6 +333,7 @@ def _assess_and_filter_loop_pairs(
         chroma (np.ndarray): The chroma spectrogram
         bpm (float): The estimated bpm/tempo of the track
         candidate_pairs (List[LoopPair]): The list of candidate loop pairs found
+        disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
 
     Returns:
         List[LoopPair]: A scored and filtered list of valid loop candidate pairs
@@ -334,7 +348,7 @@ def _assess_and_filter_loop_pairs(
         test_offset = chroma.shape[-1] // 4
 
     # Prune candidates if there are too many
-    if len(candidate_pairs) >= 100:
+    if len(candidate_pairs) >= 100 and not disable_pruning:
         pruned_candidate_pairs = _prune_candidates(candidate_pairs)
     else:
         pruned_candidate_pairs = candidate_pairs
@@ -355,7 +369,7 @@ def _assess_and_filter_loop_pairs(
     for pair, score in zip(pruned_candidate_pairs, pair_score_list):
         pair.score = score
 
-    if len(pruned_candidate_pairs) >= 50:
+    if len(pruned_candidate_pairs) >= 50 and not disable_pruning:
         score_pruned_candidate_pairs = _prune_by_score(pruned_candidate_pairs)
     else:
         score_pruned_candidate_pairs = pruned_candidate_pairs

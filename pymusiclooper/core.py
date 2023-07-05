@@ -19,6 +19,8 @@ class MusicLooper:
         max_loop_duration=None,
         approx_loop_start=None,
         approx_loop_end=None,
+        brute_force=False,
+        disable_pruning=False,
     ):
         self.min_duration_multiplier = min_duration_multiplier
         self.min_loop_duration = min_loop_duration
@@ -26,6 +28,8 @@ class MusicLooper:
         self.approx_loop_start = approx_loop_start
         self.approx_loop_end = approx_loop_end
         self.mlaudio = MLAudio(filepath=filepath)
+        self.brute_force = brute_force
+        self.disable_pruning = disable_pruning
 
     def find_loop_pairs(self):
         return find_best_loop_points(
@@ -35,6 +39,8 @@ class MusicLooper:
             max_loop_duration=self.max_loop_duration,
             approx_loop_start=self.approx_loop_start,
             approx_loop_end=self.approx_loop_end,
+            brute_force=self.brute_force,
+            disable_pruning=self.disable_pruning
         )
 
     @property

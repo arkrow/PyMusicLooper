@@ -21,6 +21,8 @@ class LoopHandler:
         min_loop_duration,
         max_loop_duration,
         approx_loop_position: tuple = None,
+        brute_force: bool = False,
+        disable_pruning: bool = False,
     ):
         if approx_loop_position is not None:
             self.approx_loop_start = approx_loop_position[0]
@@ -36,6 +38,8 @@ class LoopHandler:
             max_loop_duration=max_loop_duration,
             approx_loop_start=self.approx_loop_start,
             approx_loop_end=self.approx_loop_end,
+            brute_force=brute_force,
+            disable_pruning=disable_pruning,
         )
 
         logging.info(f"Loaded '{file_path}'. Analyzing...")
@@ -163,6 +167,8 @@ class LoopExportHandler(LoopHandler):
         max_loop_duration,
         output_dir,
         approx_loop_position: tuple = None,
+        brute_force: bool = False,
+        disable_pruning: bool = False,
         split_audio=True,
         split_audio_format="WAV",
         to_txt=False,
@@ -176,6 +182,8 @@ class LoopExportHandler(LoopHandler):
             min_loop_duration,
             max_loop_duration,
             approx_loop_position,
+            brute_force,
+            disable_pruning,
         )
         self.output_directory = output_dir
         self.split_audio = split_audio
@@ -251,6 +259,8 @@ class BatchHandler:
         recursive=False,
         flatten=False,
         tag_names: Tuple[str, str] = None,
+        brute_force: bool = False,
+        disable_pruning: bool = False,
     ):
         self.directory_path = os.path.abspath(directory_path)
         self.min_duration_multiplier = min_duration_multiplier
@@ -264,6 +274,8 @@ class BatchHandler:
         self.recursive = recursive
         self.flatten = flatten
         self.tag_names = tag_names
+        self.brute_force = brute_force
+        self.disable_pruning = disable_pruning
 
     def run(self):
         files = self.get_files_in_directory(
@@ -298,6 +310,8 @@ class BatchHandler:
                     min_duration_multiplier=self.min_duration_multiplier,
                     min_loop_duration=self.min_loop_duration,
                     max_loop_duration=self.max_loop_duration,
+                    brute_force=self.brute_force,
+                    disable_pruning=self.disable_pruning,
                     split_audio_format=self.split_audio_format,
                     output_dir=(
                         self.output_directory if self.flatten else output_dirs[file_idx]

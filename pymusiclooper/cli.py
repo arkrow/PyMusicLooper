@@ -28,6 +28,8 @@ _loop_options = [
     "--min-loop-duration",
     "--max-loop-duration",
     "--approx-loop-position",
+    "--brute-force",
+    "--disable-pruning",
 ]
 _export_options = ["--output-dir", "--format"]
 _batch_options = ["--recursive", "--flatten"]
@@ -134,6 +136,8 @@ def common_loop_options(f):
     @click.option('--min-loop-duration', type=click.FloatRange(min=0), default=None, help='the minimum loop duration in seconds (note: overrides --min-duration-multiplier if specified).')
     @click.option('--max-loop-duration', type=click.FloatRange(min=0), default=None, help='the maximum loop duration in seconds.')
     @click.option('--approx-loop-position', type=click.FloatRange(min=0), nargs=2, default=None, help='the approximate desired loop start and loop end in seconds for a specific audio track (note: only those points will be checked, with a search window of +/- 2 seconds).')
+    @click.option("--brute-force", is_flag=True, default=False, help=r"Checks the entire audio track instead of just the detected beats. Useful in case the initial results are unsatisfactory. [yellow](warning: may take several minutes to complete.)[/]")
+    @click.option("--disable-pruning", is_flag=True, default=False, help="Disables filtering of the detected loop points and returns all the discovered pairs from the initial pass.")
 
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
@@ -163,6 +167,8 @@ def play(
     min_loop_duration,
     max_loop_duration,
     approx_loop_position,
+    brute_force,
+    disable_pruning
 ):
     """Play an audio file on repeat from the terminal with the best discovered loop points, or a chosen point if interactive mode is active."""
     try:
@@ -182,6 +188,8 @@ def play(
                 min_loop_duration=min_loop_duration,
                 max_loop_duration=max_loop_duration,
                 approx_loop_position=approx_loop_position,
+                brute_force=brute_force,
+                disable_pruning=disable_pruning,
             )
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
@@ -265,6 +273,8 @@ def split_audio(
     min_loop_duration,
     max_loop_duration,
     approx_loop_position,
+    brute_force,
+    disable_pruning,
     output_dir,
     recursive,
     flatten,
@@ -292,6 +302,8 @@ def split_audio(
                     min_loop_duration=min_loop_duration,
                     max_loop_duration=max_loop_duration,
                     approx_loop_position=approx_loop_position,
+                    brute_force=brute_force,
+                    disable_pruning=disable_pruning,
                     output_dir=output_dir,
                     split_audio=True,
                     split_audio_format=format,
@@ -306,6 +318,8 @@ def split_audio(
                 min_duration_multiplier=min_duration_multiplier,
                 min_loop_duration=min_loop_duration,
                 max_loop_duration=max_loop_duration,
+                brute_force=brute_force,
+                disable_pruning=disable_pruning,
                 output_dir=output_dir,
                 split_audio=True,
                 split_audio_format=format,
@@ -337,6 +351,8 @@ def export_loop_points(
     min_loop_duration,
     max_loop_duration,
     approx_loop_position,
+    brute_force,
+    disable_pruning,
     output_dir,
     recursive,
     flatten,
@@ -367,6 +383,8 @@ def export_loop_points(
                     min_loop_duration=min_loop_duration,
                     max_loop_duration=max_loop_duration,
                     approx_loop_position=approx_loop_position,
+                    brute_force=brute_force,
+                    disable_pruning=disable_pruning,
                     output_dir=output_dir,
                     split_audio=False,
                     to_txt=to_txt,
@@ -380,6 +398,8 @@ def export_loop_points(
                 min_duration_multiplier=min_duration_multiplier,
                 min_loop_duration=min_loop_duration,
                 max_loop_duration=max_loop_duration,
+                brute_force=brute_force,
+                disable_pruning=disable_pruning,
                 output_dir=output_dir,
                 split_audio=False,
                 to_txt=to_txt,
@@ -410,6 +430,8 @@ def tag(
     min_loop_duration,
     max_loop_duration,
     approx_loop_position,
+    brute_force,
+    disable_pruning,
     output_dir,
     recursive,
     flatten,
@@ -437,6 +459,8 @@ def tag(
                     min_loop_duration=min_loop_duration,
                     max_loop_duration=max_loop_duration,
                     approx_loop_position=approx_loop_position,
+                    brute_force=brute_force,
+                    disable_pruning=disable_pruning,
                     output_dir=output_dir,
                     split_audio=False,
                     to_txt=False,
@@ -450,6 +474,8 @@ def tag(
                 min_duration_multiplier=min_duration_multiplier,
                 min_loop_duration=min_loop_duration,
                 max_loop_duration=max_loop_duration,
+                brute_force=brute_force,
+                disable_pruning=disable_pruning,
                 output_dir=output_dir,
                 split_audio=False,
                 to_txt=False,
