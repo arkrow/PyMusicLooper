@@ -533,7 +533,7 @@ def _calculate_subseq_beat_similarity(
 
     if max_offset < test_length:
         return np.average(
-            np.pad(cosine_sim, pad_width=(0, test_length - max_offset), mode="minimum"),
+            np.pad(cosine_sim, pad_width=(0, test_length - max_offset), mode="constant", constant_values=0),
             weights=weights,
         )
     else:
