@@ -61,7 +61,7 @@ COMMAND_GROUPS = {
         {
             "name": "Export Commands",
             "commands": [
-                "export-loop-points",
+                "export-points",
                 "split-audio",
                 "tag"
             ],
