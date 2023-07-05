@@ -47,7 +47,7 @@ OPTION_GROUPS = {
     "pymusiclooper play": _common_option_groups,
     "pymusiclooper split-audio": _common_option_groups,
     "pymusiclooper tag": _option_groups(["--tag-names"]),
-    "pymusiclooper export-loop-points": _option_groups(["--export-to"]),
+    "pymusiclooper export-points": _option_groups(["--export-to"]),
 }
 COMMAND_GROUPS = {
     "pymusiclooper": [
