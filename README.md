@@ -109,7 +109,7 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 
 Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
 
-**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually. Interactive mode is also available when batch processing.
+**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually. As such, it is shown in all the examples. Can be disabled if the `-i` flag is omitted. Interactive mode is also available when batch processing.
 
 ## Example Usage
 
@@ -117,16 +117,17 @@ Note: further help can be found in each subcommand's help message (e.g. `pymusic
 
 ```sh
 # Play the song on repeat with the best discovered loop point.
-pymusiclooper play --path "TRACK_NAME.mp3"
-
-
-# pymusiclooper can be used in interactive mode to preview and choose alternative loop points, e.g.
 pymusiclooper -i play --path "TRACK_NAME.mp3"
 
 
 # Audio can also be loaded from any stream supported by yt-dlp, e.g. youtube
 # (also available for the `tag` and `split-audio` subcommands)
-pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+pymusiclooper -i play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+
+# Reads the loop metadata tags from an audio file and play it with the loop active
+# using the loop start and end specified in the file (must be stored as samples)
+pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 ```
 
 ### Export
@@ -135,43 +136,34 @@ pymusiclooper play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 ```sh
 # Split the audio track into intro, loop and outro files.
-pymusiclooper split-audio --path "TRACK_NAME.ogg"
+pymusiclooper -i split-audio --path "TRACK_NAME.ogg"
 
 
 # Export the discovered loop points directly to the terminal as sample points
-pymusiclooper export-points --path "/path/to/track.wav" --export-to stdout
+pymusiclooper -i export-points --path "/path/to/track.wav" --export-to stdout
 
 
 # Add metadata tags of the best discovered loop points to a copy of the input audio file
 # (or all audio files in a directory, if a directory path is used instead)
-pymusiclooper tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
-
-
-# Reads the loop metadata tags from an audio file and play it with the loop active
-# using the loop start and end specified in the file (must be stored as samples)
-pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
+pymusiclooper -i tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 
 
 # Export the loop points (in samples) of all tracks in a particular directory to a loop.txt file
 # (compatible with https://github.com/libertyernie/LoopingAudioConverter/)
 # Note: each line in loop.txt follows the following format: {loop-start} {loop-end} {filename}
-pymusiclooper export-points --path "/path/to/dir/" --export-to txt
+pymusiclooper -i export-points --path "/path/to/dir/" --export-to txt
 ```
 
 ### Miscellaneous
 
 ```sh
-# Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
-pymusiclooper -i export-points --path "TRACK_NAME.wav"
-
-
 # If the loop is very long (or very short), a different minimum loop duration can be specified.
 ## --min-duration-multiplier 0.85 implies that the loop is at least 85% of the track,
 ## excluding trailing silence.
-pymusiclooper split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
+pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
 
 # Alternatively, the loop length constraints can be specified in seconds
-pymusiclooper split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max-loop-duration 150
+pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max-loop-duration 150
 
 
 # If the detected loop points are unsatisfactory, the brute force option `--brute-force`
