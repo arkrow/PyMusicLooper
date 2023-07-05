@@ -340,32 +340,9 @@ class BatchHandler:
         )
 
     @staticmethod
-    def _batch_export_helper(
-        file_path,
-        min_duration_multiplier,
-        min_loop_duration,
-        max_loop_duration,
-        output_dir,
-        split_audio,
-        split_audio_format,
-        to_txt,
-        to_stdout,
-        tag_names,
-    ):
+    def _batch_export_helper(*args, **kwargs):
         try:
-            export_handler = LoopExportHandler(
-                file_path=file_path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                output_dir=output_dir,
-                split_audio=split_audio,
-                split_audio_format=split_audio_format,
-                to_txt=to_txt,
-                to_stdout=to_stdout,
-                tag_names=tag_names,
-                batch_mode=True,
-            )
+            export_handler = LoopExportHandler(*args, **kwargs, batch_mode=True)
             export_handler.run()
         except (AudioLoadError, LoopNotFoundError) as e:
             logging.error(e)
