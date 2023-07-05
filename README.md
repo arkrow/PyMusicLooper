@@ -17,8 +17,8 @@ A python-based program for repeating music seamlessly and endlessly, by automati
 Features:
 
 - Find loop points within any audio file (if they exist).
-- Supports loading the most common audio formats (MP3, OGG, FLAC, WAV), with additional codec support available through ffmpeg (if installed).
-- Play the audio file endlessly and seamlessly with the best discovered loop.
+- Supports loading the most common audio formats (MP3, OGG, FLAC, WAV), with additional codec support available through ffmpeg.
+- Play the audio file endlessly and seamlessly with the best automatically discovered loop points, or using the loop metadata tags present in the audio file.
 - Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
 - Export loop points in samples directly to the terminal or to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
 - Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
@@ -98,7 +98,7 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 │              the tags present in the file.                               │
 ╰──────────────────────────────────────────────────────────────────────────╯
 ╭─ Export Commands ────────────────────────────────────────────────────────╮
-│ export-loop-points  Export the best discovered or chosen loop points to  │
+│ export-points       Export the best discovered or chosen loop points to  │
 │                     a text file or to the terminal (stdout)              │
 │ split-audio         Split the input audio into intro, loop and outro     │
 │                     sections                                             │
@@ -107,20 +107,9 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 ╰──────────────────────────────────────────────────────────────────────────╯
 ```
 
-Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-loop-points --help`)
+Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
 
-PyMusicLooper will find the best loop point it can detect, and will then, depending on the chosen command:
-
-(a) play an audio track on repeat using the best discovered loop point;
-
-(b) export an audio track into intro/loop/outro sections
-
-(c) export the loop points (in samples) to the terminal directly or to a text file compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/), which you can use for audio loops in custom theme creation, game engine audio loops, etc.
-
-(d) Add the best/chosen loop points as metadata tags to a copy of the input audio file(s)
-
-**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not be the best one perceptually,
-as that is difficult to calculate and score algorithmically
+**Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually.
 
 ## Example Usage
 
@@ -157,7 +146,7 @@ pymusiclooper split-audio "TRACK_NAME.ogg"
 Export the discovered loop points directly to the terminal as sample points
 
 ```sh
-pymusiclooper export-loop-points --path "/path/to/track.wav" --export-to stdout
+pymusiclooper export-points --path "/path/to/track.wav" --export-to stdout
 ```
 
 Add metadata tags of the best discovered loop points to a copy of the input audio file (or all audio files in a directory, if a directory path is used instead)
@@ -175,7 +164,7 @@ pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_EN
 Export the loop points (in samples) of all the songs in a particular directory to a single loop.txt file (compatible with [LoopingAudioConverter](https://github.com/libertyernie/LoopingAudioConverter/)).
 
 ```sh
-pymusiclooper export-loop-points --path "/path/to/dir/" --export-to txt
+pymusiclooper export-points --path "/path/to/dir/" --export-to txt
 ```
 
 Note: each line in loop.txt follows the following format: `{loop-start} {loop-end} {filename}`
@@ -193,28 +182,28 @@ pymusiclooper split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.8
 Loop points can be chosen and previewed interactively before playback/export using the `-i` flag, e.g.
 
 ```sh
-pymusiclooper -i export-loop-points --path "TRACK_NAME.wav"
+pymusiclooper -i export-points --path "TRACK_NAME.wav"
 ```
 
 If the detected loop points are unsatisfactory, the brute force option `--brute-force` may yield better results.
 NOTE: brute force checks the entire audio track instead of the detected beats.
-This leads to much longer runtimes (may take several minutes) and the program may appear frozen during this time, however, it is processing in the background.
+This leads to much longer runtime (may take several minutes) and the program may appear frozen during this time while it is processing in the background.
 
 ```sh
-pymusiclooper -i export-loop-points --path "TRACK_NAME.wav" --brute-force
+pymusiclooper -i export-points --path "TRACK_NAME.wav" --brute-force
 ```
 
 By default, the program filters the loop points to the top 50% (according to internal criteria) of the discovered loops when there are many.
 If that is undesirable, it can be disabled using the `--disable-pruning` flag.
 
 ```sh
-pymusiclooper -i export-loop-points --path "TRACK_NAME.wav" --disable-pruning
+pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
 ```
 
-If a desired loop point is already known, and you would like to extract the best loop positions in samples, you can use the `--approx-loop-position` option, which searches with +/- 2 seconds of the point specified. Best used interactively. Example using the `export-loop-points` subcommand:
+If a desired loop point is already known, and you would like to extract the best loop positions in samples, you can use the `--approx-loop-position` option, which searches with +/- 2 seconds of the point specified. Best used interactively. Example using the `export-points` subcommand:
 
 ```sh
-pymusiclooper -i export-loop-points --path "/path/to/track.mp3" --export-to stdout --approx-loop-position 20 210
+pymusiclooper -i export-points --path "/path/to/track.mp3" --export-to stdout --approx-loop-position 20 210
 ```
 
 `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds and loops back at the 210 seconds mark.

@@ -344,7 +344,7 @@ def split_audio(
 @common_loop_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", required=True, show_default=True, help="STDOUT: prints the loop points of a track in samples to the terminal's stdout (OR) TXT: export the loop points of a track in samples and append to a loop.txt file (compatible with LoopingAudioConverter).")
-def export_loop_points(
+def export_points(
     path,
     url,
     min_duration_multiplier,
