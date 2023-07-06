@@ -75,8 +75,9 @@ class LoopHandler:
         table.add_column("Index", justify="right", style="cyan", no_wrap=True)
         table.add_column("Loop Start", style="magenta")
         table.add_column("Loop End", style="green")
+        table.add_column("Length", style="white")
         table.add_column("Note Distance", style="yellow")
-        table.add_column("Loudness Difference (dB)", style="blue")
+        table.add_column("Loudness Difference", style="blue")
         table.add_column("Score", justify="right", style="red")
 
         for idx, pair in enumerate(self.loop_pair_list[:show_top]):
@@ -90,6 +91,11 @@ class LoopHandler:
                 if self.in_samples
                 else preview_looper.samples_to_ftime(pair.loop_end)
             )
+            length = (
+                pair.loop_end - pair.loop_start
+                if self.in_samples
+                else preview_looper.samples_to_ftime(pair.loop_end - pair.loop_start)
+            )
             score = pair.score
             loudness_difference = pair.loudness_difference
             note_distance = pair.note_distance
@@ -97,6 +103,7 @@ class LoopHandler:
                 str(idx),
                 str(start_time),
                 str(end_time),
+                str(length),
                 f"{note_distance:.4f}",
                 f"{loudness_difference:.4f}",
                 f"{score:.2%}",
