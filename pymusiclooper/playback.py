@@ -79,8 +79,6 @@ class PlaybackHandler:
                     self.current_frame += chunksize
                     if chunksize < frames:
                         outdata[chunksize:] = 0
-                        # Restore default SIGINT handler before stopping playback
-                        signal.signal(signal.SIGINT, signal.default_int_handler)
                         raise sd.CallbackStop()
 
             self.stream = sd.OutputStream(
@@ -98,6 +96,8 @@ class PlaybackHandler:
                 # Set a 0.5 second timeout to handle interrupts in-between
                 while not self.event.wait(0.5):
                     pass
+                # Restore default SIGINT handler after playback is stopped
+                signal.signal(signal.SIGINT, signal.default_int_handler)
         except Exception as e:
             logging.error(e)
 
