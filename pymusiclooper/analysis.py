@@ -250,9 +250,7 @@ def _analyze_audio(
 
 @njit
 def _db_diff(power_db_f1: np.ndarray, power_db_f2: np.ndarray) -> float:
-    f1_max = np.max(power_db_f1)
-    f2_max = np.max(power_db_f2)
-    return max(f1_max, f2_max) - min(f1_max, f2_max)
+    return np.abs(np.max(power_db_f1) - np.max(power_db_f2))
 
 
 @njit
