@@ -369,16 +369,11 @@ def _assess_and_filter_loop_pairs(
     for pair, score in zip(pruned_candidate_pairs, pair_score_list):
         pair.score = score
 
-    if len(pruned_candidate_pairs) >= 50 and not disable_pruning:
-        score_pruned_candidate_pairs = _prune_by_score(pruned_candidate_pairs)
-    else:
-        score_pruned_candidate_pairs = pruned_candidate_pairs
-
     # re-sort based on new score
-    score_pruned_candidate_pairs = sorted(
-        score_pruned_candidate_pairs, reverse=True, key=lambda x: x.score
+    pruned_candidate_pairs = sorted(
+        pruned_candidate_pairs, reverse=True, key=lambda x: x.score
     )
-    return score_pruned_candidate_pairs
+    return pruned_candidate_pairs
 
 
 def _prune_candidates(
@@ -413,22 +408,6 @@ def _prune_candidates(
         (db_diff_array <= db_threshold) & (note_dist_array <= note_dist_threshold)
     )
     return [candidate_pairs[idx] for idx in indices_that_meet_cond]
-
-
-def _prune_by_score(
-    candidate_pairs: List[LoopPair],
-    percentile: float = 25.0,
-    acceptable_score: float = 80.0,
-) -> List[LoopPair]:
-    candidate_pairs = sorted(candidate_pairs, key=lambda x: x.score)
-
-    score_array = np.array([pair.score for pair in candidate_pairs])
-
-    score_threshold = np.percentile(score_array, percentile)
-    percentile_idx = np.searchsorted(score_array, score_threshold, side="left")
-    acceptable_idx = np.searchsorted(score_array, acceptable_score, side="left")
-
-    return candidate_pairs[min(percentile_idx, acceptable_idx) :]
 
 
 def _prioritize_duration(pair_list: List[LoopPair]) -> List[LoopPair]:
