@@ -347,7 +347,7 @@ def _assess_and_filter_loop_pairs(
         test_offset = chroma.shape[-1] // 4
 
     # Prune candidates if there are too many
-    if len(candidate_pairs) >= 100 and not disable_pruning:
+    if len(candidate_pairs) >= 250 and not disable_pruning:
         pruned_candidate_pairs = _prune_candidates(candidate_pairs)
     else:
         pruned_candidate_pairs = candidate_pairs
@@ -376,7 +376,10 @@ def _assess_and_filter_loop_pairs(
 
 
 def _prune_candidates(
-    candidate_pairs: List[LoopPair], drop_bottom_x_percentile: float = 50.0
+    candidate_pairs: List[LoopPair],
+    keep_top_notes: float = 75,
+    keep_top_loudness: float = 90,
+    acceptable_loudness=0.25,
 ) -> List[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in candidate_pairs])
     note_dist_array = np.array([pair.note_distance for pair in candidate_pairs])
@@ -390,21 +393,21 @@ def _prune_candidates(
     # Otherwise, skip by setting the value to the highest available
     if min_adjusted_db_diff_array.size > 3:
         db_threshold = np.percentile(
-            min_adjusted_db_diff_array, drop_bottom_x_percentile
+            min_adjusted_db_diff_array, keep_top_notes
         )
     else:
         db_threshold = np.max(db_diff_array)
 
     if min_adjusted_note_dist_array.size > 3:
         note_dist_threshold = np.percentile(
-            min_adjusted_note_dist_array, drop_bottom_x_percentile
+            min_adjusted_note_dist_array, keep_top_loudness
         )
     else:
         note_dist_threshold = np.max(note_dist_array)
 
     # Lower values are better
     indices_that_meet_cond = np.flatnonzero(
-        (db_diff_array <= db_threshold) & (note_dist_array <= note_dist_threshold)
+        (db_diff_array <= max(acceptable_loudness, db_threshold)) & (note_dist_array <= note_dist_threshold)
     )
     return [candidate_pairs[idx] for idx in indices_that_meet_cond]
 
