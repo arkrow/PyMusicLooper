@@ -157,9 +157,9 @@ class MusicLooper:
 
         with taglib.File(self.filepath) as audio_file:
             if loop_start_tag not in audio_file.tags:
-                raise ValueError(f"The tag '{loop_start_tag}' is not present in {self.filename}'s tags.")
+                raise ValueError(f"The tag \"{loop_start_tag}\" is not present in {self.filename}\"s tags.")
             if loop_end_tag not in audio_file.tags:
-                raise ValueError(f"The tag '{loop_end_tag}' is not present in {self.filename}'s tags.")
+                raise ValueError(f"The tag \"{loop_end_tag}\" is not present in {self.filename}\"s tags.")
             try:
                 loop_start = int(audio_file.tags[loop_start_tag][0])
                 loop_end = int(audio_file.tags[loop_end_tag][0])

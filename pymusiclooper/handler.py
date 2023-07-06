@@ -41,7 +41,7 @@ class LoopHandler:
             disable_pruning=disable_pruning,
         )
 
-        logging.info(f"Loaded '{file_path}'. Analyzing...")
+        logging.info(f"Loaded \"{file_path}\". Analyzing...")
 
         self.loop_pair_list = self.musiclooper.find_loop_pairs()
         self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
@@ -215,18 +215,18 @@ class LoopExportHandler(LoopHandler):
                 loop_end_tag,
                 output_dir=self.output_directory,
             )
-            message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of '{music_looper.filename}' to a copy in '{self.output_directory}'"
+            message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of \"{music_looper.filename}\" to a copy in \"{self.output_directory}\""
             if self.batch_mode:
                 logging.info(message)
             else:
                 rich_console.print(message)
 
         if self.to_stdout:
-            rich_console.print(f"\nLoop points for '{music_looper.filename}':\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
+            rich_console.print(f"\nLoop points for \"{music_looper.filename}\":\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
         if self.to_txt:
             music_looper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
             out_path = os.path.join(self.output_directory, "loop.txt")
-            message = f"Successfully added '{music_looper.filename}' loop points to '{out_path}'"
+            message = f"Successfully added \"{music_looper.filename}\" loop points to \"{out_path}\""
             if self.batch_mode:
                 logging.info(message)
             else:
@@ -239,7 +239,7 @@ class LoopExportHandler(LoopHandler):
                     format=self.split_audio_format,
                     output_dir=self.output_directory
                 )
-                message = f"Successfully exported '{music_looper.filename}' intro/loop/outro sections to '{self.output_directory}'"
+                message = f"Successfully exported \"{music_looper.filename}\" intro/loop/outro sections to \"{self.output_directory}\""
                 if self.batch_mode:
                     logging.info(message)
                 else:
@@ -288,7 +288,7 @@ class BatchHandler:
         )
 
         if len(files) == 0:
-            raise FileNotFoundError(f"No files found in '{self.directory_path}'")
+            raise FileNotFoundError(f"No files found in \"{self.directory_path}\"")
 
         output_dirs = (
             None
@@ -308,7 +308,7 @@ class BatchHandler:
                     pbar,
                     advance=1,
                     description=(
-                        f"Processing '{os.path.relpath(file, self.directory_path)}'"
+                        f"Processing \"{os.path.relpath(file, self.directory_path)}\""
                     ),
                 )
                 self._batch_export_helper(

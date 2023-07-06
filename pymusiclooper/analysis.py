@@ -163,7 +163,7 @@ def find_best_loop_points(
 
     if not candidate_pairs:
         raise LoopNotFoundError(
-            f"No loop points found for '{mlaudio.filename}' with current parameters."
+            f"No loop points found for \"{mlaudio.filename}\" with current parameters."
         )
 
     filtered_candidate_pairs = _assess_and_filter_loop_pairs(
@@ -243,7 +243,7 @@ def _analyze_audio(
         beats = np.union1d(beats, beats_plp)
         beats = np.sort(beats)
     except Exception as e:
-        raise LoopNotFoundError(f"Beat analysis failed for '{mlaudio.filename}'. Cannot continue.") from e
+        raise LoopNotFoundError(f"Beat analysis failed for \"{mlaudio.filename}\". Cannot continue.") from e
 
     return chroma, power_db, bpm, beats
 
