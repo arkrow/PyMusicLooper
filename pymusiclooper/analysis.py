@@ -286,9 +286,10 @@ def _find_candidate_pairs(
     ## higher values typically result in the inclusion of musically unrelated beats/notes
     ACCEPTABLE_NOTE_DEVIATION = 0.0875
     ## Since the _db_diff comparison is takes a perceptually weighted power_db frame,
-    ## the difference should be imperceptible (ideally, close to 0), but the min threshold is set to 0.75
-    ## Based on trial and error, values higher than ~1 have a jarring difference in loudness
-    ACCEPTABLE_LOUDNESS_DIFFERENCE = 0.75
+    ## the difference should be imperceptible (ideally, close to 0)
+    ## Based on trial and error, values higher than ~0.5 have a perceptible
+    ## difference in loudness
+    ACCEPTABLE_LOUDNESS_DIFFERENCE = 0.5
 
     deviation = _norm(chroma[..., beats] * ACCEPTABLE_NOTE_DEVIATION)
 
