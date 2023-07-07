@@ -5,13 +5,6 @@
 [![PyPI pyversions](https://img.shields.io/pypi/v/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/pymusiclooper.svg)](https://pypi.python.org/pypi/pymusiclooper/)
 
-## Note for the v3 dev branch
-
-PyMusicLooper v3.0 is still in development with a completely new CLI
-and different commands/options are still being added. As such, this README may not reflect all the features available. For up-to-date CLI commands and options, use the built-in `--help` option.
-
----
-
 A python-based program for repeating music seamlessly and endlessly, by automatically finding the best loop points.
 
 Features:
@@ -44,12 +37,6 @@ Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be install
 
 ```sh
 pipx install pymusiclooper
-```
-
-Alternatively, for the latest features from the v3 version currently in-development
-
-```sh
-pipx install git+https://github.com/arkrow/PyMusicLooper.git@v3
 ```
 
 ### Option 2: Installing using pip
