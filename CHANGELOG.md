@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - [Unreleased (in-development)](https://github.com/arkrow/PyMusicLooper/tree/v3)
+## [3.0.0] - 2023-07-07
 
 ### Added
 
