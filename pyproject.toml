@@ -1,3 +1,53 @@
+[tool.poetry]
+name = "pymusiclooper"
+version = "3.0.0"
+description = "Automatically find the loop points of any music file and export into intro/loop/outro sections or loop points, with support for playback and preview through the terminal."
+license = "MIT"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Multimedia :: Sound/Audio",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+repository = "https://github.com/arkrow/PyMusicLooper"
+readme = "README.md"
+authors = ["arkrow <arkrow@protonmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+librosa = "^0.10.0"
+numpy = ">=1.24.0"
+soundfile = ">=0.12.1"
+sounddevice = ">=0.4.6"
+setuptools = ">=67.0.0"
+rich-click = "^1.6.1"
+rich = ">= 13.4.2"
+pytaglib = ">=2.0.0"
+numba = "^0.57.0"
+yt-dlp = ">=2023.6.22"
+click-params = "^0.4.1"
+click-option-group = "^0.5.6"
+
+[tool.poetry.scripts]
+pymusiclooper = 'pymusiclooper.__main__:cli'
+
+[tool.poetry.urls]
+"Changelog" = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+
