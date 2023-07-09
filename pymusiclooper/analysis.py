@@ -122,15 +122,17 @@ def find_best_loop_points(
                 ),
             ]
         )
-    else:
+    elif brute_force:
+        # Similarly skip beat analysis, as the results will not be used
+        chroma, power_db, _, _ = _analyze_audio(mlaudio, skip_beat_analysis=True)
+        bpm = 120.0
+        beats = np.arange(start=0, stop=chroma.shape[-1], step=1, dtype=int)
+        logging.info(f"Overriding number of frames to check with: {beats.size}")
+        logging.info(f"Estimated iterations required using brute force: {int(beats.size*beats.size*(1-(min_loop_duration/chroma.shape[-1])))}")
+        logging.info("**NOTICE** The program may appear frozen, but processing will continue in the background. This operation may take several minutes to complete.")
+    else: # normal mode of operation
         chroma, power_db, bpm, beats = _analyze_audio(mlaudio)
         logging.info(f"Detected {beats.size} beats at {bpm:.0f} bpm")
-    
-    if brute_force:
-        beats = np.arange(start=0, stop=chroma.shape[-1], step=1, dtype=int)
-        logging.info(f"Overriding number of beats to check with: {beats.size}")
-        logging.info(f"Estimated iterations required using brute force: {int(beats.size*beats.size*(1-(min_loop_duration/chroma.shape[-1])))}")
-        logging.info("**NOTICE** The program may appear frozen, but it will be continuing processing in the background. This operation may take several minutes to complete.")
 
     logging.info(
         "Finished initial audio processing in {:.3f}s".format(
