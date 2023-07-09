@@ -19,7 +19,7 @@ class PlaybackHandler:
             TextColumn("{task.fields[loop_field]}"),
             console=rich_console,
             transient=True,
-            refresh_per_second=1,
+            refresh_per_second=2,
         )
 
     def play_looping(
