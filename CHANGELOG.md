@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0] - 2023-07-09
+
+### Added
+
+- Playback progress bar showing current playback progress and time
+
+### Changed
+
+- Candidate pruning now activates if there are 100 or more initial pairs, instead of 250 as in the previous version
+
+### Fixed
+
+- Loudness and note difference threshold incorrectly swapped in candidate pair pruning
+
 ## [3.0.0] - 2023-07-07
 
 ### Added
