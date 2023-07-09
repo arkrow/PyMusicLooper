@@ -4,6 +4,7 @@ import threading
 
 import numpy as np
 import sounddevice as sd
+from rich.progress import BarColumn, Progress, TextColumn
 
 from .console import rich_console
 
@@ -11,6 +12,15 @@ from .console import rich_console
 class PlaybackHandler:
     def __init__(self) -> None:
         self.event = threading.Event()
+        self.progressbar = Progress(
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TextColumn("{task.fields[time_field]}"),
+            TextColumn("{task.fields[loop_field]}"),
+            console=rich_console,
+            transient=True,
+            refresh_per_second=1,
+        )
 
     def play_looping(
         self,
@@ -88,14 +98,36 @@ class PlaybackHandler:
                 finished_callback=self.event.set,
             )
 
-            with self.stream:
+            with self.stream, self.progressbar:
+                # Initialize playback progress bar
+                pbar = self.progressbar.add_task(
+                    "Now Playing...",
+                    total=total_samples,
+                    loop_field="",
+                    time_field="",
+                )
+
                 # Override SIGINT/KeyboardInterrupt handler with custom logic for loop handling
                 signal.signal(signal.SIGINT, self._loop_interrupt_handler)
+
                 # Workaround for python issue on Windows
                 # (threading.Event().wait() not interruptable with Ctrl-C on Windows): https://bugs.python.org/issue35935
                 # Set a 0.5 second timeout to handle interrupts in-between
                 while not self.event.wait(0.5):
-                    pass
+                    # Update playback progress bar between wait timeouts
+                    time_sec = self.current_frame / samplerate
+                    ftime = f"{time_sec // 60:02.0f}:{time_sec % 60:02.0f}"
+                    self.progressbar.update(
+                        pbar,
+                        completed=self.current_frame,
+                        time_field=ftime,
+                        loop_field=(
+                            f"[dim] | Currently on Loop #{self.loop_counter}[/]"
+                            if self.loop_counter
+                            else ""
+                        ),
+                    )
+
                 # Restore default SIGINT handler after playback is stopped
                 signal.signal(signal.SIGINT, signal.default_int_handler)
         except Exception as e:
