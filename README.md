@@ -31,12 +31,15 @@ A full list can be found at [libsndfile's supported formats page](https://libsnd
 ### Option 1: Installing using pipx [Recommended]
 
 This method of installation is strongly recommended, as it isolates PyMusicLooper's dependencies from the rest of your environment,
-making it the safest option and avoids dependency conflicts and breakage due to version upgrades.
+and as a result, avoids dependency conflicts and breakage due to other packages.
 
-Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx`).
+Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx` ).
 
 ```sh
 pipx install pymusiclooper
+
+# Updating to new releases can be done simply using:
+pipx upgrade pymusiclooper
 ```
 
 ### Option 2: Installing using pip
@@ -94,7 +97,7 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 ╰──────────────────────────────────────────────────────────────────────────╯
 ```
 
-Note: further help can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
+Note: further help and options can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
 
 **Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually. As such, it is shown in all the examples. Can be disabled if the `-i` flag is omitted. Interactive mode is also available when batch processing.
 
@@ -127,7 +130,7 @@ pymusiclooper -i split-audio --path "TRACK_NAME.ogg"
 
 
 # Export the discovered loop points directly to the terminal as sample points
-pymusiclooper -i export-points --path "/path/to/track.wav" --export-to stdout
+pymusiclooper -i export-points --path "/path/to/track.wav"
 
 
 # Add metadata tags of the best discovered loop points to a copy of the input audio file
@@ -161,9 +164,9 @@ pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --brute-force
 
 
-# By default, the program filters the loop points to the top 50% (according to
-# internal criteria) of the discovered loops when there are many.
-# If that is undesirable, it can be disabled using the `--disable-pruning` flag.
+# By default, the program further filters the initial discovered loop points
+# according to internal criteria when there are >=100 possible pairs.
+# If that is undesirable, it can be disabled using the `--disable-pruning` flag, e.g.
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
 
 
