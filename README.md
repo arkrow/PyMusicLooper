@@ -40,7 +40,7 @@ Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be install
 pipx install pymusiclooper
 
 # Alternative install (follows the git repository)
-# (equivalent to a beta release channel; always up-to-date; cutting-edge)
+# (equivalent to a beta release channel for this project)
 pipx install git+https://github.com/arkrow/PyMusicLooper.git
 
 # Updating to new releases in either case can be done simply using:
