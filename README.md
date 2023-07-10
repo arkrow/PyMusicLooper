@@ -36,13 +36,22 @@ and as a result, avoids dependency conflicts and breakage due to other packages.
 Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx` ).
 
 ```sh
+# Normal install (follows the official release channel)
 pipx install pymusiclooper
 
-# Updating to new releases can be done simply using:
+# Alternative install (follows the git repository)
+# (equivalent to a beta release channel; always up-to-date; cutting-edge)
+pipx install git+https://github.com/arkrow/PyMusicLooper.git
+
+# Updating to new releases in either case can be done simply using:
 pipx upgrade pymusiclooper
 ```
 
 ### Option 2: Installing using pip
+
+Traditional package installation method.
+
+*Note: fragile compared to an installation using `pipx`. PyMusicLooper may suddenly stop working if its dependencies were overwritten by another package (e.g. [issue #12](https://github.com/arkrow/PyMusicLooper/issues/12)).*
 
 ```sh
 pip install pymusiclooper
