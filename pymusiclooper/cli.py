@@ -17,7 +17,7 @@ from click_params import PUBLIC_URL as UrlParamType
 
 from . import __version__
 from .console import COMMAND_GROUPS, OPTION_GROUPS, rich_console
-from .core import MusicLooper
+from .looper import MusicLooper
 from .exceptions import AudioLoadError, LoopNotFoundError
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
 from .youtube import YoutubeDownloader
