@@ -91,10 +91,10 @@ Options
  --help               Show this message and exit.
 
 Play Commands
- play           Play an audio file on repeat from the terminal
-                with the best discovered loop points.
- play-tagged    Skips loop analysis and reads the loop points
-                directly from the tags present in the file.
+ play             Play an audio file on repeat from the terminal
+                  with the best discovered loop points.
+ play-tagged      Skips loop analysis and reads the loop points
+                  directly from the tags present in the file.
 
 Export Commands
  export-points    Export the best discovered or chosen loop points
