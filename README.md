@@ -174,8 +174,8 @@ pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
 
 #### Adjusting the loop length constraints
 
-By default, the minimum loop duration is 35% of the track length (excluding trailing silence), and the maximum is unbounded.
-Alternative constraints can be specified using the options below.
+*By default, the minimum loop duration is 35% of the track length (excluding trailing silence), and the maximum is unbounded.
+Alternative constraints can be specified using the options below.*
 
 ```sh
 # If the loop is very long (or very short), a different minimum loop duration can be specified.
