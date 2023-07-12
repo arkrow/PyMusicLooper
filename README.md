@@ -36,11 +36,12 @@ and as a result, avoids dependency conflicts and breakage due to other packages.
 Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx` ).
 
 ```sh
-# Normal install (follows the official release channel)
+# Normal install
+# (follows the official releases on https://pypi.org/project/pymusiclooper/)
 pipx install pymusiclooper
 
-# Alternative install (follows the git repository)
-# (equivalent to a beta release channel for this project)
+# Alternative install
+# (follows the git repository; equivalent to a nightly release channel)
 pipx install git+https://github.com/arkrow/PyMusicLooper.git
 
 # Updating to new releases in either case can be done simply using:
@@ -79,31 +80,30 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
  A program for repeating music seamlessly and endlessly, by automatically
  finding the best loop points.
 
-╭─ Options ────────────────────────────────────────────────────────────────╮
-│ --verbose      -v    Enables verbose logging output.                     │
-│ --interactive  -i    Enables interactive mode to manually preview/choose │
-│                      the desired loop point.                             │
-│ --samples      -s    Display all the loop points shown in interactive    │
-│                      mode in sample points instead of the default        │
-│                      mm:ss.sss format.                                   │
-│ --version            Show the version and exit.                          │
-│ --help               Show this message and exit.                         │
-╰──────────────────────────────────────────────────────────────────────────╯
-╭─ Play Commands ──────────────────────────────────────────────────────────╮
-│ play         Play an audio file on repeat from the terminal with the     │
-│              best discovered loop points, or a chosen point if           │
-│              interactive mode is active.                                 │
-│ play-tagged  Skips loop analysis and reads the loop points directly from │
-│              the tags present in the file.                               │
-╰──────────────────────────────────────────────────────────────────────────╯
-╭─ Export Commands ────────────────────────────────────────────────────────╮
-│ export-points       Export the best discovered or chosen loop points to  │
-│                     a text file or to the terminal (stdout)              │
-│ split-audio         Split the input audio into intro, loop and outro     │
-│                     sections                                             │
-│ tag                 Adds metadata tags of loop points to a copy of the   │
-│                     input audio file(s)                                  │
-╰──────────────────────────────────────────────────────────────────────────╯
+Options
+ --verbose      -v    Enables verbose logging output.
+ --interactive  -i    Enables interactive mode to manually preview/choose
+                      the desired loop point.
+ --samples      -s    Display all the loop points shown in interactive
+                      mode in sample points instead of the default
+                      mm:ss.sss format.
+ --version            Show the version and exit.
+ --help               Show this message and exit.
+
+Play Commands
+ play         Play an audio file on repeat from the terminal with the
+              best discovered loop points, or a chosen point if
+              interactive mode is active.
+ play-tagged  Skips loop analysis and reads the loop points directly from
+              the tags present in the file.
+
+Export Commands
+ export-points       Export the best discovered or chosen loop points to 
+                     a text file or to the terminal
+ split-audio         Split the input audio into intro, loop and outro    
+                     sections
+ tag                 Adds metadata tags of loop points to a copy of the  
+                     input audio file(s)
 ```
 
 Note: further help and options can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
@@ -155,16 +155,9 @@ pymusiclooper -i export-points --path "/path/to/dir/" --export-to txt
 
 ### Miscellaneous
 
+#### Finding more potential loops
+
 ```sh
-# If the loop is very long (or very short), a different minimum loop duration can be specified.
-## --min-duration-multiplier 0.85 implies that the loop is at least 85% of the track,
-## excluding trailing silence.
-pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
-
-# Alternatively, the loop length constraints can be specified in seconds
-pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max-loop-duration 150
-
-
 # If the detected loop points are unsatisfactory, the brute force option `--brute-force`
 # may yield better results.
 ## NOTE: brute force mode checks the entire audio track instead of the detected beats.
@@ -177,15 +170,34 @@ pymusiclooper -i export-points --path "TRACK_NAME.wav" --brute-force
 # according to internal criteria when there are >=100 possible pairs.
 # If that is undesirable, it can be disabled using the `--disable-pruning` flag, e.g.
 pymusiclooper -i export-points --path "TRACK_NAME.wav" --disable-pruning
+# Note: can be used with --brute-force if desired
+```
 
+#### Adjusting the loop length constraints
 
+By default, the minimum loop duration is 35% of the track length (excluding trailing silence), and the maximum is unbounded.
+Alternative constraints can be specified using the options below.
+
+```sh
+# If the loop is very long (or very short), a different minimum loop duration can be specified.
+## --min-duration-multiplier 0.85 implies that the loop is at least 85% of the track,
+## excluding trailing silence.
+pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-duration-multiplier 0.85
+
+# Alternatively, the loop length constraints can be specified in seconds
+pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --max-loop-duration 150
+```
+
+#### Searching near a desired start/end loop point
+
+```sh
 # If a desired loop point is already known, and you would like to extract the best loop
-# positions in samples, you can use the `--approx-loop-position` option,
+# positions in samples, the `--approx-loop-position` option can be used,
 # which searches with +/- 2 seconds of the point specified.
 # Best used interactively. Example using the `export-points` subcommand:
 pymusiclooper -i export-points --path "/path/to/track.mp3" --approx-loop-position 20 210
 ## `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds
-## and loops back at the 210 seconds mark.
+## and loops back around the 210 seconds mark.
 ```
 
 ## Acknowledgement
