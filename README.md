@@ -82,8 +82,8 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 
 Options
  --verbose      -v    Enables verbose logging output.
- --interactive  -i    Enables interactive mode to manually preview/choose
-                      the desired loop point.
+ --interactive  -i    Enables interactive mode to manually
+                      preview/choose the desired loop point.
  --samples      -s    Display all the loop points shown in interactive
                       mode in sample points instead of the default
                       mm:ss.sss format.
@@ -91,19 +91,18 @@ Options
  --help               Show this message and exit.
 
 Play Commands
- play         Play an audio file on repeat from the terminal with the
-              best discovered loop points, or a chosen point if
-              interactive mode is active.
- play-tagged  Skips loop analysis and reads the loop points directly from
-              the tags present in the file.
+ play           Play an audio file on repeat from the terminal
+                with the best discovered loop points.
+ play-tagged    Skips loop analysis and reads the loop points
+                directly from the tags present in the file.
 
 Export Commands
- export-points       Export the best discovered or chosen loop points to 
-                     a text file or to the terminal
- split-audio         Split the input audio into intro, loop and outro    
-                     sections
- tag                 Adds metadata tags of loop points to a copy of the  
-                     input audio file(s)
+ export-points    Export the best discovered or chosen loop points
+                  to a text file or to the terminal.
+ split-audio      Split the input audio into intro, loop and outro
+                  sections.
+ tag              Adds metadata tags of loop points to a copy of the
+                  input audio file(s).
 ```
 
 Note: further help and options can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
