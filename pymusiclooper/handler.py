@@ -8,7 +8,7 @@ from rich.table import Table
 
 from .analysis import LoopPair
 from .console import rich_console
-from .looper import MusicLooper
+from .core import MusicLooper
 from .exceptions import AudioLoadError, LoopNotFoundError
 
 
