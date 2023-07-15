@@ -565,7 +565,7 @@ def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
     sample_window = audio[neg_offset:pos_offset]
 
     # Adjusts the indexing offset in case the left side of sample_idx was clipped
-    offset += abs(sample_idx - offset) if sample_idx - offset < 0 else 0
+    offset_correction = abs(sample_idx - offset) if sample_idx - offset < 0 else 0
 
     sample_window_length = sample_window.shape[0]
     dist = np.zeros(sample_window_length)
@@ -584,7 +584,7 @@ def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
 
         for i in range(sample_window_length):
             dist[i] += one_dist[i]
-            dist[i] += 0.1 * abs(i - offset) / (window_size / 2)
+            dist[i] += 0.1 * abs(i - offset + offset_correction) / (window_size / 2)
 
     argmin = np.argmin(dist)
     minimum_dist = dist[argmin]
@@ -596,4 +596,4 @@ def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
     if (n_channels > 1) and (minimum_dist > (0.6 * n_channels)):
         return sample_idx
 
-    return int(sample_idx + argmin - offset)
+    return int(sample_idx + argmin - offset + offset_correction)
