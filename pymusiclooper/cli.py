@@ -284,6 +284,7 @@ def split_audio(
 @common_loop_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", show_default=True, help="STDOUT: print the loop points of a track in samples to the terminal; TXT: export the loop points of a track in samples and append to a loop.txt file.")
+@click.option("--alt-export-top", type=int, default=0, help="Alternative export format of the top N loop points instead of the best detected/chosen point. --alt-export-top -1 to export all points.")
 def export_points(
     path,
     url,
@@ -297,6 +298,7 @@ def export_points(
     recursive,
     flatten,
     export_to,
+    alt_export_top,
 ):
     """Export the best discovered or chosen loop points to a text file or to the terminal."""
     try:
@@ -330,6 +332,7 @@ def export_points(
                     split_audio=False,
                     to_txt=to_txt,
                     to_stdout=to_stdout,
+                    alt_export_top=alt_export_top,
                     tag_names=None,
                 )
             export_handler.run()
@@ -345,6 +348,7 @@ def export_points(
                 split_audio=False,
                 to_txt=to_txt,
                 to_stdout=to_stdout,
+                alt_export_top=alt_export_top,
                 recursive=recursive,
                 flatten=flatten,
                 tag_names=None,
