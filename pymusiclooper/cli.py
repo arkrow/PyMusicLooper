@@ -3,7 +3,7 @@ import logging
 import os
 import tempfile
 import warnings
-from typing import List, Optional
+from typing import Optional
 
 import rich_click as click
 from rich.logging import RichHandler
