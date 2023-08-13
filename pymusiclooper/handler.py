@@ -297,6 +297,7 @@ class BatchHandler:
         split_audio_format="WAV",
         to_txt=False,
         to_stdout=False,
+        alt_export_top: int = 0,
         recursive=False,
         flatten=False,
         tag_names: Tuple[str, str] = None,
@@ -312,6 +313,7 @@ class BatchHandler:
         self.split_audio_format = split_audio_format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
+        self.alt_export_top = alt_export_top
         self.recursive = recursive
         self.flatten = flatten
         self.tag_names = tag_names
@@ -361,6 +363,7 @@ class BatchHandler:
                     split_audio=self.split_audio,
                     to_txt=self.to_txt,
                     to_stdout=self.to_stdout,
+                    alt_export_top=self.alt_export_top,
                     tag_names=self.tag_names,
                 )
 
