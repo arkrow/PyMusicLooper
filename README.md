@@ -81,6 +81,7 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
  finding the best loop points.
 
 Options
+ --debug        -d    Enables debugging mode.
  --verbose      -v    Enables verbose logging output.
  --interactive  -i    Enables interactive mode to manually
                       preview/choose the desired loop point.

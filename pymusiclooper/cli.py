@@ -8,6 +8,7 @@ from typing import Optional
 import rich_click as click
 from rich.logging import RichHandler
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
+from rich.traceback import install as rich_traceback_handler
 from rich_click.cli import patch as rich_click_patch
 from yt_dlp.utils import YoutubeDLError
 
@@ -38,18 +39,19 @@ click.rich_click.USE_RICH_MARKUP = True
 def cli_main(debug, verbose, interactive, samples):
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
     # Store flags in environ instead of passing them as parameters
+    if debug:
+        os.environ["PML_DEBUG"] = "1"
+        warnings.simplefilter("default")
+        rich_traceback_handler(console=rich_console, suppress=[click])
+    else:
+        warnings.filterwarnings("ignore")
+
     if verbose:
         os.environ["PML_VERBOSE"] = "1"
     if interactive:
         os.environ["PML_INTERACTIVE_MODE"] = "1"
     if samples:
         os.environ["PML_DISPLAY_SAMPLES"] = "1"
-
-    if debug:
-        os.environ["PML_DEBUG"] = "1"
-        warnings.simplefilter("default")
-    else:
-        warnings.filterwarnings("ignore")
 
     if verbose:
         logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, console=rich_console, rich_tracebacks=True, show_path=debug, show_time=False, tracebacks_suppress=[click])])
@@ -163,10 +165,8 @@ def play(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
-    except (AudioLoadError, LoopNotFoundError) as e:
-        logging.error(e)
-    except Exception as e:
-        logging.error(e)
+    except (AudioLoadError, LoopNotFoundError, Exception) as e:
+        print_exception(e)
 
 
 @cli_main.command()
@@ -197,7 +197,7 @@ def play_tagged(path, tag_names):
         looper.play_looping(loop_start, loop_end)
 
     except Exception as e:
-        logging.error(e)
+        print_exception(e)
 
 
 @cli_main.command()
@@ -273,10 +273,8 @@ def split_audio(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
-    except (AudioLoadError, LoopNotFoundError) as e:
-        logging.error(e)
-    except Exception as e:
-        logging.error(e)
+    except (AudioLoadError, LoopNotFoundError, Exception) as e:
+        print_exception(e)
 
 
 @cli_main.command()
@@ -357,10 +355,8 @@ def export_points(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
-    except (AudioLoadError, LoopNotFoundError) as e:
-        logging.error(e)
-    except Exception as e:
-        logging.error(e)
+    except (AudioLoadError, LoopNotFoundError, Exception) as e:
+        print_exception(e)
 
 
 @cli_main.command()
@@ -434,11 +430,8 @@ def tag(
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
-    except (AudioLoadError, LoopNotFoundError) as e:
-        logging.error(e)
-    except Exception as e:
-        logging.error(e)
-
+    except (AudioLoadError, LoopNotFoundError, Exception) as e:
+        print_exception(e)
 
 def mk_outputdir(path: str, output_dir: Optional[str] = None) -> str:
     """Creates the output directory in the `path` provided (if it does not exists) and returns the output directory path.
@@ -473,6 +466,12 @@ def download_audio(url: str, output_dir: str) -> str:
     """
     yt = YoutubeDownloader(url, output_dir)
     return yt.filepath
+
+def print_exception(e: Exception):
+    if "PML_DEBUG" in os.environ:
+        rich_console.print_exception(suppress=[click])
+    else:
+        logging.error(e)
 
 if __name__ == "__main__":
     cli_main()
