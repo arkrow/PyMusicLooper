@@ -1,3 +1,4 @@
+"""Module for playback through the terminal"""
 import logging
 import signal
 import threading
@@ -12,6 +13,7 @@ from .console import rich_console
 sd = lazy.load("sounddevice")
 
 class PlaybackHandler:
+    """Handler class for initiating looping playback through the terminal."""
     def __init__(self) -> None:
         self.event = threading.Event()
         self.progressbar = Progress(
