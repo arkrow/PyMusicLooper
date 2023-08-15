@@ -30,8 +30,11 @@ class LoopHandler:
             self.approx_loop_start = None
             self.approx_loop_end = None
 
-        self.musiclooper = MusicLooper(
-            filepath=file_path,
+        self.musiclooper = MusicLooper(filepath=file_path)
+
+        logging.info(f"Loaded \"{file_path}\". Analyzing...")
+
+        self.loop_pair_list = self.musiclooper.find_loop_pairs(
             min_duration_multiplier=min_duration_multiplier,
             min_loop_duration=min_loop_duration,
             max_loop_duration=max_loop_duration,
@@ -40,10 +43,6 @@ class LoopHandler:
             brute_force=brute_force,
             disable_pruning=disable_pruning,
         )
-
-        logging.info(f"Loaded \"{file_path}\". Analyzing...")
-
-        self.loop_pair_list = self.musiclooper.find_loop_pairs()
         self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
         self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 

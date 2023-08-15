@@ -1,10 +1,13 @@
+"""Contains the core MusicLooper class that can be
+used for programmatic access to the CLI's main features."""
+
 import os
 import shutil
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 import lazy_loader as lazy
 
-from .analysis import find_best_loop_points
+from .analysis import find_best_loop_points, LoopPair
 from .audio import MLAudio
 from .playback import PlaybackHandler
 
@@ -13,9 +16,17 @@ soundfile = lazy.load("soundfile")
 taglib = lazy.load("taglib")
 
 class MusicLooper:
-    def __init__(
+    """High-level API access to PyMusicLooper's main functions."""
+    def __init__(self, filepath: str):
+        """Initializes the MusicLooper object with the provided audio track.
+
+        Args:
+            filepath (str): path to the audio track to use.
+        """
+        self.mlaudio = MLAudio(filepath=filepath)
+
+    def find_loop_pairs(
         self,
-        filepath,
         min_duration_multiplier=0.35,
         min_loop_duration=None,
         max_loop_duration=None,
@@ -23,26 +34,33 @@ class MusicLooper:
         approx_loop_end=None,
         brute_force=False,
         disable_pruning=False,
-    ):
-        self.min_duration_multiplier = min_duration_multiplier
-        self.min_loop_duration = min_loop_duration
-        self.max_loop_duration = max_loop_duration
-        self.approx_loop_start = approx_loop_start
-        self.approx_loop_end = approx_loop_end
-        self.mlaudio = MLAudio(filepath=filepath)
-        self.brute_force = brute_force
-        self.disable_pruning = disable_pruning
+    ) -> List[LoopPair]:
+        """Finds the best loop points for the track, according to the parameters specified.
 
-    def find_loop_pairs(self):
+        Args:
+            min_duration_multiplier (float, optional): The minimum duration of a loop as a multiplier of track duration. Defaults to 0.35.
+            min_loop_duration (float, optional): The minimum duration of a loop (in seconds). Defaults to None.
+            max_loop_duration (float, optional): The maximum duration of a loop (in seconds). Defaults to None.
+            approx_loop_start (float, optional): The approximate location of the desired loop start (in seconds). If specified, must specify approx_loop_end as well. Defaults to None.
+            approx_loop_end (float, optional): The approximate location of the desired loop end (in seconds). If specified, must specify approx_loop_start as well. Defaults to None.
+            brute_force (bool, optional): Checks the entire track instead of the detected beats (disclaimer: runtime may be significantly longer). Defaults to False.
+            disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
+        
+        Raises:
+            LoopNotFoundError: raised in case no loops were found
+
+        Returns:
+            List[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
+        """
         return find_best_loop_points(
             mlaudio=self.mlaudio,
-            min_duration_multiplier=self.min_duration_multiplier,
-            min_loop_duration=self.min_loop_duration,
-            max_loop_duration=self.max_loop_duration,
-            approx_loop_start=self.approx_loop_start,
-            approx_loop_end=self.approx_loop_end,
-            brute_force=self.brute_force,
-            disable_pruning=self.disable_pruning
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_start=approx_loop_start,
+            approx_loop_end=approx_loop_end,
+            brute_force=brute_force,
+            disable_pruning=disable_pruning
         )
 
     @property
@@ -92,7 +110,21 @@ class MusicLooper:
             start_from,
         )
 
-    def export(self, loop_start, loop_end, format="WAV", output_dir=None):
+    def export(
+        self,
+        loop_start: int,
+        loop_end: int,
+        format: str = "WAV",
+        output_dir: Optional[str] = None
+    ):
+        """Exports the audio into three files: intro, loop and outro.
+
+        Args:
+            loop_start (int): Loop start in samples.
+            loop_end (int): Loop end in samples.
+            format (str, optional): Audio format of the exported files (formats available depend on the `soundfile` library). Defaults to "WAV".
+            output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
+        """
         if output_dir is not None:
             out_path = os.path.join(output_dir, self.mlaudio.filename)
         else:
@@ -117,18 +149,47 @@ class MusicLooper:
             format=format,
         )
 
-    def export_txt(self, loop_start, loop_end, output_dir=None):
+    def export_txt(
+        self,
+        loop_start: int,
+        loop_end: int,
+        txt_name: str = "loops",
+        output_dir: Optional[str] = None
+    ):
+        """Exports the given loop points to a text file named `loop.txt` in append mode with the format:
+        `{loop_start} {loop_end} {filename}`
+
+        Args:
+            loop_start (int): _description_
+            loop_end (int): _description_
+            txt_name (str, optional): Filename of the text file to export to. Defaults to "loops".
+            output_dir (str, optional): _description_. Defaults to None.
+        """
         if output_dir is not None:
-            out_path = os.path.join(output_dir, "loop.txt")
+            out_path = os.path.join(output_dir, f"{txt_name}.txt")
         else:
-            out_path = os.path.join(os.path.dirname(self.mlaudio.filepath), "loop.txt")
+            out_path = os.path.join(os.path.dirname(self.mlaudio.filepath), f"{txt_name}.txt")
 
         with open(out_path, "a") as file:
             file.write(f"{loop_start} {loop_end} {self.mlaudio.filename}\n")
 
     def export_tags(
-        self, loop_start, loop_end, loop_start_tag, loop_end_tag, output_dir=None
+        self,
+        loop_start: int,
+        loop_end: int,
+        loop_start_tag: str,
+        loop_end_tag: str,
+        output_dir: Optional[str] = None
     ):
+        """Adds metadata tags of loop points to a copy of the source audio file.
+
+        Args:
+            loop_start (int): Loop start in samples.
+            loop_end (int): Loop end in samples.
+            loop_start_tag (str): Name of the loop_start metadata tag.
+            loop_end_tag (str): Name of the loop_end metadata tag.
+            output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
+        """
         if output_dir is None:
             output_dir = os.path.abspath(self.mlaudio.filepath)
 
