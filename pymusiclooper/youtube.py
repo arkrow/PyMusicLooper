@@ -1,6 +1,8 @@
 import os
 
-import yt_dlp
+import lazy_loader as lazy
+
+yt_dlp = lazy.load("yt_dlp")
 
 
 class YtdLogger:

@@ -2,13 +2,15 @@ import os
 import shutil
 from typing import Tuple
 
-import soundfile
-import taglib
+import lazy_loader as lazy
 
 from .analysis import find_best_loop_points
 from .audio import MLAudio
 from .playback import PlaybackHandler
 
+# Lazy-load external libraries when they're needed
+soundfile = lazy.load("soundfile")
+taglib = lazy.load("taglib")
 
 class MusicLooper:
     def __init__(

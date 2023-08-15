@@ -3,11 +3,13 @@ import signal
 import threading
 
 import numpy as np
-import sounddevice as sd
+import lazy_loader as lazy
 from rich.progress import BarColumn, Progress, TextColumn
 
 from .console import rich_console
 
+# Lazy-load sounddevice
+sd = lazy.load("sounddevice")
 
 class PlaybackHandler:
     def __init__(self) -> None:
