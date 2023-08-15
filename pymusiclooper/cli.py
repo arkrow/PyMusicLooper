@@ -3,7 +3,6 @@ import logging
 import os
 import tempfile
 import warnings
-from typing import Optional
 
 import rich_click as click
 from rich.logging import RichHandler
@@ -21,7 +20,7 @@ from .console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
 from .core import MusicLooper
 from .exceptions import AudioLoadError, LoopNotFoundError
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
-from .youtube import YoutubeDownloader
+from .utils import download_audio, mk_outputdir
 
 # CLI --help styling
 click.rich_click.OPTION_GROUPS = _OPTION_GROUPS
@@ -432,40 +431,6 @@ def tag(
         pass
     except (AudioLoadError, LoopNotFoundError, Exception) as e:
         print_exception(e)
-
-def mk_outputdir(path: str, output_dir: Optional[str] = None) -> str:
-    """Creates the output directory in the `path` provided (if it does not exists) and returns the output directory path.
-
-    Args:
-        path (str): The path of the file or directory being processed.
-        output_dir (str, optional): The output directory to use. If None, will create the directory 'LooperOutput' in the path provided.
-
-    Returns:
-        str: The path to the output directory.
-    """
-    if os.path.isdir(path):
-        default_out = os.path.join(path, "LooperOutput")
-    else:
-        default_out = os.path.join(os.path.dirname(path), "LooperOutput")
-    output_dir_to_use = default_out if output_dir is None else output_dir
-
-    if not os.path.exists(output_dir_to_use):
-        os.mkdir(output_dir_to_use)
-    return output_dir_to_use
-
-
-def download_audio(url: str, output_dir: str) -> str:
-    """Downloads an audio file using yt-dlp from the URL provided and returns its filepath
-
-    Args:
-        url (str): The URL of the stream to pass to yt-dlp to extract audio from
-        output_dir (str): The directory path to store the downloaded audio to
-
-    Returns:
-        str: The filepath of the extracted audio
-    """
-    yt = YoutubeDownloader(url, output_dir)
-    return yt.filepath
 
 def print_exception(e: Exception):
     if "PML_DEBUG" in os.environ:
