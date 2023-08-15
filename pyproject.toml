@@ -52,3 +52,5 @@ target-version = ['py39']
 [tool.isort]
 profile = "black"
 
+[tool.ruff]
+ignore = ["E501", "E402"]
