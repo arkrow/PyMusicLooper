@@ -43,13 +43,13 @@ def _option_groups(additional_basic_options=None):
 
 
 _common_option_groups = _option_groups()
-OPTION_GROUPS = {
+_OPTION_GROUPS = {
     "pymusiclooper play": _common_option_groups,
     "pymusiclooper split-audio": _common_option_groups,
     "pymusiclooper tag": _option_groups(["--tag-names"]),
     "pymusiclooper export-points": _option_groups(["--export-to", "--alt-export-top"]),
 }
-COMMAND_GROUPS = {
+_COMMAND_GROUPS = {
     "pymusiclooper": [
         {
             "name": "Play Commands",

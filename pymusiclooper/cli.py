@@ -17,15 +17,15 @@ from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
 from click_params import PUBLIC_URL as UrlParamType
 
 from . import __version__
-from .console import COMMAND_GROUPS, OPTION_GROUPS, rich_console
+from .console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
 from .core import MusicLooper
 from .exceptions import AudioLoadError, LoopNotFoundError
 from .handler import BatchHandler, LoopExportHandler, LoopHandler
 from .youtube import YoutubeDownloader
 
 # CLI --help styling
-click.rich_click.OPTION_GROUPS = OPTION_GROUPS
-click.rich_click.COMMAND_GROUPS = COMMAND_GROUPS
+click.rich_click.OPTION_GROUPS = _OPTION_GROUPS
+click.rich_click.COMMAND_GROUPS = _COMMAND_GROUPS
 click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
