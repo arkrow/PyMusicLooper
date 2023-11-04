@@ -99,20 +99,11 @@ def common_export_options(f):
 @cli_main.command()
 @common_path_options
 @common_loop_options
-def play(
-    path,
-    url,
-    min_duration_multiplier,
-    min_loop_duration,
-    max_loop_duration,
-    approx_loop_position,
-    brute_force,
-    disable_pruning
-):
+def play(**kwargs):
     """Play an audio file on repeat from the terminal with the best discovered loop points, or a chosen point if interactive mode is active."""
     try:
-        if url is not None:
-            path = download_audio(url, tempfile.gettempdir())
+        if kwargs.get("url", None) is not None:
+            kwargs["path"] = download_audio(kwargs["url"], tempfile.gettempdir())
 
         with Progress(
             SpinnerColumn(),
@@ -122,33 +113,15 @@ def play(
             transient=True
         ) as progress:
             progress.add_task("Processing", total=None)
-            handler = LoopHandler(
-                file_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                approx_loop_position=approx_loop_position,
-                brute_force=brute_force,
-                disable_pruning=disable_pruning,
-            )
+            handler = LoopHandler(**kwargs)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
         interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
 
         chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
 
-        looper = handler.get_musiclooper_obj()
-
-        start_time = (
-            chosen_loop_pair.loop_start
-            if in_samples
-            else looper.samples_to_ftime(chosen_loop_pair.loop_start)
-        )
-        end_time = (
-            chosen_loop_pair.loop_start
-            if in_samples
-            else looper.samples_to_ftime(chosen_loop_pair.loop_end)
-        )
+        start_time = handler.format_time(chosen_loop_pair.loop_start, in_samples=in_samples)
+        end_time = handler.format_time(chosen_loop_pair.loop_end, in_samples=in_samples)
 
         rich_console.print(
             "\nPlaying with looping active from [green]{}[/] back to [green]{}[/]; similarity: {:.2%}".format(
@@ -204,71 +177,11 @@ def play_tagged(path, tag_names):
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
-def split_audio(
-    path,
-    url,
-    min_duration_multiplier,
-    min_loop_duration,
-    max_loop_duration,
-    approx_loop_position,
-    brute_force,
-    disable_pruning,
-    output_dir,
-    recursive,
-    flatten,
-    format,
-):
+def split_audio(**kwargs):
     """Split the input audio into intro, loop and outro sections."""
     try:
-        if url is not None:
-            output_dir = mk_outputdir(os.getcwd(), output_dir)
-            path = download_audio(url, output_dir)
-        else:
-            output_dir = mk_outputdir(path, output_dir)
-
-        if os.path.isfile(path):
-            with Progress(
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                TimeElapsedColumn(),
-                console=rich_console,
-                transient=True
-            ) as progress:
-                progress.add_task("Processing", total=None)
-                export_handler = LoopExportHandler(
-                    file_path=path,
-                    min_duration_multiplier=min_duration_multiplier,
-                    min_loop_duration=min_loop_duration,
-                    max_loop_duration=max_loop_duration,
-                    approx_loop_position=approx_loop_position,
-                    brute_force=brute_force,
-                    disable_pruning=disable_pruning,
-                    output_dir=output_dir,
-                    split_audio=True,
-                    split_audio_format=format,
-                    to_txt=False,
-                    to_stdout=False,
-                    tag_names=None,
-                )
-            export_handler.run()
-        else:
-            batch_handler = BatchHandler(
-                directory_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                brute_force=brute_force,
-                disable_pruning=disable_pruning,
-                output_dir=output_dir,
-                split_audio=True,
-                split_audio_format=format,
-                to_txt=False,
-                to_stdout=False,
-                recursive=recursive,
-                flatten=flatten,
-                tag_names=None,
-            )
-            batch_handler.run()
+        kwargs["split_audio"] = True
+        run_handler(**kwargs)
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
@@ -280,77 +193,16 @@ def split_audio(
 @common_path_options
 @common_loop_options
 @common_export_options
-@click.option("--export-to", type=click.Choice(('STDOUT', 'TXT'), case_sensitive=False), default="STDOUT", show_default=True, help="STDOUT: print the loop points of a track in samples to the terminal; TXT: export the loop points of a track in samples and append to a loop.txt file.")
+@click.option("--export-to", type=click.Choice(("STDOUT", "TXT"), case_sensitive=False), default="STDOUT", show_default=True, help="STDOUT: print the loop points of a track in samples to the terminal; TXT: export the loop points of a track in samples and append to a loop.txt file.")
 @click.option("--alt-export-top", type=int, default=0, help="Alternative export format of the top N loop points instead of the best detected/chosen point. --alt-export-top -1 to export all points.")
-def export_points(
-    path,
-    url,
-    min_duration_multiplier,
-    min_loop_duration,
-    max_loop_duration,
-    approx_loop_position,
-    brute_force,
-    disable_pruning,
-    output_dir,
-    recursive,
-    flatten,
-    export_to,
-    alt_export_top,
-):
+def export_points(**kwargs):
     """Export the best discovered or chosen loop points to a text file or to the terminal."""
     try:
-        to_stdout = export_to.upper() == "STDOUT"
-        to_txt = export_to.upper() == "TXT"
+        kwargs["to_stdout"] = kwargs["export_to"].upper() == "STDOUT"
+        kwargs["to_txt"] = kwargs["export_to"].upper() == "TXT"
+        kwargs.pop("export_to", "")
 
-        if url is not None:
-            output_dir = mk_outputdir(os.getcwd(), output_dir)
-            path = download_audio(url, output_dir)
-        else:
-            output_dir = mk_outputdir(path, output_dir)
-
-        if os.path.isfile(path):
-            with Progress(
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                TimeElapsedColumn(),
-                console=rich_console,
-                transient=True
-            ) as progress:
-                progress.add_task("Processing", total=None)
-                export_handler = LoopExportHandler(
-                    file_path=path,
-                    min_duration_multiplier=min_duration_multiplier,
-                    min_loop_duration=min_loop_duration,
-                    max_loop_duration=max_loop_duration,
-                    approx_loop_position=approx_loop_position,
-                    brute_force=brute_force,
-                    disable_pruning=disable_pruning,
-                    output_dir=output_dir,
-                    split_audio=False,
-                    to_txt=to_txt,
-                    to_stdout=to_stdout,
-                    alt_export_top=alt_export_top,
-                    tag_names=None,
-                )
-            export_handler.run()
-        else:
-            batch_handler = BatchHandler(
-                directory_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                brute_force=brute_force,
-                disable_pruning=disable_pruning,
-                output_dir=output_dir,
-                split_audio=False,
-                to_txt=to_txt,
-                to_stdout=to_stdout,
-                alt_export_top=alt_export_top,
-                recursive=recursive,
-                flatten=flatten,
-                tag_names=None,
-            )
-            batch_handler.run()
+        run_handler(**kwargs)
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
@@ -363,74 +215,38 @@ def export_points(
 @common_loop_options
 @common_export_options
 @click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
-def tag(
-    path,
-    url,
-    min_duration_multiplier,
-    min_loop_duration,
-    max_loop_duration,
-    approx_loop_position,
-    brute_force,
-    disable_pruning,
-    output_dir,
-    recursive,
-    flatten,
-    tag_names,
-):
+def tag(**kwargs):
     """Adds metadata tags of loop points to a copy of the input audio file(s)."""
     try:
-        if url is not None:
-            output_dir = mk_outputdir(os.getcwd(), output_dir)
-            path = download_audio(url, output_dir)
-        else:
-            output_dir = mk_outputdir(path, output_dir)
-
-        if os.path.isfile(path):
-            with Progress(
-                SpinnerColumn(),
-                *Progress.get_default_columns(),
-                TimeElapsedColumn(),
-                console=rich_console,
-                transient=True
-            ) as progress:
-                progress.add_task("Processing", total=None)
-                export_handler = LoopExportHandler(
-                    file_path=path,
-                    min_duration_multiplier=min_duration_multiplier,
-                    min_loop_duration=min_loop_duration,
-                    max_loop_duration=max_loop_duration,
-                    approx_loop_position=approx_loop_position,
-                    brute_force=brute_force,
-                    disable_pruning=disable_pruning,
-                    output_dir=output_dir,
-                    split_audio=False,
-                    to_txt=False,
-                    to_stdout=False,
-                    tag_names=tag_names,
-                )
-            export_handler.run()
-        else:
-            batch_handler = BatchHandler(
-                directory_path=path,
-                min_duration_multiplier=min_duration_multiplier,
-                min_loop_duration=min_loop_duration,
-                max_loop_duration=max_loop_duration,
-                brute_force=brute_force,
-                disable_pruning=disable_pruning,
-                output_dir=output_dir,
-                split_audio=False,
-                to_txt=False,
-                to_stdout=False,
-                recursive=recursive,
-                flatten=flatten,
-                tag_names=tag_names,
-            )
-            batch_handler.run()
+        run_handler(**kwargs)
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
     except (AudioLoadError, LoopNotFoundError, Exception) as e:
         print_exception(e)
+
+
+def run_handler(**kwargs):
+    if kwargs.get("url", None) is not None:
+        kwargs["output_dir"] = mk_outputdir(os.getcwd(), kwargs["output_dir"])
+        kwargs["path"] = download_audio(kwargs["url"], kwargs["output_dir"])
+    else:  
+        kwargs["output_dir"] = mk_outputdir(kwargs["path"], kwargs["output_dir"])
+
+    if os.path.isfile(kwargs["path"]):
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+            console=rich_console,
+            transient=True
+        ) as progress:
+            progress.add_task("Processing", total=None)
+            export_handler = LoopExportHandler(**kwargs)
+        export_handler.run()
+    else:
+        batch_handler = BatchHandler(**kwargs)
+        batch_handler.run()
 
 def print_exception(e: Exception):
     if "PML_DEBUG" in os.environ:

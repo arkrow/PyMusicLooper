@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 from rich.table import Table
@@ -15,13 +15,15 @@ from .exceptions import AudioLoadError, LoopNotFoundError
 class LoopHandler:
     def __init__(
         self,
-        file_path: str,
+        *,
+        path: str,
         min_duration_multiplier: float,
         min_loop_duration: float,
         max_loop_duration: float,
         approx_loop_position: tuple = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        **kwargs,
     ):
         if approx_loop_position is not None:
             self.approx_loop_start = approx_loop_position[0]
@@ -30,9 +32,9 @@ class LoopHandler:
             self.approx_loop_start = None
             self.approx_loop_end = None
 
-        self.musiclooper = MusicLooper(filepath=file_path)
+        self.musiclooper = MusicLooper(filepath=path)
 
-        logging.info(f"Loaded \"{file_path}\". Analyzing...")
+        logging.info(f"Loaded \"{path}\". Analyzing...")
 
         self.loop_pair_list = self.musiclooper.find_loop_pairs(
             min_duration_multiplier=min_duration_multiplier,
@@ -52,8 +54,12 @@ class LoopHandler:
         """
         return self.loop_pair_list
 
-    def get_musiclooper_obj(self):
+    @property
+    def musiclooper(self):
         return self.musiclooper
+    
+    def format_time(self, samples: int, in_samples: bool = False):
+        return samples if in_samples else self.musiclooper.samples_to_ftime(samples)
 
     def play_looping(self, loop_start, loop_end):
         self.musiclooper.play_looping(loop_start, loop_end)
@@ -165,34 +171,36 @@ class LoopHandler:
 class LoopExportHandler(LoopHandler):
     def __init__(
         self,
-        file_path: str,
+        *,
+        path: str,
         min_duration_multiplier: float,
         min_loop_duration: float,
         max_loop_duration: float,
         output_dir: str,
-        approx_loop_position: tuple = None,
+        approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
-        split_audio: bool = True,
-        split_audio_format: str = "WAV",
+        split_audio: bool = False,
+        format: str = "WAV",
         to_txt: bool = False,
         to_stdout: bool = False,
         alt_export_top: int = 0,
         tag_names: Tuple[str, str] = None,
         batch_mode: bool = False,
+        **kwargs,
     ):
         super().__init__(
-            file_path,
-            min_duration_multiplier,
-            min_loop_duration,
-            max_loop_duration,
-            approx_loop_position,
-            brute_force,
-            disable_pruning,
+            path=path,
+            min_duration_multiplier=min_duration_multiplier,
+            min_loop_duration=min_loop_duration,
+            max_loop_duration=max_loop_duration,
+            approx_loop_position=approx_loop_position,
+            brute_force=brute_force,
+            disable_pruning=disable_pruning,
         )
         self.output_directory = output_dir
         self.split_audio = split_audio
-        self.split_audio_format = split_audio_format
+        self.format = format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
         self.alt_export_top = alt_export_top
@@ -224,7 +232,7 @@ class LoopExportHandler(LoopHandler):
             music_looper.export(
                 loop_start,
                 loop_end,
-                format=self.split_audio_format,
+                format=self.format,
                 output_dir=self.output_directory
             )
             message = f"Successfully exported \"{music_looper.filename}\" intro/loop/outro sections to \"{self.output_directory}\""
@@ -287,29 +295,31 @@ class LoopExportHandler(LoopHandler):
 class BatchHandler:
     def __init__(
         self,
-        directory_path,
+        *,
+        path,
         min_duration_multiplier,
         min_loop_duration,
         max_loop_duration,
         output_dir,
-        split_audio,
-        split_audio_format="WAV",
-        to_txt=False,
-        to_stdout=False,
+        split_audio: bool = False ,
+        format="WAV",
+        to_txt: bool = False,
+        to_stdout: bool = False,
         alt_export_top: int = 0,
-        recursive=False,
-        flatten=False,
+        recursive: bool = False,
+        flatten: bool = False,
         tag_names: Tuple[str, str] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        **kwargs,
     ):
-        self.directory_path = os.path.abspath(directory_path)
+        self.directory_path = os.path.abspath(path)
         self.min_duration_multiplier = min_duration_multiplier
         self.min_loop_duration = min_loop_duration
         self.max_loop_duration = max_loop_duration
         self.output_directory = output_dir
         self.split_audio = split_audio
-        self.split_audio_format = split_audio_format
+        self.format = format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
         self.alt_export_top = alt_export_top
@@ -340,22 +350,22 @@ class BatchHandler:
             console=rich_console,
         ) as progress:
             pbar = progress.add_task("Processing...", total=len(files))
-            for file_idx, file in enumerate(files):
+            for file_idx, file_path in enumerate(files):
                 progress.update(
                     pbar,
                     advance=1,
                     description=(
-                        f"Processing \"{os.path.relpath(file, self.directory_path)}\""
+                        f"Processing \"{os.path.relpath(file_path, self.directory_path)}\""
                     ),
                 )
                 self._batch_export_helper(
-                    file_path=file,
+                    path=file_path,
                     min_duration_multiplier=self.min_duration_multiplier,
                     min_loop_duration=self.min_loop_duration,
                     max_loop_duration=self.max_loop_duration,
                     brute_force=self.brute_force,
                     disable_pruning=self.disable_pruning,
-                    split_audio_format=self.split_audio_format,
+                    format=self.format,
                     output_dir=(
                         self.output_directory if self.flatten else output_dirs[file_idx]
                     ),
@@ -398,9 +408,9 @@ class BatchHandler:
         )
 
     @staticmethod
-    def _batch_export_helper(*args, **kwargs):
+    def _batch_export_helper(**kwargs):
         try:
-            export_handler = LoopExportHandler(*args, **kwargs, batch_mode=True)
+            export_handler = LoopExportHandler(**kwargs, batch_mode=True)
             export_handler.run()
         except (AudioLoadError, LoopNotFoundError) as e:
             logging.error(e)
