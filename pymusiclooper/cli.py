@@ -179,14 +179,8 @@ def play_tagged(path, tag_names):
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
 def split_audio(**kwargs):
     """Split the input audio into intro, loop and outro sections."""
-    try:
-        kwargs["split_audio"] = True
-        run_handler(**kwargs)
-    except YoutubeDLError:
-        # Already logged from youtube.py
-        pass
-    except (AudioLoadError, LoopNotFoundError, Exception) as e:
-        print_exception(e)
+    kwargs["split_audio"] = True
+    run_handler(**kwargs)
 
 
 @cli_main.command()
@@ -197,17 +191,11 @@ def split_audio(**kwargs):
 @click.option("--alt-export-top", type=int, default=0, help="Alternative export format of the top N loop points instead of the best detected/chosen point. --alt-export-top -1 to export all points.")
 def export_points(**kwargs):
     """Export the best discovered or chosen loop points to a text file or to the terminal."""
-    try:
-        kwargs["to_stdout"] = kwargs["export_to"].upper() == "STDOUT"
-        kwargs["to_txt"] = kwargs["export_to"].upper() == "TXT"
-        kwargs.pop("export_to", "")
+    kwargs["to_stdout"] = kwargs["export_to"].upper() == "STDOUT"
+    kwargs["to_txt"] = kwargs["export_to"].upper() == "TXT"
+    kwargs.pop("export_to", "")
 
-        run_handler(**kwargs)
-    except YoutubeDLError:
-        # Already logged from youtube.py
-        pass
-    except (AudioLoadError, LoopNotFoundError, Exception) as e:
-        print_exception(e)
+    run_handler(**kwargs)
 
 
 @cli_main.command()
@@ -217,36 +205,36 @@ def export_points(**kwargs):
 @click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
 def tag(**kwargs):
     """Adds metadata tags of loop points to a copy of the input audio file(s)."""
+    run_handler(**kwargs)
+
+
+def run_handler(**kwargs):
     try:
-        run_handler(**kwargs)
+        if kwargs.get("url", None) is not None:
+            kwargs["output_dir"] = mk_outputdir(os.getcwd(), kwargs["output_dir"])
+            kwargs["path"] = download_audio(kwargs["url"], kwargs["output_dir"])
+        else:  
+            kwargs["output_dir"] = mk_outputdir(kwargs["path"], kwargs["output_dir"])
+
+        if os.path.isfile(kwargs["path"]):
+            with Progress(
+                SpinnerColumn(),
+                *Progress.get_default_columns(),
+                TimeElapsedColumn(),
+                console=rich_console,
+                transient=True
+            ) as progress:
+                progress.add_task("Processing", total=None)
+                export_handler = LoopExportHandler(**kwargs)
+            export_handler.run()
+        else:
+            batch_handler = BatchHandler(**kwargs)
+            batch_handler.run()
     except YoutubeDLError:
         # Already logged from youtube.py
         pass
     except (AudioLoadError, LoopNotFoundError, Exception) as e:
         print_exception(e)
-
-
-def run_handler(**kwargs):
-    if kwargs.get("url", None) is not None:
-        kwargs["output_dir"] = mk_outputdir(os.getcwd(), kwargs["output_dir"])
-        kwargs["path"] = download_audio(kwargs["url"], kwargs["output_dir"])
-    else:  
-        kwargs["output_dir"] = mk_outputdir(kwargs["path"], kwargs["output_dir"])
-
-    if os.path.isfile(kwargs["path"]):
-        with Progress(
-            SpinnerColumn(),
-            *Progress.get_default_columns(),
-            TimeElapsedColumn(),
-            console=rich_console,
-            transient=True
-        ) as progress:
-            progress.add_task("Processing", total=None)
-            export_handler = LoopExportHandler(**kwargs)
-        export_handler.run()
-    else:
-        batch_handler = BatchHandler(**kwargs)
-        batch_handler.run()
 
 def print_exception(e: Exception):
     if "PML_DEBUG" in os.environ:
