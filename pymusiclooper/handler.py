@@ -32,7 +32,7 @@ class LoopHandler:
             self.approx_loop_start = None
             self.approx_loop_end = None
 
-        self.musiclooper = MusicLooper(filepath=path)
+        self._musiclooper = MusicLooper(filepath=path)
 
         logging.info(f"Loaded \"{path}\". Analyzing...")
 
@@ -55,8 +55,9 @@ class LoopHandler:
         return self.loop_pair_list
 
     @property
-    def musiclooper(self):
-        return self.musiclooper
+    def musiclooper(self) -> MusicLooper:
+        """Returns the handler's `MusicLooper` instance."""
+        return self._musiclooper
     
     def format_time(self, samples: int, in_samples: bool = False):
         return samples if in_samples else self.musiclooper.samples_to_ftime(samples)
@@ -213,29 +214,27 @@ class LoopExportHandler(LoopHandler):
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
 
-        music_looper = self.get_musiclooper_obj()
-
         if self.tag_names is not None:
-            self.tag_runner(loop_start, loop_end, music_looper)
+            self.tag_runner(loop_start, loop_end)
 
         if self.to_stdout:
-            self.stdout_export_runner(loop_start, loop_end, music_looper)
+            self.stdout_export_runner(loop_start, loop_end)
         
         if self.to_txt:
-            self.txt_export_runner(loop_start, loop_end, music_looper)
+            self.txt_export_runner(loop_start, loop_end)
 
         if self.split_audio:
-            self.split_audio_runner(loop_start, loop_end, music_looper)
+            self.split_audio_runner(loop_start, loop_end)
 
-    def split_audio_runner(self, loop_start, loop_end, music_looper):
+    def split_audio_runner(self, loop_start, loop_end):
         try:
-            music_looper.export(
+            self.musiclooper.export(
                 loop_start,
                 loop_end,
                 format=self.format,
                 output_dir=self.output_directory
             )
-            message = f"Successfully exported \"{music_looper.filename}\" intro/loop/outro sections to \"{self.output_directory}\""
+            message = f"Successfully exported \"{self.musiclooper.filename}\" intro/loop/outro sections to \"{self.output_directory}\""
             if self.batch_mode:
                 logging.info(message)
             else:
@@ -244,7 +243,7 @@ class LoopExportHandler(LoopHandler):
         except ValueError as e:
             logging.error(e)
 
-    def txt_export_runner(self, loop_start, loop_end, music_looper):
+    def txt_export_runner(self, loop_start, loop_end):
         if self.alt_export_top != 0:
             out_path = os.path.join(self.output_directory, f"{self.musiclooper.filename}.alt_export.txt")
             pair_list_slice = (
@@ -256,15 +255,15 @@ class LoopExportHandler(LoopHandler):
                 for pair in pair_list_slice:
                     f.write(f"{pair.loop_start} {pair.loop_end} {pair.note_distance} {pair.loudness_difference} {pair.score}\n")
         else:
-            music_looper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
+            self.musiclooper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
             out_path = os.path.join(self.output_directory, "loop.txt")
-            message = f"Successfully added \"{music_looper.filename}\" loop points to \"{out_path}\""
+            message = f"Successfully added \"{self.musiclooper.filename}\" loop points to \"{out_path}\""
             if self.batch_mode:
                 logging.info(message)
             else:
                 rich_console.print(message)
 
-    def stdout_export_runner(self, loop_start, loop_end, music_looper):
+    def stdout_export_runner(self, loop_start, loop_end):
         if self.alt_export_top != 0:
             pair_list_slice = (
                     self.loop_pair_list
@@ -274,18 +273,18 @@ class LoopExportHandler(LoopHandler):
             for pair in pair_list_slice:
                 rich_console.print(f"{pair.loop_start} {pair.loop_end} {pair.note_distance} {pair.loudness_difference} {pair.score}")
         else:
-            rich_console.print(f"\nLoop points for \"{music_looper.filename}\":\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
+            rich_console.print(f"\nLoop points for \"{self.musiclooper.filename}\":\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
 
-    def tag_runner(self, loop_start, loop_end, music_looper):        
+    def tag_runner(self, loop_start, loop_end):        
         loop_start_tag, loop_end_tag = self.tag_names
-        music_looper.export_tags(
+        self.musiclooper.export_tags(
             loop_start,
             loop_end,
             loop_start_tag,
             loop_end_tag,
             output_dir=self.output_directory,
         )
-        message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of \"{music_looper.filename}\" to a copy in \"{self.output_directory}\""
+        message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of \"{self.musiclooper.filename}\" to a copy in \"{self.output_directory}\""
         if self.batch_mode:
             logging.info(message)
         else:
