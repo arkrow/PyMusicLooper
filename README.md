@@ -21,7 +21,7 @@ Features:
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
+- [Python (64-bit)](https://www.python.org/downloads/) >= 3.8
 - [ffmpeg](https://ffmpeg.org/download.html): required for loading audio from youtube (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and adds support for loading additional audio formats and codecs such as M4A/AAC, Apple Lossless (ALAC), WMA, ATRAC (.at9), etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If the aforementioned features are not required, can be skipped.
 
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
@@ -115,16 +115,20 @@ pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600
 # Extend a track to an hour long, with its outro and in OGG format
 pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600 --disable-fade-out --format "OGG"
 
-# Export the discovered loop points directly to the terminal as sample points
+# Export the best/chosen loop points directly to the terminal as sample points
 pymusiclooper -i export-points --path "/path/to/track.wav"
 
+# Export all the discovered loop points directly to the terminal as sample points
+# Same output as interactive mode with loop values in samples, but without the formatting and pagination
+# Format: loop_start loop_end note_difference loudness_difference score
+pymusiclooper export-points --path "/path/to/track.wav" --alt-export-top -1
 
 # Add metadata tags of the best discovered loop points to a copy of the input audio file
 # (or all audio files in a directory, if a directory path is used instead)
 pymusiclooper -i tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 
 
-# Export the loop points (in samples) of all tracks in a particular directory to a loop.txt file
+# Export the loop points (in samples) of all tracks in a particular directory to a loops.txt file
 # (compatible with https://github.com/libertyernie/LoopingAudioConverter/)
 # Note: each line in loop.txt follows the following format: {loop-start} {loop-end} {filename}
 pymusiclooper -i export-points --path "/path/to/dir/" --export-to txt
