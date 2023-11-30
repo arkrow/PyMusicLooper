@@ -15,6 +15,7 @@ Features:
 - Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
 - Export loop points in samples directly to the terminal or to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
 - Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
+- Export a longer, extended version of an audio track by looping it seamlessly to the desired length
 
 ## Pre-requisites
 
@@ -74,39 +75,10 @@ A virtual environment can be setup through poetry by invoking the `poetry shell`
 
 ## Available Commands
 
-```raw
- Usage: pymusiclooper [OPTIONS] COMMAND [ARGS]...
+![pymusiclooper --help](https://github.com/arkrow/PyMusicLooper/raw/master/img/pymusiclooper.svg)
 
- A program for repeating music seamlessly and endlessly, by automatically
- finding the best loop points.
-
-Options
- --debug        -d    Enables debugging mode.
- --verbose      -v    Enables verbose logging output.
- --interactive  -i    Enables interactive mode to manually
-                      preview/choose the desired loop point.
- --samples      -s    Display all the loop points shown in interactive
-                      mode in sample points instead of the default
-                      mm:ss.sss format.
- --version            Show the version and exit.
- --help               Show this message and exit.
-
-Play Commands
- play             Play an audio file on repeat from the terminal
-                  with the best discovered loop points.
- play-tagged      Skips loop analysis and reads the loop points
-                  directly from the tags present in the file.
-
-Export Commands
- export-points    Export the best discovered or chosen loop points
-                  to a text file or to the terminal.
- split-audio      Split the input audio into intro, loop and outro
-                  sections.
- tag              Adds metadata tags of loop points to a copy of the
-                  input audio file(s).
-```
-
-Note: further help and options can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`)
+Note: further help and options can be found in each subcommand's help message (e.g. `pymusiclooper export-points --help`);
+all commands and their `--help` message can be seen in [CLI_README.md](https://github.com/arkrow/PyMusicLooper/blob/master/CLI_README.md)
 
 **Note**: using the interactive `-i` option is highly recommended, since the automatically chosen "best" loop point may not necessarily be the best one perceptually. As such, it is shown in all the examples. Can be disabled if the `-i` flag is omitted. Interactive mode is also available when batch processing.
 
@@ -137,6 +109,11 @@ pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_EN
 # Split the audio track into intro, loop and outro files.
 pymusiclooper -i split-audio --path "TRACK_NAME.ogg"
 
+# Extend a track to an hour long (--extended-length accepts a number in seconds)
+pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600
+
+# Extend a track to an hour long, with its outro and in OGG format
+pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600 --disable-fade-out --format "OGG"
 
 # Export the discovered loop points directly to the terminal as sample points
 pymusiclooper -i export-points --path "/path/to/track.wav"
