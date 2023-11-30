@@ -48,6 +48,7 @@ _OPTION_GROUPS = {
     "pymusiclooper split-audio": _common_option_groups,
     "pymusiclooper tag": _option_groups(["--tag-names"]),
     "pymusiclooper export-points": _option_groups(["--export-to", "--alt-export-top"]),
+    "pymusiclooper extend": _option_groups(["--extended-length", "--fade-length", "--disable-fade-out"]),
 }
 _COMMAND_GROUPS = {
     "pymusiclooper": [
