@@ -6,6 +6,7 @@ import shutil
 from typing import Tuple, List, Optional
 
 import lazy_loader as lazy
+import numpy as np
 
 from .analysis import find_best_loop_points, LoopPair
 from .audio import MLAudio
@@ -148,6 +149,98 @@ class MusicLooper:
             self.mlaudio.rate,
             format=format,
         )
+
+    def extend(
+        self,
+        loop_start: int,
+        loop_end: int,
+        extended_length: float,
+        fade_length: float = 5,
+        disable_fade_out: bool = False,
+        format: str = "WAV",
+        output_dir: Optional[str] = None,
+    ):
+        """Extends the audio by looping to at least the specified length.
+
+        Args:
+            loop_start (int): Loop start in samples.
+            loop_end (int): Loop end in samples.
+            extended_length (float): Desired length of the extended audio in seconds.
+            fade_length (float, optional): Desired length of the extended audio's fade out in seconds.
+            disable_fade_out (bool, optional): Disable fading out from the loop section, and instead, includes the audio outro section . If `True`, `extended_length` will be treated as an 'at least' constraint.
+            format (str, optional): Audio format of the exported files (formats available depend on the `soundfile` library). Defaults to "WAV".
+            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
+        """
+        if output_dir is not None:
+            out_path = os.path.join(output_dir, self.mlaudio.filename)
+        else:
+            out_path = os.path.abspath(self.mlaudio.filepath)
+        orig_len = self.mlaudio.total_duration
+
+        if extended_length < orig_len:
+            raise ValueError(
+                "Extended length must be greater than the audio's original length."
+            )
+
+        intro = self.mlaudio.playback_audio[:loop_start]
+        loop = self.mlaudio.playback_audio[loop_start:loop_end]
+        outro = self.mlaudio.playback_audio[loop_end:]
+
+        loop_extended_length = self.mlaudio.seconds_to_samples(extended_length) - intro.shape[0]
+
+        # If the outro will be included, account for its length when calculating the new loop duration
+        if disable_fade_out:
+            loop_extended_length -= outro.shape[0]
+
+        loop_factor = loop_extended_length / loop.shape[0]
+        left_over_multiplier = loop_factor - int(loop_factor)
+        extend_end_idx = loop_start + int(
+            (loop_end - loop_start) * left_over_multiplier
+        )
+
+        final_loop = self.mlaudio.playback_audio[loop_start:extend_end_idx]
+
+        if disable_fade_out:
+            final_loop = loop
+        else:
+            samples_to_fade = min(
+                self.mlaudio.seconds_to_samples(fade_length), final_loop.shape[0]
+            )
+            final_loop[-samples_to_fade:] = (
+                final_loop[-samples_to_fade:]
+                * np.linspace(1, 0, samples_to_fade)[:, np.newaxis]
+            )
+
+        extended_loop_len = final_loop.shape[0] + (
+            loop.shape[0] * (int(loop_factor))
+        )
+        extended_audio_length = (
+            intro.shape[0]
+            + extended_loop_len
+            + (outro.shape[0] if disable_fade_out else 0)
+        )
+        extended_audio_length_s = self.mlaudio.samples_to_seconds(extended_audio_length)
+        extended_audio_length_fmt = (
+            f"{extended_audio_length_s//60:.0f}m{extended_audio_length_s%60:.0f}s"
+        )
+        output_file_path = (
+            f"{out_path}-extended-{extended_audio_length_fmt}.{format.lower()}"
+        )
+
+        with soundfile.SoundFile(
+            output_file_path,
+            mode="w",
+            samplerate=self.mlaudio.rate,
+            channels=self.mlaudio.n_channels,
+            format=format,
+        ) as sf:
+            dtype = str(self.mlaudio.playback_audio.dtype)
+            sf.buffer_write(intro.tobytes(order="C"), dtype)
+            for _ in range(int(loop_factor)):
+                sf.buffer_write(loop.tobytes(order="C"), dtype)
+            sf.buffer_write(final_loop.tobytes(order="C"), dtype)
+            if disable_fade_out:
+                sf.buffer_write(outro.tobytes(order="C"), dtype)
 
     def export_txt(
         self,

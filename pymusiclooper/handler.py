@@ -3,7 +3,7 @@ import os
 import sys
 from typing import List, Optional, Tuple
 
-from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
+from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 from rich.table import Table
 
 from .analysis import LoopPair
@@ -188,6 +188,9 @@ class LoopExportHandler(LoopHandler):
         alt_export_top: int = 0,
         tag_names: Tuple[str, str] = None,
         batch_mode: bool = False,
+        extended_length: float = 0,
+        fade_length: float = 0,
+        disable_fade_out: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -207,6 +210,9 @@ class LoopExportHandler(LoopHandler):
         self.alt_export_top = alt_export_top
         self.tag_names = tag_names
         self.batch_mode = batch_mode
+        self.extended_length = extended_length
+        self.disable_fade_out = disable_fade_out
+        self.fade_length = fade_length
 
     def run(self):
         self.loop_pair_list = self.get_all_loop_pairs()
@@ -226,6 +232,9 @@ class LoopExportHandler(LoopHandler):
         if self.split_audio:
             self.split_audio_runner(loop_start, loop_end)
 
+        if self.extended_length:
+            self.extend_track_runner(loop_start, loop_end)
+
     def split_audio_runner(self, loop_start, loop_end):
         try:
             self.musiclooper.export(
@@ -242,6 +251,34 @@ class LoopExportHandler(LoopHandler):
         # Usually: unknown file format specified; raised by soundfile
         except ValueError as e:
             logging.error(e)
+
+    def extend_track_runner(self, loop_start, loop_end):
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            TimeElapsedColumn(),
+            console=rich_console,
+            transient=True,
+        ) as progress:
+            progress.add_task(f"Extending {self.musiclooper.filename}...", total=None)
+            try:
+                self.musiclooper.extend(
+                    loop_start,
+                    loop_end,
+                    format=self.format,
+                    output_dir=self.output_directory,
+                    extended_length=self.extended_length,
+                    disable_fade_out=self.disable_fade_out,
+                    fade_length=self.fade_length,
+                )
+                message = f'Successfully exported an extended version of "{self.musiclooper.filename}" to "{self.output_directory}"'
+                if self.batch_mode:
+                    logging.info(message)
+                else:
+                    rich_console.print(message)
+            # Usually: unknown file format specified; raised by soundfile
+            except ValueError as e:
+                rich_console.print_exception()
 
     def txt_export_runner(self, loop_start, loop_end):
         if self.alt_export_top != 0:
@@ -310,6 +347,9 @@ class BatchHandler:
         tag_names: Tuple[str, str] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        extended_length: float = 0,
+        fade_length: float = 0,
+        disable_fade_out: bool = False,
         **kwargs,
     ):
         self.directory_path = os.path.abspath(path)
@@ -327,6 +367,9 @@ class BatchHandler:
         self.tag_names = tag_names
         self.brute_force = brute_force
         self.disable_pruning = disable_pruning
+        self.extended_length = extended_length
+        self.disable_fade_out = disable_fade_out
+        self.fade_length = fade_length
 
     def run(self):
         files = self.get_files_in_directory(
@@ -373,6 +416,9 @@ class BatchHandler:
                     to_stdout=self.to_stdout,
                     alt_export_top=self.alt_export_top,
                     tag_names=self.tag_names,
+                    extended_length=self.extended_length,
+                    fade_length=self.fade_length,
+                    disable_fade_out=self.disable_fade_out,
                 )
 
     @staticmethod

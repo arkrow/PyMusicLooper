@@ -182,6 +182,18 @@ def split_audio(**kwargs):
     kwargs["split_audio"] = True
     run_handler(**kwargs)
 
+@cli_main.command()
+@common_path_options
+@common_loop_options
+@common_export_options
+@click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="MP3", show_default=True, help="Audio format to use for the output audio file.")
+@click.option('--extended-length', type=float, required=True, help="Desired length of the extended looped track in seconds. [Must be longer than the audio's original length.]")
+@click.option('--fade-length', type=float, default=5, show_default=True, help="Desired length of the loop fade out in seconds.")
+@click.option('--disable-fade-out', is_flag=True, default=False, help="Extend the track with all its sections (intro/loop/outro) without fading out. --extended-length will be treated as an 'at least' constraint.")
+def extend(**kwargs):
+    """Create an extended version of the input audio by looping it to a specific length."""
+    run_handler(**kwargs)
+
 
 @cli_main.command()
 @common_path_options

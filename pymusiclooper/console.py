@@ -63,7 +63,8 @@ _COMMAND_GROUPS = {
             "commands": [
                 "export-points",
                 "split-audio",
-                "tag"
+                "tag",
+                "extend",
             ],
         }
     ]
