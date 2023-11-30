@@ -32,19 +32,19 @@
         font-family: arial;
     }
 
-    .terminal-592412305-r1 { fill: #c5c8c6 }
-.terminal-592412305-r2 { fill: #d0b344 }
-.terminal-592412305-r3 { fill: #c5c8c6;font-weight: bold }
-.terminal-592412305-r4 { fill: #68a0b3;font-weight: bold }
-.terminal-592412305-r5 { fill: #868887 }
-.terminal-592412305-r6 { fill: #d0b344;font-weight: bold }
-.terminal-592412305-r7 { fill: #4e707b }
-.terminal-592412305-r8 { fill: #4e707b;font-weight: bold }
-.terminal-592412305-r9 { fill: #8a4346 }
-.terminal-592412305-r10 { fill: #8d7b39;font-weight: bold }
-.terminal-592412305-r11 { fill: #6b753d;font-weight: bold }
-.terminal-592412305-r12 { fill: #8d7b39 }
-.terminal-592412305-r13 { fill: #98a84b;font-weight: bold }
+    .terminal-592412305-r1 { fill: #d9d9d9 }
+.terminal-592412305-r2 { fill: #fd971f }
+.terminal-592412305-r3 { fill: #d9d9d9;font-weight: bold }
+.terminal-592412305-r4 { fill: #58d1eb;font-weight: bold }
+.terminal-592412305-r5 { fill: #878787 }
+.terminal-592412305-r6 { fill: #fd971f;font-weight: bold }
+.terminal-592412305-r7 { fill: #398291 }
+.terminal-592412305-r8 { fill: #398291;font-weight: bold }
+.terminal-592412305-r9 { fill: #97043d }
+.terminal-592412305-r10 { fill: #9c5f17;font-weight: bold }
+.terminal-592412305-r11 { fill: #608b1a;font-weight: bold }
+.terminal-592412305-r12 { fill: #9c5f17 }
+.terminal-592412305-r13 { fill: #98e024;font-weight: bold }
     </style>
 
     <defs>
@@ -182,7 +182,7 @@
             </clipPath>
     </defs>
 
-    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="1121.6" rx="8"/>
+    <rect fill="#0c0c0c" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="1121.6" rx="8"/>
             <g transform="translate(26,22)">
             <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
             <circle cx="22" cy="0" r="7" fill="#febc2e"/>

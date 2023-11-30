@@ -32,14 +32,14 @@
         font-family: arial;
     }
 
-    .terminal-2264592387-r1 { fill: #c5c8c6 }
-.terminal-2264592387-r2 { fill: #d0b344 }
-.terminal-2264592387-r3 { fill: #c5c8c6;font-weight: bold }
-.terminal-2264592387-r4 { fill: #68a0b3;font-weight: bold }
-.terminal-2264592387-r5 { fill: #868887 }
-.terminal-2264592387-r6 { fill: #cc555a }
-.terminal-2264592387-r7 { fill: #d0b344;font-weight: bold }
-.terminal-2264592387-r8 { fill: #8a4346 }
+    .terminal-2264592387-r1 { fill: #d9d9d9 }
+.terminal-2264592387-r2 { fill: #fd971f }
+.terminal-2264592387-r3 { fill: #d9d9d9;font-weight: bold }
+.terminal-2264592387-r4 { fill: #58d1eb;font-weight: bold }
+.terminal-2264592387-r5 { fill: #878787 }
+.terminal-2264592387-r6 { fill: #f4005f }
+.terminal-2264592387-r7 { fill: #fd971f;font-weight: bold }
+.terminal-2264592387-r8 { fill: #97043d }
     </style>
 
     <defs>
@@ -90,7 +90,7 @@
             </clipPath>
     </defs>
 
-    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="414" rx="8"/>
+    <rect fill="#0c0c0c" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="414" rx="8"/>
             <g transform="translate(26,22)">
             <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
             <circle cx="22" cy="0" r="7" fill="#febc2e"/>
