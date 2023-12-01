@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.2.0] - 2023-12-01
+
+### Added
+
+- New command: `extend`. Export a longer, extended version of an audio track by looping it seamlessly to the desired length.
+- Additional option in `export-points`: `--alt-export-top N`. Can be used to return the N top loop points; provides the same output as in interactive mode but without the table formatting. `--alt-export-top -1` to export all.
+- Added CLI_README.md for a basic CLI overview/reference
+
+### Changed
+
+- Playback progress bar now updates faster for smoother transitions
+- Skip beat analysis if `--brute-force` is enabled, for slightly faster runtime
+- Simplified many internal interfaces and added type hints and documentation to most core functions
+- Lazy load yt_dlp and sounddevice so that they are only imported when needed
+- Updated many core dependencies, including yt-dlp to their latest version
+- Improve `--debug` option with better exception debug output
+- Lowered the minimum supported Python version to 3.8, since it is already compatible
+- Enabled initial Python 3.12 support
+
+### Fixed
+
+- Fixed zero crossing algorithm offset potentially being out-of-bounds in very rare cases
+
 ## [3.1.0] - 2023-07-09
 
 ### Added
