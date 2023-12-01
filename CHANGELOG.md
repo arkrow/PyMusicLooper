@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.1] - 2023-12-02
+
+### Changed
+
+- When successful, the `extend` command now displays the file path of the extended audio file to the user instead of the output directory
+
+### Fixed
+
+- Fixed initial loops' output from the `extend` command being affected by the fade out parameter
+- Fixed minutes/seconds rounding issues with the `extend` command file naming scheme
+
 ## [3.2.0] - 2023-12-01
 
 ### Added
