@@ -3,12 +3,13 @@ used for programmatic access to the CLI's main features."""
 
 import os
 import shutil
-from typing import Tuple, List, Optional
+from math import ceil
+from typing import List, Optional, Tuple
 
 import lazy_loader as lazy
 import numpy as np
 
-from .analysis import find_best_loop_points, LoopPair
+from .analysis import LoopPair, find_best_loop_points
 from .audio import MLAudio
 from .playback import PlaybackHandler
 
@@ -175,9 +176,8 @@ class MusicLooper:
             out_path = os.path.join(output_dir, self.mlaudio.filename)
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
-        orig_len = self.mlaudio.total_duration
 
-        if extended_length < orig_len:
+        if extended_length < self.mlaudio.total_duration:
             raise ValueError(
                 "Extended length must be greater than the audio's original length."
             )
@@ -198,8 +198,8 @@ class MusicLooper:
             (loop_end - loop_start) * left_over_multiplier
         )
 
-        final_loop = self.mlaudio.playback_audio[loop_start:extend_end_idx]
-
+        # Modify the extended track's final loop section based on the fade out parameter
+        final_loop = self.mlaudio.playback_audio[loop_start:extend_end_idx].copy()
         if disable_fade_out:
             final_loop = loop
         else:
@@ -211,22 +211,29 @@ class MusicLooper:
                 * np.linspace(1, 0, samples_to_fade)[:, np.newaxis]
             )
 
-        extended_loop_len = final_loop.shape[0] + (
+        # Format extended file name with its duration suffixed
+        extended_loop_length = final_loop.shape[0] + (
             loop.shape[0] * (int(loop_factor))
         )
         extended_audio_length = (
             intro.shape[0]
-            + extended_loop_len
+            + extended_loop_length
             + (outro.shape[0] if disable_fade_out else 0)
         )
-        extended_audio_length_s = self.mlaudio.samples_to_seconds(extended_audio_length)
+        total_length_seconds = self.mlaudio.samples_to_seconds(extended_audio_length)
+        duration_sec = ceil(total_length_seconds%60)
+        duration_mins = int(total_length_seconds//60)
+        if duration_sec == 60:
+            duration_sec = 0
+            duration_mins += 1
         extended_audio_length_fmt = (
-            f"{extended_audio_length_s//60:.0f}m{extended_audio_length_s%60:.0f}s"
+            f"{duration_mins:d}m{duration_sec:02d}s"
         )
         output_file_path = (
             f"{out_path}-extended-{extended_audio_length_fmt}.{format.lower()}"
         )
 
+        # Export with buffered write logic to avoid storing the entire extended audio in-memory
         with soundfile.SoundFile(
             output_file_path,
             mode="w",
