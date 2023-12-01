@@ -266,7 +266,7 @@ class LoopExportHandler(LoopHandler):
             progress.add_task(f"Exporting an extended version of {self.musiclooper.filename}...", total=None)
             progress.start()
         try:
-            self.musiclooper.extend(
+            output_path = self.musiclooper.extend(
                 loop_start,
                 loop_end,
                 format=self.format,
@@ -275,7 +275,7 @@ class LoopExportHandler(LoopHandler):
                 disable_fade_out=self.disable_fade_out,
                 fade_length=self.fade_length,
             )
-            message = f'Successfully exported an extended version of "{self.musiclooper.filename}" to "{self.output_directory}"'
+            message = f'Successfully exported an extended version of "{self.musiclooper.filename}" to "{output_path}"'
             if self.batch_mode:
                 logging.info(message)
             else:

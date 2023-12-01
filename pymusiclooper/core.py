@@ -160,8 +160,9 @@ class MusicLooper:
         disable_fade_out: bool = False,
         format: str = "WAV",
         output_dir: Optional[str] = None,
-    ):
+    ) -> str:
         """Extends the audio by looping to at least the specified length.
+        Returns the path to the extended audio file. 
 
         Args:
             loop_start (int): Loop start in samples.
@@ -248,6 +249,7 @@ class MusicLooper:
             sf.buffer_write(final_loop.tobytes(order="C"), dtype)
             if disable_fade_out:
                 sf.buffer_write(outro.tobytes(order="C"), dtype)
+        return output_file_path
 
     def export_txt(
         self,
