@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.2] - 2023-12-03
+
+### Fixed
+
+- Fixed `pymusiclooper --version` reporting v3.1.0 instead of the actual package version; affects versions 3.2.0 and 3.2.1
+
 ## [3.2.1] - 2023-12-02
 
 ### Changed
