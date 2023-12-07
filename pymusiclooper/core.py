@@ -262,10 +262,10 @@ class MusicLooper:
         `{loop_start} {loop_end} {filename}`
 
         Args:
-            loop_start (int): _description_
-            loop_end (int): _description_
+            loop_start (int): Loop start in samples.
+            loop_end (int): Loop end in samples.
             txt_name (str, optional): Filename of the text file to export to. Defaults to "loops".
-            output_dir (str, optional): _description_. Defaults to None.
+            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
         """
         if output_dir is not None:
             out_path = os.path.join(output_dir, f"{txt_name}.txt")
