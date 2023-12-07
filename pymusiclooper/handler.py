@@ -18,9 +18,9 @@ class LoopHandler:
         *,
         path: str,
         min_duration_multiplier: float,
-        min_loop_duration: float,
-        max_loop_duration: float,
-        approx_loop_position: tuple = None,
+        min_loop_duration: Optional[float] = None,
+        max_loop_duration: Optional[float] = None,
+        approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
         **kwargs,
@@ -62,7 +62,7 @@ class LoopHandler:
     def format_time(self, samples: int, in_samples: bool = False):
         return samples if in_samples else self.musiclooper.samples_to_ftime(samples)
 
-    def play_looping(self, loop_start, loop_end):
+    def play_looping(self, loop_start: int, loop_end: int):
         self.musiclooper.play_looping(loop_start, loop_end)
 
     def choose_loop_pair(self, interactive_mode=False):
@@ -175,9 +175,9 @@ class LoopExportHandler(LoopHandler):
         *,
         path: str,
         min_duration_multiplier: float,
-        min_loop_duration: float,
-        max_loop_duration: float,
         output_dir: str,
+        min_loop_duration: Optional[float] = None,
+        max_loop_duration: Optional[float] = None,
         approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
@@ -186,7 +186,7 @@ class LoopExportHandler(LoopHandler):
         to_txt: bool = False,
         to_stdout: bool = False,
         alt_export_top: int = 0,
-        tag_names: Tuple[str, str] = None,
+        tag_names: Optional[Tuple[str, str]] = None,
         batch_mode: bool = False,
         extended_length: float = 0,
         fade_length: float = 0,
@@ -235,7 +235,7 @@ class LoopExportHandler(LoopHandler):
         if self.extended_length:
             self.extend_track_runner(loop_start, loop_end)
 
-    def split_audio_runner(self, loop_start, loop_end):
+    def split_audio_runner(self, loop_start: int, loop_end: int):
         try:
             self.musiclooper.export(
                 loop_start,
@@ -252,7 +252,7 @@ class LoopExportHandler(LoopHandler):
         except ValueError as e:
             logging.error(e)
 
-    def extend_track_runner(self, loop_start, loop_end):
+    def extend_track_runner(self, loop_start: int, loop_end: int):
         # Add a progress bar since it could take some time to export
         # Do not enable if batch mode is active, since it already has a progress bar
         if not self.batch_mode:
@@ -285,7 +285,7 @@ class LoopExportHandler(LoopHandler):
         except ValueError as e:
             logging.error(e)
 
-    def txt_export_runner(self, loop_start, loop_end):
+    def txt_export_runner(self, loop_start: int, loop_end: int):
         if self.alt_export_top != 0:
             out_path = os.path.join(self.output_directory, f"{self.musiclooper.filename}.alt_export.txt")
             pair_list_slice = (
@@ -305,7 +305,7 @@ class LoopExportHandler(LoopHandler):
             else:
                 rich_console.print(message)
 
-    def stdout_export_runner(self, loop_start, loop_end):
+    def stdout_export_runner(self, loop_start: int, loop_end: int):
         if self.alt_export_top != 0:
             pair_list_slice = (
                     self.loop_pair_list
@@ -317,7 +317,7 @@ class LoopExportHandler(LoopHandler):
         else:
             rich_console.print(f"\nLoop points for \"{self.musiclooper.filename}\":\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
 
-    def tag_runner(self, loop_start, loop_end):        
+    def tag_runner(self, loop_start: int, loop_end: int):        
         loop_start_tag, loop_end_tag = self.tag_names
         self.musiclooper.export_tags(
             loop_start,
@@ -337,11 +337,11 @@ class BatchHandler:
     def __init__(
         self,
         *,
-        path,
-        min_duration_multiplier,
-        min_loop_duration,
-        max_loop_duration,
-        output_dir,
+        path: str,
+        min_duration_multiplier: float,
+        output_dir: str,
+        min_loop_duration: Optional[float] = None,
+        max_loop_duration: Optional[float] = None,
         split_audio: bool = False ,
         format="WAV",
         to_txt: bool = False,
@@ -349,7 +349,7 @@ class BatchHandler:
         alt_export_top: int = 0,
         recursive: bool = False,
         flatten: bool = False,
-        tag_names: Tuple[str, str] = None,
+        tag_names: Optional[Tuple[str, str]] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
         extended_length: float = 0,
@@ -427,7 +427,7 @@ class BatchHandler:
                 )
 
     @staticmethod
-    def clone_file_tree_structure(in_files, output_directory):
+    def clone_file_tree_structure(in_files: List[str], output_directory: str) -> List[str]:
         common_path = os.path.commonpath(in_files)
         output_dirs = [
             os.path.join(
@@ -442,7 +442,7 @@ class BatchHandler:
         return output_dirs
 
     @staticmethod
-    def get_files_in_directory(dir_path, recursive=False):
+    def get_files_in_directory(dir_path: str, recursive: bool = False) -> List[str]:
         return (
             [
                 os.path.join(directory, filename)

@@ -29,13 +29,13 @@ class MusicLooper:
 
     def find_loop_pairs(
         self,
-        min_duration_multiplier=0.35,
-        min_loop_duration=None,
-        max_loop_duration=None,
-        approx_loop_start=None,
-        approx_loop_end=None,
-        brute_force=False,
-        disable_pruning=False,
+        min_duration_multiplier: float = 0.35,
+        min_loop_duration: Optional[float] = None,
+        max_loop_duration: Optional[float] = None,
+        approx_loop_start: Optional[float] = None,
+        approx_loop_end: Optional[float] = None,
+        brute_force: bool = False,
+        disable_pruning: bool = False,
     ) -> List[LoopPair]:
         """Finds the best loop points for the track, according to the parameters specified.
 
@@ -66,35 +66,35 @@ class MusicLooper:
         )
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return self.mlaudio.filename
 
     @property
-    def filepath(self):
+    def filepath(self) -> str:
         return self.mlaudio.filepath
 
-    def samples_to_frames(self, samples):
+    def samples_to_frames(self, samples: int) -> int:
         return self.mlaudio.samples_to_frames(samples)
     
-    def samples_to_seconds(self, samples):
+    def samples_to_seconds(self, samples: int) -> float:
         return self.mlaudio.samples_to_seconds(samples)
 
-    def frames_to_samples(self, frame):
+    def frames_to_samples(self, frame: int) -> int:
         return self.mlaudio.frames_to_samples(frame)
 
-    def seconds_to_frames(self, seconds):
+    def seconds_to_frames(self, seconds: float) -> int:
         return self.mlaudio.seconds_to_frames(seconds)
 
-    def seconds_to_samples(self, seconds):
+    def seconds_to_samples(self, seconds: float) -> int:
         return self.mlaudio.seconds_to_samples(seconds)
 
-    def frames_to_ftime(self, frame):
+    def frames_to_ftime(self, frame: int) -> str:
         return self.mlaudio.frames_to_ftime(frame)
     
-    def samples_to_ftime(self, samples):
+    def samples_to_ftime(self, samples: int) -> str:
         return self.mlaudio.samples_to_ftime(samples)
 
-    def play_looping(self, loop_start: int, loop_end: int, start_from=0):
+    def play_looping(self, loop_start: int, loop_end: int, start_from: int = 0):
         """Plays an audio file with a loop active at the points specified
 
         Args:
