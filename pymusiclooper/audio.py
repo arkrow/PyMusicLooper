@@ -3,7 +3,7 @@ import os
 import librosa
 import numpy as np
 
-from .exceptions import AudioLoadError
+from pymusiclooper.exceptions import AudioLoadError
 
 
 class MLAudio:

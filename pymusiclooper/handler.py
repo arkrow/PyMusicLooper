@@ -6,10 +6,10 @@ from typing import List, Optional, Tuple
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 from rich.table import Table
 
-from .analysis import LoopPair
-from .console import rich_console
-from .core import MusicLooper
-from .exceptions import AudioLoadError, LoopNotFoundError
+from pymusiclooper.analysis import LoopPair
+from pymusiclooper.console import rich_console
+from pymusiclooper.core import MusicLooper
+from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
 
 
 class LoopHandler:

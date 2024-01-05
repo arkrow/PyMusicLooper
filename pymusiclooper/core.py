@@ -9,9 +9,9 @@ from typing import List, Optional, Tuple
 import lazy_loader as lazy
 import numpy as np
 
-from .analysis import LoopPair, find_best_loop_points
-from .audio import MLAudio
-from .playback import PlaybackHandler
+from pymusiclooper.analysis import LoopPair, find_best_loop_points
+from pymusiclooper.audio import MLAudio
+from pymusiclooper.playback import PlaybackHandler
 
 # Lazy-load external libraries when they're needed
 soundfile = lazy.load("soundfile")

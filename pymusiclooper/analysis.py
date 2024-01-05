@@ -7,8 +7,8 @@ import librosa
 import numpy as np
 from numba import njit
 
-from .audio import MLAudio
-from .exceptions import LoopNotFoundError
+from pymusiclooper.audio import MLAudio
+from pymusiclooper.exceptions import LoopNotFoundError
 
 
 @dataclass

@@ -7,7 +7,7 @@ import numpy as np
 import lazy_loader as lazy
 from rich.progress import BarColumn, Progress, TextColumn
 
-from .console import rich_console
+from pymusiclooper.console import rich_console
 
 # Lazy-load sounddevice
 sd = lazy.load("sounddevice")

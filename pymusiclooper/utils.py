@@ -2,7 +2,7 @@
 import os
 from typing import Optional
 
-from .youtube import YoutubeDownloader
+from pymusiclooper.youtube import YoutubeDownloader
 
 
 def mk_outputdir(path: str, output_dir: Optional[str] = None) -> str:

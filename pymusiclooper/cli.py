@@ -15,12 +15,12 @@ rich_click_patch()
 from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
 from click_params import PUBLIC_URL as UrlParamType
 
-from . import __version__
-from .console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
-from .core import MusicLooper
-from .exceptions import AudioLoadError, LoopNotFoundError
-from .handler import BatchHandler, LoopExportHandler, LoopHandler
-from .utils import download_audio, mk_outputdir
+from pymusiclooper import __version__
+from pymusiclooper.console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
+from pymusiclooper.core import MusicLooper
+from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
+from pymusiclooper.handler import BatchHandler, LoopExportHandler, LoopHandler
+from pymusiclooper.utils import download_audio, mk_outputdir
 
 # CLI --help styling
 click.rich_click.OPTION_GROUPS = _OPTION_GROUPS

@@ -1,6 +1,6 @@
 import logging
 
-from .cli import cli_main
+from pymusiclooper.cli import cli_main
 
 
 def cli():
