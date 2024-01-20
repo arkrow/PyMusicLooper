@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.3] - 2024-01-20
+
+### Changed
+
+- Import `taglib` only when required, isolating `taglib` ImportErrors to the affected functions only, instead of blocking the use of the entire library.
+
 ## [3.2.2] - 2023-12-03
 
 ### Fixed
