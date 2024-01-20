@@ -219,12 +219,17 @@ class LoopExportHandler(LoopHandler):
         chosen_loop_pair = self.choose_loop_pair(self.interactive_mode)
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
+        
+        # Runners that do not need an output directory
+        if self.to_stdout:
+            self.stdout_export_runner(loop_start, loop_end)
+
+        # Runners that need an output directory
+        if not os.path.exists(self.output_directory):
+            os.mkdir(self.output_directory)
 
         if self.tag_names is not None:
             self.tag_runner(loop_start, loop_end)
-
-        if self.to_stdout:
-            self.stdout_export_runner(loop_start, loop_end)
         
         if self.to_txt:
             self.txt_export_runner(loop_start, loop_end)

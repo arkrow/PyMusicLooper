@@ -20,7 +20,7 @@ from pymusiclooper.console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
 from pymusiclooper.core import MusicLooper
 from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
 from pymusiclooper.handler import BatchHandler, LoopExportHandler, LoopHandler
-from pymusiclooper.utils import download_audio, mk_outputdir
+from pymusiclooper.utils import download_audio, get_outputdir, mk_outputdir
 
 # CLI --help styling
 click.rich_click.OPTION_GROUPS = _OPTION_GROUPS
@@ -226,7 +226,7 @@ def run_handler(**kwargs):
             kwargs["output_dir"] = mk_outputdir(os.getcwd(), kwargs["output_dir"])
             kwargs["path"] = download_audio(kwargs["url"], kwargs["output_dir"])
         else:  
-            kwargs["output_dir"] = mk_outputdir(kwargs["path"], kwargs["output_dir"])
+            kwargs["output_dir"] = get_outputdir(kwargs["path"], kwargs["output_dir"])
 
         if os.path.isfile(kwargs["path"]):
             with Progress(
