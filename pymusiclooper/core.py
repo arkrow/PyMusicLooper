@@ -15,7 +15,6 @@ from pymusiclooper.playback import PlaybackHandler
 
 # Lazy-load external libraries when they're needed
 soundfile = lazy.load("soundfile")
-taglib = lazy.load("taglib")
 
 class MusicLooper:
     """High-level API access to PyMusicLooper's main functions."""
@@ -292,6 +291,10 @@ class MusicLooper:
             loop_end_tag (str): Name of the loop_end metadata tag.
             output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
         """
+        # Workaround for taglib import issues on Apple silicon devices
+        # Import taglib only when needed to isolate ImportErrors
+        import taglib
+            
         if output_dir is None:
             output_dir = os.path.abspath(self.mlaudio.filepath)
 
@@ -317,6 +320,10 @@ class MusicLooper:
         Returns:
             Tuple[int, int]: A tuple containing (loop_start, loop_end)
         """
+        # Workaround for taglib import issues on Apple silicon devices
+        # Import taglib only when needed to isolate ImportErrors
+        import taglib
+
         loop_start = None
         loop_end = None
 
