@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymusiclooper"
-version = "3.2.2"
+version = "3.2.3"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 license = "MIT"
 classifiers = [
