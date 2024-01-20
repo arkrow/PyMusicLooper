@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.4] - 2024-01-20
+
+### Fixed
+
+- Output directory is created only when needed for PyMusicLooper exports, instead of pre-emptively.
+- The absolute path of the export file/directory is now always returned, even if the provided output directory is relative, for clarity.
+
 ## [3.2.3] - 2024-01-20
 
 ### Fixed
