@@ -9,6 +9,7 @@ from numba import njit
 
 from pymusiclooper.audio import MLAudio
 from pymusiclooper.exceptions import LoopNotFoundError
+from pymusiclooper.rust_analysis import detect_loop_pairs
 
 
 @dataclass
@@ -266,7 +267,6 @@ def _db_diff(power_db_f1: np.ndarray, power_db_f2: np.ndarray) -> float:
 def _norm(a: np.ndarray) -> float:
     return np.sqrt(np.sum(np.abs(a) ** 2, axis=0))
 
-
 @njit(cache=True)
 def _find_candidate_pairs(
     chroma: np.ndarray,
@@ -288,7 +288,6 @@ def _find_candidate_pairs(
     Returns:
         List[Tuple[int, int, float, float]]: A list of tuples containing each candidate loop pair data in the following format (loop_start, loop_end, note_distance, loudness_difference)
     """
-    candidate_pairs = []
 
     # Magic constants
     ## Mainly found through trial and error,
@@ -301,30 +300,43 @@ def _find_candidate_pairs(
     ACCEPTABLE_LOUDNESS_DIFFERENCE = 0.5
 
     deviation = _norm(chroma[..., beats] * ACCEPTABLE_NOTE_DEVIATION)
+    try:
+        # New function implemented in rust
+        return detect_loop_pairs(
+            chroma.astype(np.float32),
+            power_db.astype(np.float32),
+            beats.astype(np.uint64),
+            deviation.astype(np.float32),
+            min_loop_duration,
+            max_loop_duration,
+            ACCEPTABLE_LOUDNESS_DIFFERENCE,
+        )
+    except Exception:
+        # Python fallback
+        candidate_pairs = []
 
-    for idx, loop_end in enumerate(beats):
-        for loop_start in beats:
-            loop_length = loop_end - loop_start
-            if loop_length < min_loop_duration:
-                break
-            if loop_length > max_loop_duration:
-                continue
-            note_distance = _norm(chroma[..., loop_end] - chroma[..., loop_start])
+        for idx, loop_end in enumerate(beats):
+            for loop_start in beats:
+                loop_length = loop_end - loop_start
+                if loop_length < min_loop_duration:
+                    break
+                if loop_length > max_loop_duration:
+                    continue
+                note_distance = _norm(chroma[..., loop_end] - chroma[..., loop_start])
 
-            if note_distance <= deviation[idx]:
-                loudness_difference = _db_diff(
-                    power_db[..., loop_end], power_db[..., loop_start]
-                )
-                loop_pair = (
-                    int(loop_start),
-                    int(loop_end),
-                    note_distance,
-                    loudness_difference,
-                )
-                if loudness_difference <= ACCEPTABLE_LOUDNESS_DIFFERENCE:
-                    candidate_pairs.append(loop_pair)
-
-    return candidate_pairs
+                if note_distance <= deviation[idx]:
+                    loudness_difference = _db_diff(
+                        power_db[..., loop_end], power_db[..., loop_start]
+                    )
+                    loop_pair = (
+                        int(loop_start),
+                        int(loop_end),
+                        note_distance,
+                        loudness_difference,
+                    )
+                    if loudness_difference <= ACCEPTABLE_LOUDNESS_DIFFERENCE:
+                        candidate_pairs.append(loop_pair)
+        return candidate_pairs
 
 
 def _assess_and_filter_loop_pairs(

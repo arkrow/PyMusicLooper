@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymusiclooper"
-version = "3.4.1"
+version = "3.4.1.dev1"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 license = "MIT"
 classifiers = [
@@ -8,6 +8,7 @@ classifiers = [
   "Environment :: Console",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Programming Language :: Rust",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
@@ -36,6 +37,9 @@ click-params = "^0.5.0"
 click-option-group = "^0.5.6"
 lazy-loader = ">=0.3"
 
+[tool.poetry.dev-dependencies]
+maturin = ">=1.4,<2.0"
+
 [tool.poetry.scripts]
 pymusiclooper = 'pymusiclooper.__main__:cli'
 
@@ -43,8 +47,13 @@ pymusiclooper = 'pymusiclooper.__main__:cli'
 "Changelog" = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "python"
+module-name = "pymusiclooper.rust_analysis"
+features = ["pyo3/extension-module"]
 
 [tool.black]
 target-version = ['py38']
