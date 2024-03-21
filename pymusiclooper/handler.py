@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Literal
 
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 from rich.table import Table
@@ -182,9 +182,10 @@ class LoopExportHandler(LoopHandler):
         brute_force: bool = False,
         disable_pruning: bool = False,
         split_audio: bool = False,
-        format: str = "WAV",
+        format: Literal["WAV", "FLAC", "OGG", "MP3"] = "WAV",
         to_txt: bool = False,
         to_stdout: bool = False,
+        fmt: Literal["SAMPLES", "SECONDS", "TIME"] = "SAMPLES",
         alt_export_top: int = 0,
         tag_names: Optional[Tuple[str, str]] = None,
         batch_mode: bool = False,
@@ -207,6 +208,7 @@ class LoopExportHandler(LoopHandler):
         self.format = format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
+        self.fmt = fmt.lower()
         self.alt_export_top = alt_export_top
         self.tag_names = tag_names
         self.batch_mode = batch_mode
@@ -292,19 +294,15 @@ class LoopExportHandler(LoopHandler):
 
     def txt_export_runner(self, loop_start: int, loop_end: int):
         if self.alt_export_top != 0:
-            out_path = os.path.join(self.output_directory, f"{self.musiclooper.filename}.alt_export.txt")
-            pair_list_slice = (
-                    self.loop_pair_list
-                    if self.alt_export_top < 0 or self.alt_export_top >= len(self.loop_pair_list)
-                    else self.loop_pair_list[:self.alt_export_top]
-            )
-            with open(out_path, mode="w") as f:
-                for pair in pair_list_slice:
-                    f.write(f"{pair.loop_start} {pair.loop_end} {pair.note_distance} {pair.loudness_difference} {pair.score}\n")
+            self.alt_export_runner(mode="TXT")
         else:
-            self.musiclooper.export_txt(loop_start, loop_end, output_dir=self.output_directory)
+            self.musiclooper.export_txt(
+                self._fmt(loop_start),
+                self._fmt(loop_end),
+                output_dir=self.output_directory,
+            )
             out_path = os.path.join(self.output_directory, "loop.txt")
-            message = f"Successfully added \"{self.musiclooper.filename}\" loop points to \"{out_path}\""
+            message = f'Successfully added "{self.musiclooper.filename}" loop points to "{out_path}"'
             if self.batch_mode:
                 logging.info(message)
             else:
@@ -312,15 +310,34 @@ class LoopExportHandler(LoopHandler):
 
     def stdout_export_runner(self, loop_start: int, loop_end: int):
         if self.alt_export_top != 0:
-            pair_list_slice = (
-                    self.loop_pair_list
-                    if self.alt_export_top < 0 or self.alt_export_top >= len(self.loop_pair_list)
-                    else self.loop_pair_list[:self.alt_export_top]
-            )
-            for pair in pair_list_slice:
-                rich_console.print(f"{pair.loop_start} {pair.loop_end} {pair.note_distance} {pair.loudness_difference} {pair.score}")
+            self.alt_export_runner(mode="STDOUT")
         else:
-            rich_console.print(f"\nLoop points for \"{self.musiclooper.filename}\":\nLOOP_START: {loop_start}\nLOOP_END: {loop_end}\n")
+            rich_console.print(
+                f'\nLoop points for "{self.musiclooper.filename}":\n'
+                f"LOOP_START: {self._fmt(loop_start)}\n"
+                f"LOOP_END: {self._fmt(loop_end)}\n"
+            )
+
+    def alt_export_runner(self, mode: Literal["STDOUT", "TXT"]):
+        pair_list_slice = (
+            self.loop_pair_list
+            if self.alt_export_top < 0
+            or self.alt_export_top >= len(self.loop_pair_list)
+            else self.loop_pair_list[: self.alt_export_top]
+        )
+
+        def fmt_line(pair: LoopPair):
+            return f"{self._fmt(pair.loop_start)} {self._fmt(pair.loop_end)} {pair.note_distance} {pair.loudness_difference} {pair.score}\n"
+
+        formatted_lines = [fmt_line(pair) for pair in pair_list_slice]
+        if mode == "STDOUT":
+            rich_console.print(*formatted_lines, sep="", end="")
+        elif mode == "TXT":
+            out_path = os.path.join(
+                self.output_directory, f"{self.musiclooper.filename}.alt_export.txt"
+            )
+            with open(out_path, mode="w") as f:
+                f.writelines(formatted_lines)
 
     def tag_runner(self, loop_start: int, loop_end: int):        
         loop_start_tag, loop_end_tag = self.tag_names
@@ -336,6 +353,14 @@ class LoopExportHandler(LoopHandler):
             logging.info(message)
         else:
             rich_console.print(message)
+
+    def _fmt(self, samples: int):
+        if self.fmt == "seconds":
+            return str(self.musiclooper.samples_to_seconds(samples))
+        elif self.fmt == "time":
+            return str(self.musiclooper.samples_to_ftime(samples))
+        else:
+            return str(samples)
 
 
 class BatchHandler:

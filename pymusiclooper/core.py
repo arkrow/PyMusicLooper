@@ -4,7 +4,7 @@ used for programmatic access to the CLI's main features."""
 import os
 import shutil
 from math import ceil
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import lazy_loader as lazy
 import numpy as np
@@ -252,8 +252,8 @@ class MusicLooper:
 
     def export_txt(
         self,
-        loop_start: int,
-        loop_end: int,
+        loop_start: Union[int, float, str],
+        loop_end: Union[str, int, float, str],
         txt_name: str = "loops",
         output_dir: Optional[str] = None
     ):
@@ -261,8 +261,8 @@ class MusicLooper:
         `{loop_start} {loop_end} {filename}`
 
         Args:
-            loop_start (int): Loop start in samples.
-            loop_end (int): Loop end in samples.
+            loop_start (Union[int, float, str]): Loop start in samples, seconds or ftime.
+            loop_end (Union[int, float, str]): Loop end in samples, seconds or ftime.
             txt_name (str, optional): Filename of the text file to export to. Defaults to "loops".
             output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
         """
