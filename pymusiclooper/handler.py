@@ -343,43 +343,25 @@ class BatchHandler:
         self,
         *,
         path: str,
-        min_duration_multiplier: float,
         output_dir: str,
-        min_loop_duration: Optional[float] = None,
-        max_loop_duration: Optional[float] = None,
-        split_audio: bool = False ,
-        format="WAV",
-        to_txt: bool = False,
-        to_stdout: bool = False,
-        alt_export_top: int = 0,
         recursive: bool = False,
         flatten: bool = False,
-        tag_names: Optional[Tuple[str, str]] = None,
-        brute_force: bool = False,
-        disable_pruning: bool = False,
-        extended_length: float = 0,
-        fade_length: float = 0,
-        disable_fade_out: bool = False,
         **kwargs,
     ):
+        """Processes all audio files in a directory with `LoopExportHandler`.
+
+        Args:
+            path (str): Path to directory.
+            output_dir (str): Output directory to use for exports. 
+            recursive (bool, optional): Process directories recursively. Defaults to False.
+            flatten (bool, optional): Flatten the output directory structure instead of preserving it when processing it recursively. Defaults to False.
+            kwargs: Additional `kwargs` are passed onto `LoopExportHandler`.
+        """
         self.directory_path = os.path.abspath(path)
-        self.min_duration_multiplier = min_duration_multiplier
-        self.min_loop_duration = min_loop_duration
-        self.max_loop_duration = max_loop_duration
         self.output_directory = output_dir
-        self.split_audio = split_audio
-        self.format = format
-        self.to_txt = to_txt
-        self.to_stdout = to_stdout
-        self.alt_export_top = alt_export_top
         self.recursive = recursive
         self.flatten = flatten
-        self.tag_names = tag_names
-        self.brute_force = brute_force
-        self.disable_pruning = disable_pruning
-        self.extended_length = extended_length
-        self.disable_fade_out = disable_fade_out
-        self.fade_length = fade_length
+        self.kwargs = kwargs
 
     def run(self):
         files = self.get_files_in_directory(
@@ -410,26 +392,12 @@ class BatchHandler:
                         f"Processing \"{os.path.relpath(file_path, self.directory_path)}\""
                     ),
                 )
-                self._batch_export_helper(
-                    path=file_path,
-                    min_duration_multiplier=self.min_duration_multiplier,
-                    min_loop_duration=self.min_loop_duration,
-                    max_loop_duration=self.max_loop_duration,
-                    brute_force=self.brute_force,
-                    disable_pruning=self.disable_pruning,
-                    format=self.format,
-                    output_dir=(
-                        self.output_directory if self.flatten else output_dirs[file_idx]
-                    ),
-                    split_audio=self.split_audio,
-                    to_txt=self.to_txt,
-                    to_stdout=self.to_stdout,
-                    alt_export_top=self.alt_export_top,
-                    tag_names=self.tag_names,
-                    extended_length=self.extended_length,
-                    fade_length=self.fade_length,
-                    disable_fade_out=self.disable_fade_out,
-                )
+                task_kwargs = {
+                    **self.kwargs,
+                    "path": file_path,
+                    "output_dir": self.output_directory if self.flatten else output_dirs[file_idx]
+                }
+                self._batch_export_helper(**task_kwargs)
 
     @staticmethod
     def clone_file_tree_structure(in_files: List[str], output_directory: str) -> List[str]:
