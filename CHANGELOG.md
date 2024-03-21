@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.3.0] - 2024-03-21
+
+### Added
+
+- New option in `export-points`: `--fmt`, to customize the exported loop points format. Options: `samples` (default), `seconds`, or `time` (mm:ss.sss).
+
+### Changed
+
+- Minor internal code clean-up and refactoring.
+- Updated dependencies.
+
 ## [3.2.4] - 2024-01-20
 
 ### Fixed
