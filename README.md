@@ -21,7 +21,7 @@ Features:
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python (64-bit)](https://www.python.org/downloads/) >= 3.8
+- [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
 - [ffmpeg](https://ffmpeg.org/download.html): required for loading audio from youtube (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and adds support for loading additional audio formats and codecs such as M4A/AAC, Apple Lossless (ALAC), WMA, ATRAC (.at9), etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If the aforementioned features are not required, can be skipped.
 
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
