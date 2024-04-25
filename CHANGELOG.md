@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.4.0] - 2024-04-25
+
+### Added
+
+- Added proper Python 3.12 support.
+
+### Removed
+
+- Support for Python 3.8 has been removed. The minimum supported Python version for PyMusicLooper is now Python 3.9.
+
+### Maintenance
+
+- Updated dependencies.
+
 ## [3.3.0] - 2024-03-21
 
 ### Added
