@@ -13,7 +13,9 @@ assignees: ''
 A clear and concise description of what the bug is.
 
 **Debugging Information**
-Copy the command-line arguments used and the error message / stack trace if applicable. Include some brief information about the file(s) being loaded if relevant (e.g. file type/extension, file size, length, does the audio have an obvious loop point that algorithm failed to find?)
+Copy the command-line arguments used and the error message / stack trace if applicable. For `ERROR` messages, try to re-run the command with debugging enabled using the `-d`/`--debug` flag (e.g. `pymusiclooper -i --debug play test.mp3`) and provide the traceback output if available.
+
+Optionally, include some brief information about the file(s) being loaded if relevant (e.g. file type/extension, file size, length, does the audio have an obvious loop point that algorithm failed to find?)
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
