@@ -248,6 +248,9 @@ def _analyze_audio(
 
         beats = np.union1d(beats, beats_plp)
         beats = np.sort(beats)
+
+        if isinstance(bpm, np.ndarray):
+            bpm = bpm[0]
     except Exception as e:
         raise LoopNotFoundError(f"Beat analysis failed for \"{mlaudio.filename}\". Cannot continue.") from e
 
