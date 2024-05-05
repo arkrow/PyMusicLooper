@@ -1,18 +1,36 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.4.1] - 2024-05-05
+
+### Changed
+
+- Updated dependencies.
+- Minor internal changes for deprecated library functionalities/imports.
+
+### Fixed
+
+- BPM is now correctly derived from librosa 0.10.2's updated beat_track function.
+
 ## [3.4.0] - 2024-04-25
 
 ### Added
 
 - Added proper Python 3.12 support.
 
+### Changed
+
+- Updated dependencies.
+
 ### Removed
 
 - Support for Python 3.8 has been removed. The minimum supported Python version for PyMusicLooper is now Python 3.9.
-
-### Maintenance
-
-- Updated dependencies.
 
 ## [3.3.0] - 2024-03-21
 
