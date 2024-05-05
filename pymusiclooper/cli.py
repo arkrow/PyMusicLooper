@@ -8,12 +8,12 @@ import rich_click as click
 from rich.logging import RichHandler
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 from rich.traceback import install as rich_traceback_handler
-from rich_click.cli import patch as rich_click_patch
+from rich_click.patch import patch as rich_click_patch
 from yt_dlp.utils import YoutubeDLError
 
 rich_click_patch()
 from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
-from click_params import PUBLIC_URL as UrlParamType
+from click_params import URL as UrlParamType
 
 from pymusiclooper import __version__
 from pymusiclooper.console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
