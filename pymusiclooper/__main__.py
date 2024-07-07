@@ -1,4 +1,6 @@
 import logging
+import faulthandler
+faulthandler.enable(all_threads=True)
 
 from pymusiclooper.cli import cli_main
 
