@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 import librosa
 import numpy as np
-from numba import njit
+# from numba import njit
 
 from pymusiclooper.audio import MLAudio
 from pymusiclooper.exceptions import LoopNotFoundError
@@ -257,17 +257,17 @@ def _analyze_audio(
     return chroma, power_db, bpm, beats
 
 
-@njit
+# @njit
 def _db_diff(power_db_f1: np.ndarray, power_db_f2: np.ndarray) -> float:
     return np.abs(np.max(power_db_f1) - np.max(power_db_f2))
 
 
-@njit
+# @njit
 def _norm(a: np.ndarray) -> float:
     return np.sqrt(np.sum(np.abs(a) ** 2, axis=0))
 
 
-@njit(cache=True)
+# @njit(cache=True)
 def _find_candidate_pairs(
     chroma: np.ndarray,
     power_db: np.ndarray,
@@ -534,7 +534,7 @@ def _weights(length: int, start: int = 100, stop: int = 1):
     return np.geomspace(start, stop, num=length)
 
 
-@njit(cache=True)
+# @njit(cache=True)
 def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
     """Implementation of Audacity's `At Zero Crossings` feature. https://manual.audacityteam.org/man/select_menu_at_zero_crossings.html
     Description is based on the relevant Audacity manual page, due to identical behaviour.
