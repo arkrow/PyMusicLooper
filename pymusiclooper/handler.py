@@ -237,12 +237,33 @@ class LoopExportHandler(LoopHandler):
             self.txt_export_runner(loop_start, loop_end)
 
         if self.split_audio:
+            logging.info(f"Splitting audio for \"{self.musiclooper.filename}\"")
             self.split_audio_runner(loop_start, loop_end)
 
         if self.extended_length:
             self.extend_track_runner(loop_start, loop_end)
 
+    def run_and_return_all_loop_pairs(self, pairs_count=30):
+        self.loop_pair_list = self.get_all_loop_pairs()
+        
+        formatted_loop_pairs = []
+        for pair in self.loop_pair_list[:pairs_count]:
+            loop_start = self.musiclooper.samples_to_ftime(pair.loop_start)
+            loop_end = self.musiclooper.samples_to_ftime(pair.loop_end)
+            duration = self.musiclooper.samples_to_ftime(pair.loop_end - pair.loop_start)
+            formatted_loop_pairs.append({
+            "loop_start": loop_start,
+            "loop_end": loop_end,
+            "duration": duration,
+            "score": f"{pair.score:.2%}",
+            })
+        return formatted_loop_pairs
+
+
     def split_audio_runner(self, loop_start: int, loop_end: int):
+        """
+        Splits the audio file into intro, loop, and outro sections.
+        """
         try:
             self.musiclooper.export(
                 loop_start,

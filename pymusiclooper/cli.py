@@ -21,7 +21,6 @@ from pymusiclooper.core import MusicLooper
 from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
 from pymusiclooper.handler import BatchHandler, LoopExportHandler, LoopHandler
 from pymusiclooper.utils import download_audio, get_outputdir, mk_outputdir
-
 # CLI --help styling
 click.rich_click.OPTION_GROUPS = _OPTION_GROUPS
 click.rich_click.COMMAND_GROUPS = _COMMAND_GROUPS
@@ -29,14 +28,11 @@ click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
 
-@click.group("pymusiclooper", epilog="Full documentation and examples can be found at https://github.com/arkrow/PyMusicLooper")
-@click.option("--debug", "-d", is_flag=True, default=False, help="Enables debugging mode.")
-@click.option("--verbose", "-v", is_flag=True, default=False, help="Enables verbose logging output.")
-@click.option("--interactive", "-i", is_flag=True, default=False, help="Enables interactive mode to manually preview/choose the desired loop point.")
-@click.option("--samples", "-s", is_flag=True, default=False, help="Display all the loop points shown in interactive mode in sample points instead of the default mm:ss.sss format.")
-@click.version_option(__version__, prog_name="pymusiclooper", message="%(prog)s %(version)s")
-def cli_main(debug, verbose, interactive, samples):
+def cli_main(kwargs):
+    debug = verbose = interactive = samples = False
+    
     """A program for repeating music seamlessly and endlessly, by automatically finding the best loop points."""
+    print('inside cli_main')
     # Store flags in environ instead of passing them as parameters
     if debug:
         os.environ["PML_DEBUG"] = "1"
@@ -56,6 +52,11 @@ def cli_main(debug, verbose, interactive, samples):
         logging.basicConfig(format="%(message)s", level=logging.INFO, handlers=[RichHandler(level=logging.INFO, console=rich_console, rich_tracebacks=True, show_path=debug, show_time=False, tracebacks_suppress=[click])])
     else:
         logging.basicConfig(format="%(message)s", level=logging.ERROR, handlers=[RichHandler(level=logging.ERROR, console=rich_console, show_time=False, show_path=False)])
+
+    return split_audio(**kwargs)
+    
+
+
 
 
 def common_path_options(f):
@@ -96,7 +97,7 @@ def common_export_options(f):
     return wrapper_common_options
 
 
-@cli_main.command()
+# @cli_main.command()
 @common_path_options
 @common_loop_options
 def play(**kwargs):
@@ -141,7 +142,7 @@ def play(**kwargs):
         print_exception(e)
 
 
-@cli_main.command()
+# @cli_main.command()
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
 @click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
 def play_tagged(path, tag_names):
@@ -172,17 +173,18 @@ def play_tagged(path, tag_names):
         print_exception(e)
 
 
-@cli_main.command()
+# @cli_main.command()
 @common_path_options
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
 def split_audio(**kwargs):
     """Split the input audio into intro, loop and outro sections."""
+    print('inside split_audio')
     kwargs["split_audio"] = True
-    run_handler(**kwargs)
+    return run_handler(**kwargs)
 
-@cli_main.command()
+# @cli_main.command()
 @common_path_options
 @common_loop_options
 @common_export_options
@@ -195,7 +197,7 @@ def extend(**kwargs):
     run_handler(**kwargs)
 
 
-@cli_main.command()
+# @cli_main.command()
 @common_path_options
 @common_loop_options
 @common_export_options
@@ -211,7 +213,7 @@ def export_points(**kwargs):
     run_handler(**kwargs)
 
 
-@cli_main.command()
+# @cli_main.command()
 @common_path_options
 @common_loop_options
 @common_export_options
@@ -223,6 +225,7 @@ def tag(**kwargs):
 
 def run_handler(**kwargs):
     try:
+        print(kwargs)
         if kwargs.get("url", None) is not None:
             kwargs["output_dir"] = mk_outputdir(os.getcwd(), kwargs["output_dir"])
             kwargs["path"] = download_audio(kwargs["url"], kwargs["output_dir"])
@@ -239,7 +242,10 @@ def run_handler(**kwargs):
             ) as progress:
                 progress.add_task("Processing", total=None)
                 export_handler = LoopExportHandler(**kwargs)
-            export_handler.run()
+            # export_handler.run()
+            pairs = export_handler.run_and_return_all_loop_pairs(pairs_count=kwargs['pairs_count'])
+            print('First loop pairs:', pairs[0])
+            return pairs
         else:
             batch_handler = BatchHandler(**kwargs)
             batch_handler.run()
@@ -257,3 +263,4 @@ def print_exception(e: Exception):
 
 if __name__ == "__main__":
     cli_main()
+
