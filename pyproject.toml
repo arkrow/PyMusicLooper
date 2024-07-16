@@ -70,11 +70,6 @@ style = "semver"
 [tool.poetry-dynamic-versioning.substitution]
 files = ["*/__version__.py"]
 
-[tool.black]
-target-version = ['py38']
-
-[tool.isort]
-profile = "black"
-
 [tool.ruff]
+target-version = "py39"
 ignore = ["E501", "E402"]
