@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymusiclooper"
-version = "3.4.1"
+version = "0.0.0"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 license = "MIT"
 classifiers = [
@@ -43,8 +43,32 @@ pymusiclooper = 'pymusiclooper.__main__:cli'
 "Changelog" = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-pyinstaller-plugin]
+# Pyinstaller version (Optional, latest if not set)
+# Does not support version constraint (eg: ^6.4)
+version = "6.9.0"
+
+# Disable UPX compression
+disable-upx = true
+
+[tool.poetry-pyinstaller-plugin.scripts]
+# Single file bundled
+pymusiclooper = { source = "pymusiclooper/__main__.py", type = "onefile", bundle = true }
+
+[tool.poetry-pyinstaller-plugin.collect]
+# Collect all submodules, data files & binaries for 'sounddevice'
+all = ['sounddevice']
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["*/__version__.py"]
 
 [tool.black]
 target-version = ['py38']

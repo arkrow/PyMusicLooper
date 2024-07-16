@@ -15,7 +15,7 @@ rich_click_patch()
 from click_option_group import RequiredMutuallyExclusiveOptionGroup, optgroup
 from click_params import URL as UrlParamType
 
-from pymusiclooper import __version__
+from pymusiclooper.__version__ import __version__
 from pymusiclooper.console import _COMMAND_GROUPS, _OPTION_GROUPS, rich_console
 from pymusiclooper.core import MusicLooper
 from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
