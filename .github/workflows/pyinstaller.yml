@@ -1,9 +1,6 @@
-name: Package Application with Pyinstaller
+name: Package Application with PyInstaller
 
-on:
-  workflow_dispatch:
-  # release:
-  #   types: [published]
+on: workflow_dispatch
 
 jobs:
   build:
