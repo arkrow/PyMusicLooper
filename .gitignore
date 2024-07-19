@@ -141,10 +141,13 @@ cython_debug/
 # Editor config
 .vscode/
 
+#########################
+# PyMusicLooper-related #
+#########################
 # Audio files (used for testing)
 *.mp3
 *.ogg
 *.wav
 
-# Ignore generated cache file
-cache.json
+# Avoid auto-generated version file from being committed
+pymusiclooper/_version.py
