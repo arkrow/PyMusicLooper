@@ -29,10 +29,12 @@ jobs:
       - name: Inject poetry-dynamic-versioning
         run: pipx inject poetry "poetry-dynamic-versioning[plugin]"
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --with dev
       - name: Build package
-        run: poetry build
+        run: poetry build --format pyinstaller
       - uses: actions/upload-artifact@v4
         with:
           name: pymusiclooper-${{ matrix.os }}
-          path: dist/pyinstaller/**/pymusiclooper*
+          path: |
+            dist/pyinstaller/**/*
+            !dist/pyinstaller/**/.specs
