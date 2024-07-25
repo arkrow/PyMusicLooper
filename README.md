@@ -59,20 +59,6 @@ Traditional package installation method.
 pip install pymusiclooper
 ```
 
-### Option 3: Installing directly from source
-
-Required python packages: `pip` and [`poetry`](https://python-poetry.org/).
-
-Clone the git repository to a directory of your choice and `cd` to inside the repo.
-
-Then, run:
-
-```sh
-poetry install
-```
-
-A virtual environment can be setup through poetry by invoking the `poetry shell` command before installing.
-
 ## Available Commands
 
 ![pymusiclooper --help](https://github.com/arkrow/PyMusicLooper/raw/master/img/pymusiclooper.svg)
@@ -179,6 +165,40 @@ pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --
 pymusiclooper -i export-points --path "/path/to/track.mp3" --approx-loop-position 20 210
 ## `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds
 ## and loops back around the 210 seconds mark.
+```
+
+## Building from source
+
+Required python packages: `pip` and [`poetry`](https://python-poetry.org/).
+
+Clone the git repository to a directory of your choice and `cd` to inside the repo.
+
+Two poetry plugins need to be installed for full functionality:
+
+- [poetry-dynamic-versioning[plugin]](https://pypi.org/project/poetry-dynamic-versioning/) (v1.4.0 or later): Adds and enables dynamic package versioning functionality
+- [poetry-pyinstaller-plugin](https://pypi.org/project/poetry-pyinstaller-plugin/) (v1.1.15 or later): Adds PyInstaller build option integrated in the `poetry build` subcommand
+
+```bash
+# To install the poetry plugins:
+# Depending on how you installed poetry, if you installed poetry using pipx
+pipx inject poetry poetry-dynamic-versioning[plugin] poetry-pyinstaller-plugin
+# Otherwise:
+poetry self add "poetry-dynamic-versioning[plugin]"
+poetry self add poetry-pyinstaller-plugin
+```
+
+It's preferrable to setup a virtual environment through poetry by invoking the `poetry shell` command before starting.
+
+To build python wheels and a built single-file executable by PyInstaller, run (in an activated venv using `poetry shell`):
+
+```sh
+poetry build
+```
+
+To install the package normally using poetry, run:
+
+```sh
+poetry install
 ```
 
 ## Acknowledgement
