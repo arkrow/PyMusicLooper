@@ -24,6 +24,8 @@ jobs:
         uses: abatilo/actions-poetry@v3
         with:
           poetry-version: ${{ matrix.poetry-version }}
+      - name: Disable poetry virtualenvs creation
+        run: poetry config virtualenvs.create false
       - name: Inject poetry-pyinstaller-plugin
         run: pipx inject poetry poetry-pyinstaller-plugin
       - name: Inject poetry-dynamic-versioning
