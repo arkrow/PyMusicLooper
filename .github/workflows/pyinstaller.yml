@@ -33,7 +33,7 @@ jobs:
           installer-parallel: true
           plugins: |
             poetry-pyinstaller-plugin
-            poetry-dynamic-versioning[plugin]
+            "poetry-dynamic-versioning[plugin]"
       - name: Load cached venv
         id: cached-poetry-dependencies
         uses: actions/cache@v3
