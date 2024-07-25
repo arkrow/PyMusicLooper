@@ -195,6 +195,8 @@ To build python wheels and a built single-file executable by PyInstaller, run (i
 poetry build
 ```
 
+Note: PyInstaller's built executable can be found under your platform's folder in `dist/pyinstaller/`
+
 To install the package normally using poetry, run:
 
 ```sh
