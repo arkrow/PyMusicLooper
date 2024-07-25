@@ -58,6 +58,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 # Pyinstaller version (Optional, latest if not set)
 # Does not support version constraint (eg: ^6.4)
 version = "6.9.0"
+use-poetry-install = true
 
 # Disable UPX compression
 disable-upx = true
