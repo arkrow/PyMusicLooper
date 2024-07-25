@@ -22,6 +22,8 @@ jobs:
           poetry-version: ${{ matrix.poetry-version }}
       - name: Inject poetry-pyinstaller-plugin
         run: pipx inject poetry poetry-pyinstaller-plugin
+      - name: Inject poetry-dynamic-versioning
+        run: pipx inject poetry "poetry-dynamic-versioning[plugin]"
       - name: Install dependencies
         run: poetry install
       - name: Build package
