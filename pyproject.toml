@@ -30,7 +30,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.13"
 librosa = "0.10.2"
 numpy = ">=1.25.0, <2.0.0"
 soundfile = ">=0.12.1"
@@ -43,6 +43,12 @@ yt-dlp = ">=2024.7.2"
 click-params = "^0.5.0"
 click-option-group = "^0.5.6"
 lazy-loader = ">=0.3"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "6.9.0"
 
 [tool.poetry.scripts]
 pymusiclooper = 'pymusiclooper.__main__:cli'
@@ -65,7 +71,7 @@ disable-upx = true
 
 [tool.poetry-pyinstaller-plugin.scripts]
 # Single file bundled
-pymusiclooper = { source = "pymusiclooper/__main__.py", type = "onefile", bundle = true }
+pymusiclooper = { source = "pymusiclooper/__main__.py", type = "onefile" }
 
 [tool.poetry-pyinstaller-plugin.collect]
 # Collect all submodules, data files & binaries for 'sounddevice'
