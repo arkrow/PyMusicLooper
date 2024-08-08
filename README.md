@@ -59,20 +59,6 @@ Traditional package installation method.
 pip install pymusiclooper
 ```
 
-### Option 3: Installing directly from source
-
-Required python packages: `pip` and [`poetry`](https://python-poetry.org/).
-
-Clone the git repository to a directory of your choice and `cd` to inside the repo.
-
-Then, run:
-
-```sh
-poetry install
-```
-
-A virtual environment can be setup through poetry by invoking the `poetry shell` command before installing.
-
 ## Available Commands
 
 ![pymusiclooper --help](https://github.com/arkrow/PyMusicLooper/raw/master/img/pymusiclooper.svg)
@@ -179,6 +165,30 @@ pymusiclooper -i split-audio --path "TRACK_NAME.flac" --min-loop-duration 120 --
 pymusiclooper -i export-points --path "/path/to/track.mp3" --approx-loop-position 20 210
 ## `--approx-loop-position 20 210` means the desired loop point starts around 20 seconds
 ## and loops back around the 210 seconds mark.
+```
+
+## Building from source
+
+Required tools: [Rust toolchain](https://www.rust-lang.org/tools/install) and [`rye`](https://rye.astral.sh/).
+
+1. Clone the git repository to a directory of your choice and `cd` to inside the repo.
+
+2. Automatically create a venv with the .python-version specified and install all requirements:
+
+    ```sh
+    rye sync
+    ```
+
+3. Running any of the CLI commands can then be done by prefixing `pymusiclooper` commands with `rye run`, e.g:
+
+    ```sh
+    rye run pymusiclooper --help
+    ```
+
+To manually build the rust crate and install it as a python module directly in the current venv (preferably, with the `--release` flag for good runtime performance):
+
+```sh
+maturin develop --release
 ```
 
 ## Acknowledgement
