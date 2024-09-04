@@ -331,7 +331,7 @@ class LoopExportHandler(LoopHandler):
 
         formatted_lines = [fmt_line(pair) for pair in pair_list_slice]
         if mode == "STDOUT":
-            rich_console.print(*formatted_lines, sep="", end="")
+            rich_console.out(*formatted_lines, sep="", end="")
         elif mode == "TXT":
             out_path = os.path.join(
                 self.output_directory, f"{self.musiclooper.filename}.alt_export.txt"
