@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.2] - 2024-09-04
+
+### Changed
+
+- Updated dependencies.
+
+### Fixed
+
+- The output of `--alt-export-top` wrapping in some edge cases ([#43](https://github.com/arkrow/PyMusicLooper/issues/43))
+- Active audio streams interrupted in some cases on Windows ([#21](https://github.com/arkrow/PyMusicLooper/issues/21))
+
 ## [3.4.1] - 2024-05-05
 
 ### Changed
