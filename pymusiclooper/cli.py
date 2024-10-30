@@ -143,12 +143,14 @@ def play(**kwargs):
 
 @cli_main.command()
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
-@click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
-def play_tagged(path, tag_names):
+@click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
+@click.option("--offset", is_flag=True, default=False, help="Always parse latter loop metadata tag as a relative length (default auto-detects by name).")
+@click.option("--no-offset", is_flag=True, default=False, help="Always parse latter loop metadata tag as an absolute end position (default auto-detects by name).")
+def play_tagged(path, tag_names, offset, no_offset):
     """Skips loop analysis and reads the loop points directly from the tags present in the file."""
     try:
         looper = MusicLooper(path)
-        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1])
+        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], offset, no_offset)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 
@@ -216,6 +218,8 @@ def export_points(**kwargs):
 @common_loop_options
 @common_export_options
 @click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
+@click.option("--offset", is_flag=True, default=False, help="Always export latter loop metadata tag as a relative length (default auto-detects by name).")
+@click.option("--no-offset", is_flag=True, default=False, help="Always export latter loop metadata tag as an absolute end position (default auto-detects by name).")
 def tag(**kwargs):
     """Adds metadata tags of loop points to a copy of the input audio file(s)."""
     run_handler(**kwargs)
