@@ -275,6 +275,23 @@ class MusicLooper:
             file.write(f"{loop_start} {loop_end} {self.mlaudio.filename}\n")
 
 
+    def end_tag_is_offset(
+        self,
+        loop_end_tag: str,
+        always_offset: bool,
+        never_offset: bool,
+    ) -> bool:
+        if always_offset:
+            return True
+
+        if never_offset:
+            return False
+
+        upper_loop_end_tag = loop_end_tag.upper()
+
+        return "LEN" in upper_loop_end_tag or "OFFSET" in upper_loop_end_tag
+
+
     def relativize_end_tag(
         self,
         loop_start: int,
@@ -283,15 +300,7 @@ class MusicLooper:
         always_offset: bool,
         never_offset: bool,
     ) -> int:
-        if never_offset:
-            return loop_end
-
-        if always_offset:
-            return loop_end - loop_start
-
-        upper_loop_end_tag = loop_end_tag.upper()
-
-        if "LEN" in upper_loop_end_tag or "OFFSET" in upper_loop_end_tag:
+        if self.end_tag_is_offset(loop_end_tag, always_offset, never_offset):
             return loop_end - loop_start
 
         return loop_end
@@ -305,15 +314,7 @@ class MusicLooper:
         always_offset: bool,
         never_offset: bool,
     ) -> int:
-        if never_offset:
-            return loop_end
-
-        if always_offset:
-            return loop_start + loop_end
-
-        upper_loop_end_tag = loop_end_tag.upper()
-
-        if "LEN" in upper_loop_end_tag or "OFFSET" in upper_loop_end_tag:
+        if self.end_tag_is_offset(loop_end_tag, always_offset, never_offset):
             return loop_start + loop_end
 
         return loop_end
