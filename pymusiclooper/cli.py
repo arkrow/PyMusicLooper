@@ -217,8 +217,7 @@ def export_points(**kwargs):
 @common_loop_options
 @common_export_options
 @click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
-@click.option("--offset", is_flag=True, default=False, help="Always export latter loop metadata tag as a relative length (default auto-detects by name).")
-@click.option("--no-offset", is_flag=True, default=False, help="Always export latter loop metadata tag as an absolute end position (default auto-detects by name).")
+@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always export second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 def tag(**kwargs):
     """Adds metadata tags of loop points to a copy of the input audio file(s)."""
     run_handler(**kwargs)
