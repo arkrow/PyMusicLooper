@@ -188,7 +188,7 @@ class LoopExportHandler(LoopHandler):
         fmt: Literal["SAMPLES", "SECONDS", "TIME"] = "SAMPLES",
         alt_export_top: int = 0,
         tag_names: Optional[Tuple[str, str]] = None,
-        is_offset: Optional[bool] = None,
+        tag_offset: Optional[bool] = None,
         batch_mode: bool = False,
         extended_length: float = 0,
         fade_length: float = 0,
@@ -212,7 +212,7 @@ class LoopExportHandler(LoopHandler):
         self.fmt = fmt.lower()
         self.alt_export_top = alt_export_top
         self.tag_names = tag_names
-        self.is_offset = is_offset
+        self.tag_offset = tag_offset
         self.batch_mode = batch_mode
         self.extended_length = extended_length
         self.disable_fade_out = disable_fade_out
@@ -348,7 +348,7 @@ class LoopExportHandler(LoopHandler):
             loop_end,
             loop_start_tag,
             loop_end_tag,
-            is_offset=self.is_offset,
+            is_offset=self.tag_offset,
             output_dir=self.output_directory,
         )
         message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of \"{self.musiclooper.filename}\" to a copy in \"{self.output_directory}\""
