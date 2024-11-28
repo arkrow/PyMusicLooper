@@ -296,7 +296,7 @@ class MusicLooper:
         loop_end_tag: str,
         is_offset: Optional[bool] = None,
         output_dir: Optional[str] = None
-    ):
+    ) -> Tuple[str]:
         """Adds metadata tags of loop points to a copy of the source audio file.
 
         Args:
@@ -328,6 +328,8 @@ class MusicLooper:
         with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
             audio_file.tags[loop_start_tag] = [str(loop_start)]
             audio_file.tags[loop_end_tag] = [str(loop_end)]
+
+        return str(loop_start), str(loop_end)
 
 
     def read_tags(self, loop_start_tag: str, loop_end_tag: str, is_offset: Optional[bool] = None) -> Tuple[int, int]:

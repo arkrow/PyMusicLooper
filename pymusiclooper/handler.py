@@ -343,7 +343,7 @@ class LoopExportHandler(LoopHandler):
 
     def tag_runner(self, loop_start: int, loop_end: int):        
         loop_start_tag, loop_end_tag = self.tag_names
-        self.musiclooper.export_tags(
+        loop_start, loop_end = self.musiclooper.export_tags(
             loop_start,
             loop_end,
             loop_start_tag,
