@@ -288,32 +288,6 @@ class MusicLooper:
         return "LEN" in upper_loop_end_tag or "OFFSET" in upper_loop_end_tag
 
 
-    def relativize_end_tag(
-        self,
-        loop_start: int,
-        loop_end: int,
-        loop_end_tag: str,
-        is_offset: Optional[bool],
-    ) -> int:
-        if self.end_tag_is_offset(loop_end_tag, is_offset):
-            return loop_end - loop_start
-
-        return loop_end
-
-
-    def absolutize_end_tag(
-        self,
-        loop_start: int,
-        loop_end: int,
-        loop_end_tag: str,
-        is_offset: Optional[bool],
-    ) -> int:
-        if self.end_tag_is_offset(loop_end_tag, is_offset):
-            return loop_start + loop_end
-
-        return loop_end
-
-
     def export_tags(
         self,
         loop_start: int,
@@ -348,7 +322,8 @@ class MusicLooper:
         shutil.copyfile(self.mlaudio.filepath, exported_file_path)
 
         # Handle LOOPLENGTH tag
-        loop_end = self.relativize_end_tag(loop_start, loop_end, loop_end_tag, is_offset)
+        if self.end_tag_is_offset(loop_end_tag, is_offset):
+            loop_end = loop_end - loop_start
 
         with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
             audio_file.tags[loop_start_tag] = [str(loop_start)]
@@ -391,6 +366,7 @@ class MusicLooper:
         real_loop_end = max(loop_start, loop_end)
 
         # Handle LOOPLENGTH tag
-        real_loop_end = self.absolutize_end_tag(real_loop_start, real_loop_end, loop_end_tag, is_offset)
+        if self.end_tag_is_offset(loop_end_tag, is_offset):
+            real_loop_end = real_loop_start + real_loop_end
 
         return real_loop_start, real_loop_end
