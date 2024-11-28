@@ -278,14 +278,10 @@ class MusicLooper:
     def end_tag_is_offset(
         self,
         loop_end_tag: str,
-        always_offset: bool,
-        never_offset: bool,
+        is_offset: Optional[bool],
     ) -> bool:
-        if always_offset:
-            return True
-
-        if never_offset:
-            return False
+        if is_offset is not None:
+            return is_offset
 
         upper_loop_end_tag = loop_end_tag.upper()
 
@@ -297,10 +293,9 @@ class MusicLooper:
         loop_start: int,
         loop_end: int,
         loop_end_tag: str,
-        always_offset: bool,
-        never_offset: bool,
+        is_offset: Optional[bool],
     ) -> int:
-        if self.end_tag_is_offset(loop_end_tag, always_offset, never_offset):
+        if self.end_tag_is_offset(loop_end_tag, is_offset):
             return loop_end - loop_start
 
         return loop_end
@@ -311,10 +306,9 @@ class MusicLooper:
         loop_start: int,
         loop_end: int,
         loop_end_tag: str,
-        always_offset: bool,
-        never_offset: bool,
+        is_offset: Optional[bool],
     ) -> int:
-        if self.end_tag_is_offset(loop_end_tag, always_offset, never_offset):
+        if self.end_tag_is_offset(loop_end_tag, is_offset):
             return loop_start + loop_end
 
         return loop_end
@@ -326,8 +320,7 @@ class MusicLooper:
         loop_end: int,
         loop_start_tag: str,
         loop_end_tag: str,
-        always_offset: bool = False,
-        never_offset: bool = False,
+        is_offset: Optional[bool] = None,
         output_dir: Optional[str] = None
     ):
         """Adds metadata tags of loop points to a copy of the source audio file.
@@ -337,6 +330,7 @@ class MusicLooper:
             loop_end (int): Loop end in samples.
             loop_start_tag (str): Name of the loop_start metadata tag.
             loop_end_tag (str): Name of the loop_end metadata tag.
+            is_offset (bool, optional): Export second tag as relative length / absolute end. Defaults to auto-detecting based on tag name.
             output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
         """
         # Workaround for taglib import issues on Apple silicon devices
@@ -354,19 +348,20 @@ class MusicLooper:
         shutil.copyfile(self.mlaudio.filepath, exported_file_path)
 
         # Handle LOOPLENGTH tag
-        loop_end = self.relativize_end_tag(loop_start, loop_end, loop_end_tag, always_offset, never_offset)
+        loop_end = self.relativize_end_tag(loop_start, loop_end, loop_end_tag, is_offset)
 
         with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
             audio_file.tags[loop_start_tag] = [str(loop_start)]
             audio_file.tags[loop_end_tag] = [str(loop_end)]
 
 
-    def read_tags(self, loop_start_tag: str, loop_end_tag: str, always_offset: bool = False, never_offset: bool = False) -> Tuple[int, int]:
+    def read_tags(self, loop_start_tag: str, loop_end_tag: str, is_offset: Optional[bool] = None) -> Tuple[int, int]:
         """Reads the tags provided from the file and returns the read loop points
 
         Args:
             loop_start_tag (str): The name of the metadata tag containing the loop_start value
             loop_end_tag (str): The name of the metadata tag containing the loop_end value
+            is_offset (bool, optional): Parse second tag as relative length / absolute end. Defaults to auto-detecting based on tag name.
 
         Returns:
             Tuple[int, int]: A tuple containing (loop_start, loop_end)
@@ -396,6 +391,6 @@ class MusicLooper:
         real_loop_end = max(loop_start, loop_end)
 
         # Handle LOOPLENGTH tag
-        real_loop_end = self.absolutize_end_tag(real_loop_start, real_loop_end, loop_end_tag, always_offset, never_offset)
+        real_loop_end = self.absolutize_end_tag(real_loop_start, real_loop_end, loop_end_tag, is_offset)
 
         return real_loop_start, real_loop_end

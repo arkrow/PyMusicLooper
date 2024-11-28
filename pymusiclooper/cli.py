@@ -144,13 +144,12 @@ def play(**kwargs):
 @cli_main.command()
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
 @click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
-@click.option("--offset", is_flag=True, default=False, help="Always parse latter loop metadata tag as a relative length (default auto-detects by name).")
-@click.option("--no-offset", is_flag=True, default=False, help="Always parse latter loop metadata tag as an absolute end position (default auto-detects by name).")
-def play_tagged(path, tag_names, offset, no_offset):
+@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
+def play_tagged(path, tag_names, tag_offset):
     """Skips loop analysis and reads the loop points directly from the tags present in the file."""
     try:
         looper = MusicLooper(path)
-        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], offset, no_offset)
+        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], tag_offset)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 
