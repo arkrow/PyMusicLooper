@@ -275,7 +275,7 @@ class MusicLooper:
             file.write(f"{loop_start} {loop_end} {self.mlaudio.filename}\n")
 
 
-    def end_tag_is_offset(
+    def _end_tag_is_offset(
         self,
         loop_end_tag: str,
         is_offset: Optional[bool],
@@ -322,7 +322,7 @@ class MusicLooper:
         shutil.copyfile(self.mlaudio.filepath, exported_file_path)
 
         # Handle LOOPLENGTH tag
-        if self.end_tag_is_offset(loop_end_tag, is_offset):
+        if self._end_tag_is_offset(loop_end_tag, is_offset):
             loop_end = loop_end - loop_start
 
         with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
@@ -366,7 +366,7 @@ class MusicLooper:
         real_loop_end = max(loop_start, loop_end)
 
         # Handle LOOPLENGTH tag
-        if self.end_tag_is_offset(loop_end_tag, is_offset):
+        if self._end_tag_is_offset(loop_end_tag, is_offset):
             real_loop_end = real_loop_start + real_loop_end
 
         return real_loop_start, real_loop_end
