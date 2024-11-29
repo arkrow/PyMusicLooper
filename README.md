@@ -27,6 +27,9 @@ The following software must be installed for `pymusiclooper` to function correct
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
 A full list can be found at [libsndfile's supported formats page](https://libsndfile.github.io/libsndfile/formats.html)
 
+Additionally, to use the `play` command on Linux systems, you may need to
+install the PortAudio library. On Ubuntu, run `sudo apt install libportaudio2`.
+
 ## Installation
 
 ### Option 1: Installing using pipx [Recommended]
