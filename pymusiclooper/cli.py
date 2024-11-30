@@ -143,12 +143,13 @@ def play(**kwargs):
 
 @cli_main.command()
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
-@click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tags-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
-def play_tagged(path, tag_names):
+@click.option("--tag-names", type=str, required=True, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units).")
+@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
+def play_tagged(path, tag_names, tag_offset):
     """Skips loop analysis and reads the loop points directly from the tags present in the file."""
     try:
         looper = MusicLooper(path)
-        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1])
+        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], tag_offset)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
 
@@ -216,6 +217,7 @@ def export_points(**kwargs):
 @common_loop_options
 @common_export_options
 @click.option('--tag-names', type=str, required=True, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END')
+@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always export second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 def tag(**kwargs):
     """Adds metadata tags of loop points to a copy of the input audio file(s)."""
     run_handler(**kwargs)
