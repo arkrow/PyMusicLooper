@@ -20,8 +20,8 @@ classifiers = [
   "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
 dependencies = [
-  "librosa==0.10.2",
-  "numpy>=1.25.0, <2.0.0",
+  "librosa>=0.11.0rc0,<0.12.0",
+  "numpy>=1.25.0",
   "soundfile>=0.12.1",
   "sounddevice>=0.5.0",
   "rich-click>=1.8.0,<2",
@@ -32,6 +32,8 @@ dependencies = [
   "click-params>=0.5.0,<0.6",
   "click-option-group>=0.5.6,<0.6",
   "lazy-loader>=0.3",
+  "standard-aifc>=3.13; python_version >= '3.13'",
+  "standard-sunau>=3.13; python_version >= '3.13'",
 ]
 
 [project.urls]
