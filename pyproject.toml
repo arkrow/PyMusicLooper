@@ -1,7 +1,10 @@
-[tool.poetry]
+[project]
 name = "pymusiclooper"
 version = "3.4.2"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
+authors = [{ name = "arkrow", email = "arkrow@protonmail.com" }]
+requires-python = "~=3.9"
+readme = "README.md"
 license = "MIT"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -17,34 +20,27 @@ classifiers = [
   "Topic :: Multimedia :: Sound/Audio",
   "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
-repository = "https://github.com/arkrow/PyMusicLooper"
-readme = "README.md"
-authors = ["arkrow <arkrow@protonmail.com>"]
+dependencies = [
+  "librosa==0.10.2",
+  "numpy>=1.25.0, <2.0.0",
+  "soundfile>=0.12.1",
+  "sounddevice>=0.5.0",
+  "rich-click>=1.8.0,<2",
+  "rich>= 13.4.2",
+  "pytaglib>=3.0.0,<4",
+  "numba>=0.59.1",
+  "yt-dlp>=2024.8.6",
+  "click-params>=0.5.0,<0.6",
+  "click-option-group>=0.5.6,<0.6",
+  "lazy-loader>=0.3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-librosa = "0.10.2"
-numpy = ">=1.25.0, <2.0.0"
-soundfile = ">=0.12.1"
-sounddevice = ">=0.5.0"
-rich-click = "^1.8.0"
-rich = ">= 13.4.2"
-pytaglib = "^3.0.0"
-numba = ">=0.59.1"
-yt-dlp = ">=2024.8.6"
-click-params = "^0.5.0"
-click-option-group = "^0.5.6"
-lazy-loader = ">=0.3"
+[project.urls]
+Repository = "https://github.com/arkrow/PyMusicLooper"
+Changelog = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 
-[tool.poetry.scripts]
-pymusiclooper = 'pymusiclooper.__main__:cli'
-
-[tool.poetry.urls]
-"Changelog" = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[project.scripts]
+pymusiclooper = "pymusiclooper.__main__:cli"
 
 [tool.black]
 target-version = ['py38']
@@ -54,3 +50,7 @@ profile = "black"
 
 [tool.ruff]
 ignore = ["E501", "E402"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
