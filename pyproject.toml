@@ -43,15 +43,25 @@ Changelog = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 [project.scripts]
 pymusiclooper = "pymusiclooper.__main__:cli"
 
-[tool.black]
-target-version = ['py38']
-
-[tool.isort]
-profile = "black"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 ignore = ["E501", "E402"]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.ruff.lint]
+select = [
+  # pycodestyle
+  "E",
+  # Pyflakes
+  "F",
+  # pyupgrade
+  "UP",
+  # flake8-bugbear
+  "B",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+]
