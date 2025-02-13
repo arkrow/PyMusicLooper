@@ -3,7 +3,7 @@ name = "pymusiclooper"
 version = "3.4.2"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 authors = [{ name = "arkrow", email = "arkrow@protonmail.com" }]
-requires-python = "~=3.9"
+requires-python = "~=3.10"
 readme = "README.md"
 license = "MIT"
 classifiers = [
@@ -13,7 +13,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
