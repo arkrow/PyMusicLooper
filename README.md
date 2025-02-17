@@ -35,6 +35,7 @@ This method of installation is strongly recommended, as it isolates PyMusicLoope
 and as a result, avoids dependency conflicts and breakage due to other packages.
 
 Required tool: [`uv`](https://github.com/astral-sh/uv).
+
 Note: python is not required, as `uv` automatically installs this package's required python version automatically if not present.
 
 ```sh
@@ -48,6 +49,12 @@ uv tool install git+https://github.com/arkrow/PyMusicLooper.git
 
 # Updating to new releases in either case can be done simply using:
 uv tool upgrade pymusiclooper
+```
+
+Installation note: you may need to specify a Python version if the latest Python release is not supported and fails to install, e.g.
+
+```sh
+uv tool install pymusiclooper --python "3.12"
 ```
 
 ### Option 2: Installing using pipx
