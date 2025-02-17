@@ -21,7 +21,7 @@ Features:
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python (64-bit)](https://www.python.org/downloads/) >= 3.9
+- [Python (64-bit)](https://www.python.org/downloads/) >=3.10
 - [ffmpeg](https://ffmpeg.org/download.html): required for loading audio from youtube (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and adds support for loading additional audio formats and codecs such as M4A/AAC, Apple Lossless (ALAC), WMA, ATRAC (.at9), etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If the aforementioned features are not required, can be skipped.
 
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
@@ -29,10 +29,32 @@ A full list can be found at [libsndfile's supported formats page](https://libsnd
 
 ## Installation
 
-### Option 1: Installing using pipx [Recommended]
+### Option 1: Installing using uv [Recommended]
 
 This method of installation is strongly recommended, as it isolates PyMusicLooper's dependencies from the rest of your environment,
 and as a result, avoids dependency conflicts and breakage due to other packages.
+
+Required tool: [`uv`](https://github.com/astral-sh/uv).
+Note: python is not required, as `uv` automatically installs this package's required python version automatically if not present.
+
+```sh
+# Normal install
+# (follows the official releases on https://pypi.org/project/pymusiclooper/)
+uv tool install pymusiclooper
+
+# Alternative install
+# (follows the git repository; equivalent to a nightly release channel)
+uv tool install git+https://github.com/arkrow/PyMusicLooper.git
+
+# Updating to new releases in either case can be done simply using:
+uv tool upgrade pymusiclooper
+```
+
+### Option 2: Installing using pipx
+
+Like `uv`, isolates PyMusicLooper's dependencies from the rest of your environment,
+and as a result, avoids dependency conflicts and breakage due to other packages.
+However, unlike `uv`, requires python to already be installed along with `pipx`.
 
 Required python packages: [`pipx`](https://pypa.github.io/pipx/) (can be installed using `pip install pipx` ).
 
@@ -49,29 +71,15 @@ pipx install git+https://github.com/arkrow/PyMusicLooper.git
 pipx upgrade pymusiclooper
 ```
 
-### Option 2: Installing using pip
+### Option 3: Installing using pip
 
 Traditional package installation method.
 
-*Note: fragile compared to an installation using `pipx`. PyMusicLooper may suddenly stop working if its dependencies were overwritten by another package (e.g. [issue #12](https://github.com/arkrow/PyMusicLooper/issues/12)).*
+*Note: fragile compared to an installation using `uv` or `pipx`. PyMusicLooper may suddenly stop working if its dependencies were overwritten by another package (e.g. [issue #12](https://github.com/arkrow/PyMusicLooper/issues/12)).*
 
 ```sh
 pip install pymusiclooper
 ```
-
-### Option 3: Installing directly from source
-
-Required python packages: `pip` and [`poetry`](https://python-poetry.org/).
-
-Clone the git repository to a directory of your choice and `cd` to inside the repo.
-
-Then, run:
-
-```sh
-poetry install
-```
-
-A virtual environment can be setup through poetry by invoking the `poetry shell` command before installing.
 
 ## Available Commands
 
