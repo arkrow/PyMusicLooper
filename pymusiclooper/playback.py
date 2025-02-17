@@ -1,16 +1,22 @@
 """Module for playback through the terminal"""
+import importlib
 import logging
 import signal
 import threading
 
 import numpy as np
-import lazy_loader as lazy
 from rich.progress import BarColumn, Progress, TextColumn
 
 from pymusiclooper.console import rich_console
 
-# Lazy-load sounddevice
-sd = lazy.load("sounddevice")
+# Lazy-load sounddevice: call `sd()` to return the module.
+# (We use this instead of `lazy-loader`, to get clearer error messages when
+# sounddevice is missing dependencies like PortAudio.)
+_sd = None
+def sd():
+    global _sd
+    _sd = _sd or importlib.import_module("sounddevice")
+    return _sd
 
 class PlaybackHandler:
     """Handler class for initiating looping playback through the terminal."""
@@ -93,9 +99,9 @@ class PlaybackHandler:
                     self.current_frame += chunksize
                     if chunksize < frames:
                         outdata[chunksize:] = 0
-                        raise sd.CallbackStop()
+                        raise sd().CallbackStop()
 
-            self.stream = sd.OutputStream(
+            self.stream = sd().OutputStream(
                 samplerate=samplerate,
                 channels=n_channels,
                 callback=callback,
