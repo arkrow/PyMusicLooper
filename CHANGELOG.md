@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.5.0] - 2025-03-15
+
+### Added
+
+- Support exporting and reading `LOOPLENGTH` tag by @Splendide-Imaginarius in PR #47. Adds the `--tag-offset/--no-tag-offset` option to `tag` and `play-tagged` to customize the behaviour (default: auto).
+
+### Changed
+
+- Migrate dependency management from poetry to uv
+- Added support for Python 3.13
+- Dropped support for Python 3.9
+
+### Fixed
+
+- Properly handle and auto cleanup default output directory (Fixes #29)
+- Prevent division by zero in _calculate_subseq_beat_similarity by @Chlorobyte-but-real in PR #53
+- Improve experience when system does not have PortAudio installed yet by @matchu in #49
+
 
 ## [3.4.2] - 2024-09-04
 
