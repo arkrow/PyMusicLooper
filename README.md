@@ -206,3 +206,7 @@ This project started out as a fork of [Nolan Nicholson](https://github.com/Nolan
 ## Version History
 
 Available at [CHANGELOG.md](CHANGELOG.md)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=arkrow/PyMusicLooper&type=Date)](https://www.star-history.com/#arkrow/PyMusicLooper&Date)
