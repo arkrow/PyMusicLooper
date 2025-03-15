@@ -217,32 +217,48 @@ class LoopExportHandler(LoopHandler):
         self.extended_length = extended_length
         self.disable_fade_out = disable_fade_out
         self.fade_length = fade_length
+        self._is_autocreated_outdir = False
 
     def run(self):
         self.loop_pair_list = self.get_all_loop_pairs()
         chosen_loop_pair = self.choose_loop_pair(self.interactive_mode)
         loop_start = chosen_loop_pair.loop_start
         loop_end = chosen_loop_pair.loop_end
-        
+
         # Runners that do not need an output directory
         if self.to_stdout:
             self.stdout_export_runner(loop_start, loop_end)
 
-        # Runners that need an output directory
-        if not os.path.exists(self.output_directory):
-            os.mkdir(self.output_directory)
+        # TODO: refactor into a context manager instead
+        try:
+            # Runners that need an output directory
+            if (
+                self.tag_names
+                or self.to_txt
+                or self.split_audio
+                or self.extended_length
+            ) and not os.path.exists(self.output_directory):
+                os.mkdir(self.output_directory)
+                self._is_autocreated_outdir = True
 
-        if self.tag_names is not None:
-            self.tag_runner(loop_start, loop_end)
-        
-        if self.to_txt:
-            self.txt_export_runner(loop_start, loop_end)
+            if self.tag_names is not None:
+                self.tag_runner(loop_start, loop_end)
 
-        if self.split_audio:
-            self.split_audio_runner(loop_start, loop_end)
+            if self.to_txt:
+                self.txt_export_runner(loop_start, loop_end)
 
-        if self.extended_length:
-            self.extend_track_runner(loop_start, loop_end)
+            if self.split_audio:
+                self.split_audio_runner(loop_start, loop_end)
+
+            if self.extended_length:
+                self.extend_track_runner(loop_start, loop_end)
+        finally:
+            if (
+                self._is_autocreated_outdir
+                and os.path.exists(self.output_directory)
+                and len(os.listdir(self.output_directory)) == 0
+            ):
+                os.rmdir(self.output_directory)
 
     def split_audio_runner(self, loop_start: int, loop_end: int):
         try:
