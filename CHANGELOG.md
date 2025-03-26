@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.1] - 2025-03-26
+
+### Fixed
+
+- Prevent the `--interactive/-i` mode's input from being obscured by the progress bar when batch processing ([#55](https://github.com/arkrow/PyMusicLooper/issues/55))
+- Properly handle and auto cleanup output directories in batch processing mode  (related to [#29](https://github.com/arkrow/PyMusicLooper/issues/29))
+
+
 ## [3.5.0] - 2025-03-15
 
 ### Added
@@ -19,9 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Properly handle and auto cleanup default output directory (Fixes #29)
-- Prevent division by zero in _calculate_subseq_beat_similarity by @Chlorobyte-but-real in PR #53
-- Improve experience when system does not have PortAudio installed yet by @matchu in #49
+- Properly handle and auto cleanup default output directory (Fixes [#29](https://github.com/arkrow/PyMusicLooper/issues/29))
+- Prevent division by zero in _calculate_subseq_beat_similarity by @Chlorobyte-but-real in PR [#53](https://github.com/arkrow/PyMusicLooper/pulls/53)
+- Improve experience when system does not have PortAudio installed yet by @matchu in [#49](https://github.com/arkrow/PyMusicLooper/pulls/49)
 
 
 ## [3.4.2] - 2024-09-04
