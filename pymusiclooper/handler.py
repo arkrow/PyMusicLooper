@@ -11,6 +11,7 @@ from pymusiclooper.analysis import LoopPair
 from pymusiclooper.console import rich_console
 from pymusiclooper.core import MusicLooper
 from pymusiclooper.exceptions import AudioLoadError, LoopNotFoundError
+from pymusiclooper.utils import DEFAULT_OUTPUT_DIRECTORY_NAME
 
 
 class LoopHandler:
@@ -413,6 +414,7 @@ class BatchHandler:
         self.recursive = recursive
         self.flatten = flatten
         self.kwargs = kwargs
+        self._created_dirs = []
 
     def run(self):
         files = self.get_files_in_directory(
@@ -449,10 +451,12 @@ class BatchHandler:
                     "path": file_path,
                     "output_dir": self.output_directory if self.flatten else output_dirs[file_idx]
                 }
-                self._batch_export_helper(**task_kwargs)
+                try:
+                    self._batch_export_helper(**task_kwargs)
+                finally:
+                    self._cleanup_empty_created_dirs()
 
-    @staticmethod
-    def clone_file_tree_structure(in_files: List[str], output_directory: str) -> List[str]:
+    def clone_file_tree_structure(self, in_files: List[str], output_directory: str) -> List[str]:
         common_path = os.path.commonpath(in_files)
         output_dirs = [
             os.path.join(
@@ -464,6 +468,7 @@ class BatchHandler:
         for out_dir in output_dirs:
             if not os.path.isdir(out_dir):
                 os.makedirs(out_dir, exist_ok=True)
+                self._created_dirs.append(out_dir)
         return output_dirs
 
     @staticmethod
@@ -491,6 +496,19 @@ class BatchHandler:
             logging.error(e)
         except Exception as e:
             logging.error(e)
+
+    def _cleanup_empty_created_dirs(self):
+        dirs_to_check = self._created_dirs
+
+        if os.path.basename(self.output_directory) == DEFAULT_OUTPUT_DIRECTORY_NAME:
+            dirs_to_check += [self.output_directory]
+
+        for directory in dirs_to_check:
+            if (
+                os.path.exists(directory)
+                and len(os.listdir(directory)) == 0
+            ):
+                os.removedirs(directory)
 
 
 @contextmanager

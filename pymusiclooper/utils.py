@@ -1,8 +1,11 @@
 """General utility functions."""
+
 import os
 from typing import Optional
 
 from pymusiclooper.youtube import YoutubeDownloader
+
+DEFAULT_OUTPUT_DIRECTORY_NAME = "LooperOutput"
 
 
 def get_outputdir(path: str, output_dir: Optional[str] = None) -> str:
@@ -16,10 +19,15 @@ def get_outputdir(path: str, output_dir: Optional[str] = None) -> str:
         str: The path to the output directory.
     """
     if os.path.isdir(path):
-        default_out = os.path.join(path, "LooperOutput")
+        default_out = os.path.join(path, DEFAULT_OUTPUT_DIRECTORY_NAME)
     else:
-        default_out = os.path.join(os.path.dirname(path), "LooperOutput")
-    return os.path.abspath(default_out) if output_dir is None else os.path.abspath(output_dir)
+        default_out = os.path.join(os.path.dirname(path), DEFAULT_OUTPUT_DIRECTORY_NAME)
+    return (
+        os.path.abspath(default_out)
+        if output_dir is None
+        else os.path.abspath(output_dir)
+    )
+
 
 def mk_outputdir(path: str, output_dir: Optional[str] = None) -> str:
     """Creates the output directory in the `path` provided (if it does not exists) and returns the output directory path.
