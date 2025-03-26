@@ -1,7 +1,8 @@
 import logging
 import os
 import sys
-from typing import List, Optional, Tuple, Literal
+from contextlib import contextmanager
+from typing import List, Literal, Optional, Tuple
 
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 from rich.table import Table
@@ -23,6 +24,7 @@ class LoopHandler:
         approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        _progressbar: Progress = None,
         **kwargs,
     ):
         if approx_loop_position is not None:
@@ -32,6 +34,7 @@ class LoopHandler:
             self.approx_loop_start = None
             self.approx_loop_end = None
 
+        self.filepath = path
         self._musiclooper = MusicLooper(filepath=path)
 
         logging.info(f"Loaded \"{path}\". Analyzing...")
@@ -47,6 +50,7 @@ class LoopHandler:
         )
         self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
         self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
+        self._progressbar = _progressbar
 
     def get_all_loop_pairs(self) -> List[LoopPair]:
         """
@@ -68,16 +72,18 @@ class LoopHandler:
     def choose_loop_pair(self, interactive_mode=False):
         index = 0
         if self.loop_pair_list and interactive_mode:
-            index = self.interactive_handler()
+            with _hideprogressbar(self._progressbar):
+                index = self.interactive_handler()
 
         return self.loop_pair_list[index]
 
     def interactive_handler(self, show_top=25):
         preview_looper = self.musiclooper
         total_candidates = len(self.loop_pair_list)
-        more_prompt_message = "\nEnter 'more' to display additional loop points, 'all' to display all of them, or 'reset' to display the default amount." if show_top < total_candidates else ""
-        rich_console.print()
-        table = Table(title=f"Discovered loop points ({min(show_top, total_candidates)}/{total_candidates} displayed)", caption=more_prompt_message)
+        _display_more_hint_msg = "\nEnter 'more' to display additional loop points, 'all' to display all of them, or 'reset' to display the default amount." if show_top < total_candidates else ""
+        rich_console.print(f"Processing: \"{self.filepath}\"")
+        _discovered_points_msg = f"Discovered loop points\n({min(show_top, total_candidates)}/{total_candidates} displayed)"
+        table = Table(title=_discovered_points_msg, caption=_display_more_hint_msg)
         table.add_column("Index", justify="right", style="cyan", no_wrap=True)
         table.add_column("Loop Start", style="magenta")
         table.add_column("Loop End", style="green")
@@ -203,6 +209,7 @@ class LoopExportHandler(LoopHandler):
             approx_loop_position=approx_loop_position,
             brute_force=brute_force,
             disable_pruning=disable_pruning,
+            **kwargs,
         )
         self.output_directory = output_dir
         self.split_audio = split_audio
@@ -438,6 +445,7 @@ class BatchHandler:
                 )
                 task_kwargs = {
                     **self.kwargs,
+                    "_progressbar": progress,
                     "path": file_path,
                     "output_dir": self.output_directory if self.flatten else output_dirs[file_idx]
                 }
@@ -483,3 +491,30 @@ class BatchHandler:
             logging.error(e)
         except Exception as e:
             logging.error(e)
+
+
+@contextmanager
+def _hideprogressbar(progress: Progress):
+    """
+    Intended to pause and hide the progress bar while a prompt is active.
+
+    Based on @abrahammurciano's answer in rich issue #1535
+    https://github.com/Textualize/rich/issues/1535#issuecomment-1745297594
+    """
+    # Handle edge case where a progressbar might not exist
+    if progress is None:
+        try:
+            yield
+        finally:
+            pass
+        return
+    transient = progress.live.transient # save the old value
+    progress.live.transient = True
+    progress.stop()
+    try:
+        yield
+    finally:
+        # make space for the progress to use so it doesn't overwrite any previous lines
+        print("\n" * (len(progress.tasks) - 2))
+        progress.live.transient = transient # restore the old value
+        progress.start()
