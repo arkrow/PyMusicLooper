@@ -275,6 +275,55 @@ class MusicLooper:
             file.write(f"{loop_start} {loop_end} {self.mlaudio.filename}\n")
 
 
+    def _find_start_tag(
+        self,
+        file_tags: dict[str, List[str]],
+    ) -> str:
+        # List derived from:
+        # https://github.com/libsdl-org/SDL_mixer/blob/5175907b515ea9e07d0b35849bfaf09870d07d33/src/codecs/music_ogg.c#L289-L302
+        # https://github.com/vgmstream/vgmstream/blob/02d3c3f875fb97b682c4479fe66c7e0a0eeee04d/src/meta/ogg_vorbis.c#L647-L675
+        known_tags = [
+            'COMMENT=LOOPPOINT',
+            'LOOP',
+            'LOOP_BEGIN',
+            'LOOPPOINT',
+            'LOOPS',
+            'LOOPSTART',
+            'LOOP_START',
+            'LOOP-START',
+            'UM3.STREAM.LOOPPOINT.START',
+            'XIPH_CUE_LOOPSTART',
+        ]
+
+        for tag in known_tags:
+            if tag in file_tags:
+                return tag
+
+        raise ValueError(f"No loop start tag could be automatically detected in the metadata of \"{self.filename}\".")
+
+
+    def _find_end_tag(
+        self,
+        file_tags: dict[str, List[str]],
+    ) -> str:
+        known_tags = [
+            'LOOPE',
+            'LOOPEND',
+            'LOOP_END',
+            'LOOP-END',
+            'LOOPLENGTH',
+            'LOOP_LENGTH',
+            'LOOP-LENGTH',
+            'XIPH_CUE_LOOPEND',
+        ]
+
+        for tag in known_tags:
+            if tag in file_tags:
+                return tag
+
+        raise ValueError(f"No loop end tag could be automatically detected in the metadata of \"{self.filename}\".")
+
+
     def _end_tag_is_offset(
         self,
         loop_end_tag: str,
@@ -351,6 +400,10 @@ class MusicLooper:
         loop_end = None
 
         with taglib.File(self.filepath) as audio_file:
+            if loop_start_tag is None:
+                loop_start_tag = self._find_start_tag(audio_file.tags)
+            if loop_end_tag is None:
+                loop_end_tag = self._find_end_tag(audio_file.tags)
             if loop_start_tag not in audio_file.tags:
                 raise ValueError(f"The tag \"{loop_start_tag}\" is not present in the metadata of \"{self.filename}\".")
             if loop_end_tag not in audio_file.tags:
