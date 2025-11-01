@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2025-11-01
+
+### Changed
+
+- Automatically detect tag names when using tag-reated features (e.g. play-tagged) by @Splendide-Imaginarius in PR ([#66](https://github.com/arkrow/PyMusicLooper/pull/66))
+- Add existing tags to looped file when using extend, implementation courtesy of @mhieronymus in ([#65](https://github.com/arkrow/PyMusicLooper/issues/65))
+
+
 ## [3.5.1] - 2025-03-26
 
 ### Fixed
