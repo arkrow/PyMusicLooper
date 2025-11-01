@@ -248,6 +248,22 @@ class MusicLooper:
             sf.buffer_write(final_loop.tobytes(order="C"), dtype)
             if disable_fade_out:
                 sf.buffer_write(outro.tobytes(order="C"), dtype)
+
+        # attempt to copy over the tags
+        try:
+            import taglib
+            original_tags = None
+            with taglib.File(self.filepath, save_on_exit=False) as src_file:
+                original_tags = src_file.tags
+
+            with taglib.File(output_file_path, save_on_exit=True) as dest_file:
+                for tag in original_tags:
+                    dest_file.tags[tag] = original_tags[tag]
+        except Exception:
+            # silently ignore errors for now;
+            # TODO: implement logging for debugging
+            pass
+
         return output_file_path
 
     def export_txt(
