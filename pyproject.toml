@@ -1,6 +1,6 @@
 [project]
 name = "pymusiclooper"
-version = "3.5.1"
+version = "3.6.0"
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 authors = [{ name = "arkrow", email = "arkrow@protonmail.com" }]
 requires-python = "~=3.10"
