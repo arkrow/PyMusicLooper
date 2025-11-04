@@ -78,6 +78,11 @@ def common_loop_options(f):
     @click.option("--brute-force", is_flag=True, default=False, help=r"Check the entire audio track instead of just the detected beats. [dim yellow](Warning: may take several minutes to complete.)[/]")
     @click.option("--disable-pruning", is_flag=True, default=False, help="Disables filtering of the detected loop points from the initial pass.")
 
+    @click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
+    @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
+
+    @click.option("--read-tags/--no-read-tags", is_flag=True, default=None, help="Always determine loop points from metadata tags / from analysis. Default: use tags if present, analysis otherwise.")
+
     @functools.wraps(f)
     def wrapper_common_options(*args, **kwargs):
         return f(*args, **kwargs)
@@ -116,9 +121,8 @@ def play(**kwargs):
             handler = LoopHandler(**kwargs)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
-        interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
 
-        chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
+        chosen_loop_pair = handler.choose_loop_pair(interactive_mode=handler.interactive_mode)
 
         start_time = handler.format_time(chosen_loop_pair.loop_start, in_samples=in_samples)
         end_time = handler.format_time(chosen_loop_pair.loop_end, in_samples=in_samples)
@@ -138,41 +142,6 @@ def play(**kwargs):
         # Already logged from youtube.py
         pass
     except (AudioLoadError, LoopNotFoundError, Exception) as e:
-        print_exception(e)
-
-
-@cli_main.command()
-@click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
-@click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
-@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
-def play_tagged(path, tag_names, tag_offset):
-    """Skips loop analysis and reads the loop points directly from the tags present in the file."""
-    try:
-        if tag_names is None:
-            tag_names = [None, None]
-
-        looper = MusicLooper(path)
-        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], tag_offset)
-
-        in_samples = "PML_DISPLAY_SAMPLES" in os.environ
-
-        start_time = (
-            loop_start
-            if in_samples
-            else looper.samples_to_ftime(loop_start)
-        )
-        end_time = (
-            loop_end
-            if in_samples
-            else looper.samples_to_ftime(loop_end)
-        )
-
-        rich_console.print(f"\nPlaying with looping active from [green]{end_time}[/] back to [green]{start_time}[/]")
-        rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
-
-        looper.play_looping(loop_start, loop_end)
-
-    except Exception as e:
         print_exception(e)
 
 

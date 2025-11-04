@@ -26,17 +26,33 @@ class LoopHandler:
         brute_force: bool = False,
         disable_pruning: bool = False,
         _progressbar: Progress = None,
+        tag_names: Optional[List[Optional[str]]] = None,
+        tag_offset: Optional[bool] = None,
+        read_tags: Optional[bool] = None,
         **kwargs,
     ):
+        self.filepath = path
+        self._musiclooper = MusicLooper(filepath=path)
+
+        if read_tags or read_tags is None:
+            try:
+                if tag_names is None:
+                    tag_names = [None, None]
+
+                loop_start, loop_end = self._musiclooper.read_tags(tag_names[0], tag_names[1], tag_offset)
+                self.loop_pair_list = [LoopPair(_loop_start_frame_idx=None, _loop_end_frame_idx=None, note_distance=0.0, loudness_difference=0.0, loop_start=loop_start, loop_end=loop_end, score=1.0)]
+                self.interactive_mode = False
+                return
+            except ValueError as e:
+                if read_tags:
+                    raise e
+
         if approx_loop_position is not None:
             self.approx_loop_start = approx_loop_position[0]
             self.approx_loop_end = approx_loop_position[1]
         else:
             self.approx_loop_start = None
             self.approx_loop_end = None
-
-        self.filepath = path
-        self._musiclooper = MusicLooper(filepath=path)
 
         logging.info(f"Loaded \"{path}\". Analyzing...")
 
