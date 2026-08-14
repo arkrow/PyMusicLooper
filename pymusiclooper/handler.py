@@ -197,7 +197,8 @@ class LoopExportHandler(LoopHandler):
         tag_names: Optional[Tuple[str, str]] = None,
         tag_offset: Optional[bool] = None,
         batch_mode: bool = False,
-        extended_length: float = 0,
+        extended_length: Optional[float] = None,
+        extended_count: Optional[float] = None,
         fade_length: float = 0,
         disable_fade_out: bool = False,
         **kwargs,
@@ -222,7 +223,10 @@ class LoopExportHandler(LoopHandler):
         self.tag_names = tag_names
         self.tag_offset = tag_offset
         self.batch_mode = batch_mode
+        if (extended_length is not None) and (extended_count is not None):
+            raise ValueError("Must not specify --extended-length and --extended_count simultaneously")
         self.extended_length = extended_length
+        self.extended_count = extended_count
         self.disable_fade_out = disable_fade_out
         self.fade_length = fade_length
         self._is_autocreated_outdir = False
@@ -245,6 +249,7 @@ class LoopExportHandler(LoopHandler):
                 or self.to_txt
                 or self.split_audio
                 or self.extended_length
+                or self.extended_count is not None
             ) and not os.path.exists(self.output_directory):
                 os.mkdir(self.output_directory)
                 self._is_autocreated_outdir = True
@@ -258,7 +263,7 @@ class LoopExportHandler(LoopHandler):
             if self.split_audio:
                 self.split_audio_runner(loop_start, loop_end)
 
-            if self.extended_length:
+            if self.extended_length or self.extended_count is not None:
                 self.extend_track_runner(loop_start, loop_end)
         finally:
             if (
@@ -305,6 +310,7 @@ class LoopExportHandler(LoopHandler):
                 format=self.format,
                 output_dir=self.output_directory,
                 extended_length=self.extended_length,
+                extended_count=self.extended_count,
                 disable_fade_out=self.disable_fade_out,
                 fade_length=self.fade_length,
             )

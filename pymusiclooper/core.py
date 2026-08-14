@@ -154,7 +154,8 @@ class MusicLooper:
         self,
         loop_start: int,
         loop_end: int,
-        extended_length: float,
+        extended_length: Optional[float],
+        extended_count: Optional[float],
         fade_length: float = 5,
         disable_fade_out: bool = False,
         format: str = "WAV",
@@ -177,16 +178,21 @@ class MusicLooper:
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
 
-        if extended_length < self.mlaudio.total_duration:
-            raise ValueError(
-                "Extended length must be greater than the audio's original length."
-            )
-
         intro = self.mlaudio.playback_audio[:loop_start]
         loop = self.mlaudio.playback_audio[loop_start:loop_end]
         outro = self.mlaudio.playback_audio[loop_end:]
 
-        loop_extended_length = self.mlaudio.seconds_to_samples(extended_length) - intro.shape[0]
+        if extended_length is not None and extended_length < self.mlaudio.total_duration:
+            raise ValueError(
+                "Extended length must be greater than the audio's original length."
+            )
+
+        if extended_count is not None:
+            if extended_length is not None:
+                raise ValueError("Must not specify extended length and extended count simultaneously.")
+            loop_extended_length = round(extended_count * loop.shape[0])
+        else:
+            loop_extended_length = self.mlaudio.seconds_to_samples(extended_length) - intro.shape[0]
 
         # If the outro will be included, account for its length when calculating the new loop duration
         if disable_fade_out:
@@ -212,23 +218,28 @@ class MusicLooper:
             )
 
         # Format extended file name with its duration suffixed
-        extended_loop_length = final_loop.shape[0] + (
-            loop.shape[0] * (int(loop_factor))
-        )
-        extended_audio_length = (
-            intro.shape[0]
-            + extended_loop_length
-            + (outro.shape[0] if disable_fade_out else 0)
-        )
-        total_length_seconds = self.mlaudio.samples_to_seconds(extended_audio_length)
-        duration_sec = ceil(total_length_seconds%60)
-        duration_mins = int(total_length_seconds//60)
-        if duration_sec == 60:
-            duration_sec = 0
-            duration_mins += 1
-        extended_audio_length_fmt = (
-            f"{duration_mins:d}m{duration_sec:02d}s"
-        )
+        if extended_length is not None:
+            extended_loop_length = final_loop.shape[0] + (
+                loop.shape[0] * (int(loop_factor))
+            )
+            extended_audio_length = (
+                intro.shape[0]
+                + extended_loop_length
+                + (outro.shape[0] if disable_fade_out else 0)
+            )
+            total_length_seconds = self.mlaudio.samples_to_seconds(extended_audio_length)
+            duration_sec = ceil(total_length_seconds%60)
+            duration_mins = int(total_length_seconds//60)
+            if duration_sec == 60:
+                duration_sec = 0
+                duration_mins += 1
+            extended_audio_length_fmt = (
+                f"{duration_mins:d}m{duration_sec:02d}s"
+            )
+        else:
+            extended_audio_length_fmt = (
+                f"{extended_count:g}lp"
+            )
         output_file_path = (
             f"{out_path}-extended-{extended_audio_length_fmt}.{format.lower()}"
         )
