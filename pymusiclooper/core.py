@@ -13,6 +13,7 @@ import numpy as np
 from pymusiclooper.analysis import LoopPair, find_best_loop_points
 from pymusiclooper.audio import MLAudio
 from pymusiclooper.playback import PlaybackHandler
+from pymusiclooper.wav_smpl import is_wav_file, read_wav_smpl, write_wav_smpl
 
 # Lazy-load external libraries when they're needed
 soundfile = lazy.load("soundfile")
@@ -406,27 +407,47 @@ class MusicLooper:
         self,
         loop_start: int,
         loop_end: int,
-        loop_start_tag: str,
-        loop_end_tag: str,
+        loop_start_tag: Optional[str] = None,
+        loop_end_tag: Optional[str] = None,
         is_offset: Optional[bool] = None,
-        output_dir: Optional[str] = None
-    ) -> Tuple[str]:
+        output_dir: Optional[str] = None,
+        write_smpl: Optional[bool] = None,
+    ) -> Tuple[str, str]:
         """Adds metadata tags of loop points to a copy of the source audio file.
+
+        For WAV files, also writes a standard RIFF `smpl` chunk by default unless `write_smpl=False`.
 
         Args:
             loop_start (int): Loop start in samples.
             loop_end (int): Loop end in samples.
-            loop_start_tag (str): Name of the loop_start metadata tag.
-            loop_end_tag (str): Name of the loop_end metadata tag.
+            loop_start_tag (str, optional): Name of the loop_start metadata tag.
+            loop_end_tag (str, optional): Name of the loop_end metadata tag.
             is_offset (bool, optional): Export second tag as relative length / absolute end. Defaults to auto-detecting based on tag name.
-            output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
+            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
+            write_smpl (bool, optional): If True, write a WAV RIFF `smpl` chunk; if False, skip it; if None, automatically write it for WAV files.
         """
-        # Workaround for taglib import issues on Apple silicon devices
-        # Import taglib only when needed to isolate ImportErrors
-        import taglib
-            
+        has_tag_names = loop_start_tag is not None and loop_end_tag is not None
+        if (loop_start_tag is None) != (loop_end_tag is None):
+            raise ValueError(
+                "Both loop_start_tag and loop_end_tag must be provided together."
+            )
+
+        wav_file = is_wav_file(self.mlaudio.filepath)
+        should_write_smpl = wav_file if write_smpl is None else write_smpl
+
+        if write_smpl is True and not wav_file:
+            raise ValueError(
+                f'Cannot write WAV smpl chunk to non-WAV file "{self.mlaudio.filename}".'
+            )
+
+        if not has_tag_names and not should_write_smpl:
+            raise ValueError(
+                "Must specify loop_start_tag and loop_end_tag for non-WAV files "
+                "(or use a WAV file to write a smpl chunk)."
+            )
+
         if output_dir is None:
-            output_dir = os.path.abspath(self.mlaudio.filepath)
+            output_dir = os.path.dirname(os.path.abspath(self.mlaudio.filepath))
 
         track_name, file_extension = os.path.splitext(self.mlaudio.filename)
 
@@ -435,23 +456,47 @@ class MusicLooper:
         )
         shutil.copyfile(self.mlaudio.filepath, exported_file_path)
 
-        # Handle LOOPLENGTH tag
-        if self._end_tag_is_offset(loop_end_tag, is_offset):
-            loop_end = loop_end - loop_start
+        raw_loop_end = loop_end
+        tag_loop_end = loop_end
 
-        with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
-            audio_file.tags[loop_start_tag] = [str(loop_start)]
-            audio_file.tags[loop_end_tag] = [str(loop_end)]
+        if has_tag_names:
+            # Workaround for taglib import issues on Apple silicon devices
+            # Import taglib only when needed to isolate ImportErrors
+            import taglib
 
-        return str(loop_start), str(loop_end)
+            # Handle LOOPLENGTH tag
+            if self._end_tag_is_offset(loop_end_tag, is_offset):
+                tag_loop_end = loop_end - loop_start
+
+            with taglib.File(exported_file_path, save_on_exit=True) as audio_file:
+                audio_file.tags[loop_start_tag] = [str(loop_start)]
+                audio_file.tags[loop_end_tag] = [str(tag_loop_end)]
+
+        if should_write_smpl:
+            write_wav_smpl(
+                exported_file_path,
+                loop_start,
+                raw_loop_end,
+                self.mlaudio.rate,
+            )
+
+        return str(loop_start), str(tag_loop_end)
 
 
-    def read_tags(self, loop_start_tag: str, loop_end_tag: str, is_offset: Optional[bool] = None) -> Tuple[int, int]:
-        """Reads the tags provided from the file and returns the read loop points
+    def read_tags(
+        self,
+        loop_start_tag: Optional[str] = None,
+        loop_end_tag: Optional[str] = None,
+        is_offset: Optional[bool] = None,
+    ) -> Tuple[int, int]:
+        """Reads the tags provided from the file and returns the read loop points.
+
+        When `loop_start_tag` and `loop_end_tag` are both None on a WAV file,
+        falls back to reading the RIFF `smpl` chunk if standard text tags are absent.
 
         Args:
-            loop_start_tag (str): The name of the metadata tag containing the loop_start value
-            loop_end_tag (str): The name of the metadata tag containing the loop_end value
+            loop_start_tag (str, optional): The name of the metadata tag containing the loop_start value
+            loop_end_tag (str, optional): The name of the metadata tag containing the loop_end value
             is_offset (bool, optional): Parse second tag as relative length / absolute end. Defaults to auto-detecting based on tag name.
 
         Returns:
@@ -463,23 +508,31 @@ class MusicLooper:
 
         loop_start = None
         loop_end = None
+        auto_detect = loop_start_tag is None and loop_end_tag is None
 
-        with taglib.File(self.filepath) as audio_file:
-            if loop_start_tag is None:
-                loop_start_tag = self._find_start_tag(audio_file.tags)
-            if loop_end_tag is None:
-                loop_end_tag = self._find_end_tag(audio_file.tags)
-            if loop_start_tag not in audio_file.tags:
-                raise ValueError(f"The tag \"{loop_start_tag}\" is not present in the metadata of \"{self.filename}\".")
-            if loop_end_tag not in audio_file.tags:
-                raise ValueError(f"The tag \"{loop_end_tag}\" is not present in the metadata of \"{self.filename}\".")
-            try:
-                loop_start = int(audio_file.tags[loop_start_tag][0])
-                loop_end = int(audio_file.tags[loop_end_tag][0])
-            except Exception as e:
-                raise TypeError(
-                    "One of the tags provided has invalid (non-integer or empty) values"
-                ) from e
+        try:
+            with taglib.File(self.filepath) as audio_file:
+                if loop_start_tag is None:
+                    loop_start_tag = self._find_start_tag(audio_file.tags)
+                if loop_end_tag is None:
+                    loop_end_tag = self._find_end_tag(audio_file.tags)
+                if loop_start_tag not in audio_file.tags:
+                    raise ValueError(f"The tag \"{loop_start_tag}\" is not present in the metadata of \"{self.filename}\".")
+                if loop_end_tag not in audio_file.tags:
+                    raise ValueError(f"The tag \"{loop_end_tag}\" is not present in the metadata of \"{self.filename}\".")
+                try:
+                    loop_start = int(audio_file.tags[loop_start_tag][0])
+                    loop_end = int(audio_file.tags[loop_end_tag][0])
+                except Exception as e:
+                    raise TypeError(
+                        "One of the tags provided has invalid (non-integer or empty) values"
+                    ) from e
+        except (ValueError, OSError):
+            if auto_detect and is_wav_file(self.filepath):
+                smpl_points = read_wav_smpl(self.filepath)
+                if smpl_points is not None:
+                    return min(smpl_points), max(smpl_points)
+            raise
 
         # Re-order the loop points in case
         real_loop_start = min(loop_start, loop_end)

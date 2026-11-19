@@ -197,6 +197,8 @@ class LoopExportHandler(LoopHandler):
         alt_export_top: int = 0,
         tag_names: Optional[Tuple[str, str]] = None,
         tag_offset: Optional[bool] = None,
+        smpl: Optional[bool] = None,
+        tag_mode: bool = False,
         batch_mode: bool = False,
         extended_length: float = 0,
         fade_length: float = 0,
@@ -223,6 +225,8 @@ class LoopExportHandler(LoopHandler):
         self.alt_export_top = alt_export_top
         self.tag_names = tag_names
         self.tag_offset = tag_offset
+        self.smpl = smpl
+        self.tag_mode = tag_mode or (tag_names is not None) or (smpl is True)
         self.batch_mode = batch_mode
         self.extended_length = extended_length
         self.disable_fade_out = disable_fade_out
@@ -242,16 +246,17 @@ class LoopExportHandler(LoopHandler):
         # TODO: refactor into a context manager instead
         try:
             # Runners that need an output directory
-            if (
-                self.tag_names
+            needs_output_dir = (
+                self.tag_mode
                 or self.to_txt
                 or self.split_audio
                 or self.extended_length
-            ) and not os.path.exists(self.output_directory):
+            )
+            if needs_output_dir and not os.path.exists(self.output_directory):
                 os.mkdir(self.output_directory)
                 self._is_autocreated_outdir = True
 
-            if self.tag_names is not None:
+            if self.tag_mode:
                 self.tag_runner(loop_start, loop_end)
 
             if self.to_txt:
@@ -371,17 +376,26 @@ class LoopExportHandler(LoopHandler):
             with open(out_path, mode="w") as f:
                 f.writelines(formatted_lines)
 
-    def tag_runner(self, loop_start: int, loop_end: int):        
-        loop_start_tag, loop_end_tag = self.tag_names
-        loop_start, loop_end = self.musiclooper.export_tags(
+    def tag_runner(self, loop_start: int, loop_end: int):
+        loop_start_tag, loop_end_tag = (
+            self.tag_names if self.tag_names is not None else (None, None)
+        )
+        out_start, out_end = self.musiclooper.export_tags(
             loop_start,
             loop_end,
             loop_start_tag,
             loop_end_tag,
             is_offset=self.tag_offset,
             output_dir=self.output_directory,
+            write_smpl=self.smpl,
         )
-        message = f"Exported {loop_start_tag}: {loop_start} and {loop_end_tag}: {loop_end} of \"{self.musiclooper.filename}\" to a copy in \"{self.output_directory}\""
+        if loop_start_tag is not None and loop_end_tag is not None:
+            tag_desc = f"{loop_start_tag}: {out_start} and {loop_end_tag}: {out_end}"
+        else:
+            tag_desc = f"smpl loop ({out_start} - {out_end})"
+
+        message = f'Exported {tag_desc} of "{self.musiclooper.filename}" to a copy in "{self.output_directory}"'
+
         if self.batch_mode:
             logging.info(message)
         else:

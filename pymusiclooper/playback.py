@@ -67,7 +67,7 @@ class PlaybackHandler:
             loop_start < 0
             or loop_start >= total_samples
             or loop_end < 0
-            or loop_end >= total_samples
+            or loop_end > total_samples
             or loop_start >= loop_end
         )
 
