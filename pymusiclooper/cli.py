@@ -145,6 +145,21 @@ def play(**kwargs):
         print_exception(e)
 
 
+@cli_main.command(deprecated=True)
+@click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
+@click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
+@click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
+@click.pass_context
+def play_tagged(ctx, path, tag_names, tag_offset):
+    """(Use play instead.) Skips loop analysis and reads the loop points directly from the tags present in the file."""
+    args = ['--path', path]
+    if tag_names is not None:
+        args.extend(['--tag-names', tag_names[0], tag_names[1]])
+    if tag_offset is not None:
+        args.extend([('--tag-offset' if tag_offset else '--no-tag-offset')])
+    play(args, standalone_mode=False)
+
+
 @cli_main.command()
 @common_path_options
 @common_loop_options
