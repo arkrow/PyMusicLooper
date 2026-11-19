@@ -1,9 +1,63 @@
+import contextlib
+import io
 import os
+import sys
+import threading
 
 import librosa
 import numpy as np
 
 from pymusiclooper.exceptions import AudioLoadError
+
+_STDERR_REDIRECT_LOCK = threading.Lock()
+
+
+@contextlib.contextmanager
+def _suppress_stderr():
+    """Suppresses C-level stderr output (e.g. libmpg123 warnings from libsndfile)
+    without affecting stdout.
+
+    Falls back to a no-op when `PML_DEBUG` is set or when stderr is not backed
+    by a valid OS file descriptor (e.g. windowless/GUI environments).
+    """
+    if "PML_DEBUG" in os.environ:
+        yield
+        return
+
+    try:
+        stderr_fd = sys.stderr.fileno() if sys.stderr is not None else 2
+    except (AttributeError, ValueError, io.UnsupportedOperation):
+        stderr_fd = 2
+
+    with _STDERR_REDIRECT_LOCK:
+        devnull_fd = None
+        saved_stderr_fd = None
+        try:
+            if sys.stderr is not None:
+                with contextlib.suppress(Exception):
+                    sys.stderr.flush()
+            saved_stderr_fd = os.dup(stderr_fd)
+            devnull_fd = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull_fd, stderr_fd)
+        except OSError:
+            if devnull_fd is not None:
+                os.close(devnull_fd)
+            if saved_stderr_fd is not None:
+                os.close(saved_stderr_fd)
+            yield
+            return
+
+        try:
+            yield
+        finally:
+            try:
+                if sys.stderr is not None:
+                    with contextlib.suppress(Exception):
+                        sys.stderr.flush()
+                os.dup2(saved_stderr_fd, stderr_fd)
+            finally:
+                os.close(devnull_fd)
+                os.close(saved_stderr_fd)
 
 
 class MLAudio:
@@ -30,10 +84,10 @@ class MLAudio:
         """
         # Load the file if it exists
         try:
-            raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
+            with _suppress_stderr():
+                raw_audio, sampling_rate = librosa.load(filepath, sr=None, mono=False)
         except Exception as e:
             raise AudioLoadError(f"{os.path.basename(filepath)} could not be loaded. It might not contain valid audio data, or is in an supported format.") from e
-
         self.total_duration = librosa.get_duration(y=raw_audio, sr=sampling_rate)
 
         if raw_audio.size == 0:
