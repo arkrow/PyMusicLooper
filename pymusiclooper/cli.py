@@ -223,8 +223,9 @@ def export_points(**kwargs):
 @click.option('--tag-names', type=str, required=False, default=None, nargs=2, help='Name of the loop metadata tags to use, e.g. --tag-names LOOP_START LOOP_END. Optional for WAV files when writing a smpl chunk.')
 @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always export second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 @click.option("--smpl/--no-smpl", is_flag=True, default=None, help="Write/skip a standard WAV RIFF smpl chunk containing the loop points. Default: enabled automatically for WAV files.")
+@click.option("--in-place", is_flag=True, default=False, help="Add loop metadata directly to the input file(s) without creating copies.")
 def tag(**kwargs):
-    """Adds metadata tags of loop points to a copy of the input audio file(s)."""
+    """Adds metadata tags of loop points to a copy of the input audio file(s), or in-place with --in-place."""
     if kwargs.get("tag_names") is None and kwargs.get("smpl") is False:
         raise click.UsageError(
             "Must specify --tag-names unless writing a WAV smpl chunk."

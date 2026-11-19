@@ -198,6 +198,7 @@ class LoopExportHandler(LoopHandler):
         tag_names: Optional[Tuple[str, str]] = None,
         tag_offset: Optional[bool] = None,
         smpl: Optional[bool] = None,
+        in_place: bool = False,
         tag_mode: bool = False,
         batch_mode: bool = False,
         extended_length: float = 0,
@@ -226,6 +227,7 @@ class LoopExportHandler(LoopHandler):
         self.tag_names = tag_names
         self.tag_offset = tag_offset
         self.smpl = smpl
+        self.in_place = in_place
         self.tag_mode = tag_mode or (tag_names is not None) or (smpl is True)
         self.batch_mode = batch_mode
         self.extended_length = extended_length
@@ -247,7 +249,7 @@ class LoopExportHandler(LoopHandler):
         try:
             # Runners that need an output directory
             needs_output_dir = (
-                self.tag_mode
+                (self.tag_mode and not self.in_place)
                 or self.to_txt
                 or self.split_audio
                 or self.extended_length
@@ -387,6 +389,7 @@ class LoopExportHandler(LoopHandler):
             loop_end_tag,
             is_offset=self.tag_offset,
             output_dir=self.output_directory,
+            in_place=self.in_place,
             write_smpl=self.smpl,
         )
         if loop_start_tag is not None and loop_end_tag is not None:
@@ -394,7 +397,10 @@ class LoopExportHandler(LoopHandler):
         else:
             tag_desc = f"smpl loop ({out_start} - {out_end})"
 
-        message = f'Exported {tag_desc} of "{self.musiclooper.filename}" to a copy in "{self.output_directory}"'
+        if self.in_place:
+            message = f'Exported {tag_desc} in-place to "{self.musiclooper.filepath}"'
+        else:
+            message = f'Exported {tag_desc} of "{self.musiclooper.filename}" to a copy in "{self.output_directory}"'
 
         if self.batch_mode:
             logging.info(message)
@@ -444,9 +450,15 @@ class BatchHandler:
         if len(files) == 0:
             raise FileNotFoundError(f"No files found in \"{self.directory_path}\"")
 
+        needs_output_dirs = not (
+            self.kwargs.get("in_place", False)
+            and not self.kwargs.get("split_audio", False)
+            and not self.kwargs.get("to_txt", False)
+            and not self.kwargs.get("extended_length", 0)
+        )
         output_dirs = (
             None
-            if self.flatten
+            if self.flatten or not needs_output_dirs
             else self.clone_file_tree_structure(files, self.output_directory)
         )
 
@@ -469,7 +481,11 @@ class BatchHandler:
                     **self.kwargs,
                     "_progressbar": progress,
                     "path": file_path,
-                    "output_dir": self.output_directory if self.flatten else output_dirs[file_idx]
+                    "output_dir": (
+                        self.output_directory
+                        if (self.flatten or not needs_output_dirs)
+                        else output_dirs[file_idx]
+                    ),
                 }
                 try:
                     self._batch_export_helper(**task_kwargs)

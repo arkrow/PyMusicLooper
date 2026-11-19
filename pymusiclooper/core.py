@@ -411,9 +411,10 @@ class MusicLooper:
         loop_end_tag: Optional[str] = None,
         is_offset: Optional[bool] = None,
         output_dir: Optional[str] = None,
+        in_place: bool = False,
         write_smpl: Optional[bool] = None,
     ) -> Tuple[str, str]:
-        """Adds metadata tags of loop points to a copy of the source audio file.
+        """Adds metadata tags of loop points to a copy of the source audio file (or in-place).
 
         For WAV files, also writes a standard RIFF `smpl` chunk by default unless `write_smpl=False`.
 
@@ -423,7 +424,8 @@ class MusicLooper:
             loop_start_tag (str, optional): Name of the loop_start metadata tag.
             loop_end_tag (str, optional): Name of the loop_end metadata tag.
             is_offset (bool, optional): Export second tag as relative length / absolute end. Defaults to auto-detecting based on tag name.
-            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
+            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file. Ignored when `in_place=True`.
+            in_place (bool, optional): If True, write tags directly to the source file without creating a copy. Defaults to False.
             write_smpl (bool, optional): If True, write a WAV RIFF `smpl` chunk; if False, skip it; if None, automatically write it for WAV files.
         """
         has_tag_names = loop_start_tag is not None and loop_end_tag is not None
@@ -446,15 +448,18 @@ class MusicLooper:
                 "(or use a WAV file to write a smpl chunk)."
             )
 
-        if output_dir is None:
-            output_dir = os.path.dirname(os.path.abspath(self.mlaudio.filepath))
+        if in_place:
+            exported_file_path = self.mlaudio.filepath
+        else:
+            if output_dir is None:
+                output_dir = os.path.dirname(os.path.abspath(self.mlaudio.filepath))
 
-        track_name, file_extension = os.path.splitext(self.mlaudio.filename)
+            track_name, file_extension = os.path.splitext(self.mlaudio.filename)
 
-        exported_file_path = os.path.join(
-            output_dir, f"{track_name}-tagged{file_extension}"
-        )
-        shutil.copyfile(self.mlaudio.filepath, exported_file_path)
+            exported_file_path = os.path.join(
+                output_dir, f"{track_name}-tagged{file_extension}"
+            )
+            shutil.copyfile(self.mlaudio.filepath, exported_file_path)
 
         raw_loop_end = loop_end
         tag_loop_end = loop_end
