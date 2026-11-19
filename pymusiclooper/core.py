@@ -1,6 +1,7 @@
 """Contains the core MusicLooper class that can be
 used for programmatic access to the CLI's main features."""
 
+import logging
 import os
 import shutil
 from math import ceil
@@ -19,6 +20,24 @@ soundfile = lazy.load("soundfile")
 # Write audio in fixed-size frame chunks to avoid libsndfile stack overflows
 # (e.g. OGG/Vorbis on Windows and large buffers on Linux) and lower peak memory.
 _WRITE_CHUNK_FRAMES = 65536
+# Standard RIFF WAV uses a 32-bit size field; many players and parsers treat it
+# as signed (2 GiB limit, ~3h 06m 24s at 48 kHz stereo PCM_16). Automatically
+# upgrade WAV outputs exceeding this size to RF64 (64-bit WAV).
+_WAV_STANDARD_MAX_BYTES = (2**31) - 1
+
+
+def _resolve_soundfile_format(format: str, n_frames: int, n_channels: int) -> str:
+    """Returns the soundfile container format to use, upgrading large WAV files to RF64."""
+    if format.upper() == "WAV":
+        # Default soundfile subtype for WAV is PCM_16 (2 bytes per sample per channel)
+        estimated_bytes = 44 + int(n_frames) * int(n_channels) * 2
+        if estimated_bytes > _WAV_STANDARD_MAX_BYTES:
+            logging.info(
+                "Output WAV exceeds the 2 GiB standard RIFF limit; "
+                "using RF64 container format."
+            )
+            return "RF64"
+    return format
 
 
 def _write_audio_chunks(
@@ -157,12 +176,15 @@ class MusicLooper:
 
         ext = format.lower()
         for suffix, section_audio in sections:
+            sf_format = _resolve_soundfile_format(
+                format, section_audio.shape[0], self.mlaudio.n_channels
+            )
             with soundfile.SoundFile(
                 f"{out_path}-{suffix}.{ext}",
                 mode="w",
                 samplerate=self.mlaudio.rate,
                 channels=self.mlaudio.n_channels,
-                format=format,
+                format=sf_format,
             ) as sf:
                 _write_audio_chunks(sf, section_audio)
 
@@ -250,13 +272,16 @@ class MusicLooper:
         )
 
         # Export with chunked buffered write logic to avoid storing the entire extended audio in-memory
-        # and to avoid libsndfile stack overflows on large single writes
+        # and to avoid libsndfile stack overflows on large single writes; upgrade >2 GiB WAVs to RF64
+        sf_format = _resolve_soundfile_format(
+            format, extended_audio_length, self.mlaudio.n_channels
+        )
         with soundfile.SoundFile(
             output_file_path,
             mode="w",
             samplerate=self.mlaudio.rate,
             channels=self.mlaudio.n_channels,
-            format=format,
+            format=sf_format,
         ) as sf:
             _write_audio_chunks(sf, intro)
             for _ in range(int(loop_factor)):
@@ -265,20 +290,21 @@ class MusicLooper:
             if disable_fade_out:
                 _write_audio_chunks(sf, outro)
 
-        # attempt to copy over the tags
-        try:
-            import taglib
-            original_tags = None
-            with taglib.File(self.filepath, save_on_exit=False) as src_file:
-                original_tags = src_file.tags
+        # attempt to copy over the tags (skip for RF64 since TagLib does not support RF64 WAV)
+        if sf_format != "RF64":
+            try:
+                import taglib
+                original_tags = None
+                with taglib.File(self.filepath, save_on_exit=False) as src_file:
+                    original_tags = src_file.tags
 
-            with taglib.File(output_file_path, save_on_exit=True) as dest_file:
-                for tag in original_tags:
-                    dest_file.tags[tag] = original_tags[tag]
-        except Exception:
-            # silently ignore errors for now;
-            # TODO: implement logging for debugging
-            pass
+                with taglib.File(output_file_path, save_on_exit=True) as dest_file:
+                    for tag in original_tags:
+                        dest_file.tags[tag] = original_tags[tag]
+            except Exception:
+                # silently ignore errors for now;
+                # TODO: implement logging for debugging
+                pass
 
         return output_file_path
 
