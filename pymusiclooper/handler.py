@@ -25,6 +25,7 @@ class LoopHandler:
         approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
+        start_before_end: Optional[float] = None,
         _progressbar: Progress = None,
         **kwargs,
     ):
@@ -51,6 +52,7 @@ class LoopHandler:
         )
         self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
         self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
+        self.start_before_end = start_before_end
         self._progressbar = _progressbar
 
     def get_all_loop_pairs(self) -> List[LoopPair]:
@@ -67,8 +69,8 @@ class LoopHandler:
     def format_time(self, samples: int, in_samples: bool = False):
         return samples if in_samples else self.musiclooper.samples_to_ftime(samples)
 
-    def play_looping(self, loop_start: int, loop_end: int):
-        self.musiclooper.play_looping(loop_start, loop_end)
+    def play_looping(self, loop_start: int, loop_end: int, start_from: int = 0):
+        self.musiclooper.play_looping(loop_start, loop_end, start_from=start_from)
 
     def choose_loop_pair(self, interactive_mode=False):
         index = 0
@@ -132,11 +134,13 @@ class LoopHandler:
                 preview = False
 
                 if num_input == "more":
-                    self.interactive_handler(show_top=show_top * 2)
+                    return self.interactive_handler(show_top=show_top * 2)
                 if num_input == "all":
-                    self.interactive_handler(show_top=total_candidates)
+                    return self.interactive_handler(show_top=total_candidates)
                 if num_input == "reset":
-                    self.interactive_handler()
+                    return self.interactive_handler()
+                if not num_input:
+                    raise ValueError
 
                 if num_input[-1] == "p":
                     idx = int(num_input[:-1])
@@ -151,8 +155,11 @@ class LoopHandler:
                     rich_console.print(f"Previewing loop [cyan]#{idx}[/] | (Press [red]Ctrl+C[/] to stop looping):")
                     loop_start = self.loop_pair_list[idx].loop_start
                     loop_end = self.loop_pair_list[idx].loop_end
-                    # start preview 5 seconds before the looping point
-                    offset = preview_looper.seconds_to_samples(5)
+                    # start preview before the looping point (default 5 seconds)
+                    preview_seconds = (
+                        self.start_before_end if self.start_before_end is not None else 5
+                    )
+                    offset = preview_looper.seconds_to_samples(preview_seconds)
                     preview_offset = loop_end - offset if loop_end - offset > 0 else 0
                     preview_looper.play_looping(loop_start, loop_end, start_from=preview_offset)
                     return get_user_input()

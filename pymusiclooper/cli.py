@@ -99,6 +99,7 @@ def common_export_options(f):
 @cli_main.command()
 @common_path_options
 @common_loop_options
+@click.option("--start-before-end", type=click.FloatRange(min=0, min_open=True), default=None, help="Start playback this many seconds before the loop end point to preview the loop transition quickly.")
 def play(**kwargs):
     """Play an audio file on repeat from the terminal with the best discovered loop points, or a chosen point if interactive mode is active."""
     try:
@@ -132,7 +133,17 @@ def play(**kwargs):
         )
         rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
 
-        handler.play_looping(chosen_loop_pair.loop_start, chosen_loop_pair.loop_end)
+        start_from = 0
+        start_before_end = kwargs.get("start_before_end")
+        if start_before_end is not None:
+            offset = handler.musiclooper.seconds_to_samples(start_before_end)
+            start_from = max(0, chosen_loop_pair.loop_end - offset)
+
+        handler.play_looping(
+            chosen_loop_pair.loop_start,
+            chosen_loop_pair.loop_end,
+            start_from=start_from,
+        )
 
     except YoutubeDLError:
         # Already logged from youtube.py
@@ -145,7 +156,8 @@ def play(**kwargs):
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
 @click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
 @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
-def play_tagged(path, tag_names, tag_offset):
+@click.option("--start-before-end", type=click.FloatRange(min=0, min_open=True), default=None, help="Start playback this many seconds before the loop end point to preview the loop transition quickly.")
+def play_tagged(path, tag_names, tag_offset, start_before_end):
     """Skips loop analysis and reads the loop points directly from the tags present in the file."""
     try:
         if tag_names is None:
@@ -170,7 +182,12 @@ def play_tagged(path, tag_names, tag_offset):
         rich_console.print(f"\nPlaying with looping active from [green]{end_time}[/] back to [green]{start_time}[/]")
         rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
 
-        looper.play_looping(loop_start, loop_end)
+        start_from = 0
+        if start_before_end is not None:
+            offset = looper.seconds_to_samples(start_before_end)
+            start_from = max(0, loop_end - offset)
+
+        looper.play_looping(loop_start, loop_end, start_from=start_from)
 
     except Exception as e:
         print_exception(e)

@@ -44,7 +44,7 @@ def _option_groups(additional_basic_options=None):
 
 _common_option_groups = _option_groups()
 _OPTION_GROUPS = {
-    "pymusiclooper play": _common_option_groups,
+    "pymusiclooper play": _option_groups(["--start-before-end"]),
     "pymusiclooper split-audio": _option_groups(["--loop-only"]),
     "pymusiclooper tag": _option_groups(["--tag-names", "--tag-offset", "--smpl", "--in-place"]),
     "pymusiclooper export-points": _option_groups(["--export-to", "--alt-export-top", "--fmt"]),
