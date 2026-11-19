@@ -557,6 +557,7 @@ def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
     # https://github.com/audacity/audacity/blob/057bf4ee6f71962cd8ecc6dbccf0852695340758/src/menus/SelectMenus.cpp#L30
     # Original credit goes to the Audacity team and contributors
     n_channels = audio.shape[1]
+    sample_idx = min(max(0, sample_idx), audio.shape[0] - 1)
 
     # Window is 1/100th of a second
     window_size = int(max(1, rate / 100))

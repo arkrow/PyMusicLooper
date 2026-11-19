@@ -16,6 +16,24 @@ from pymusiclooper.playback import PlaybackHandler
 # Lazy-load external libraries when they're needed
 soundfile = lazy.load("soundfile")
 
+# Write audio in fixed-size frame chunks to avoid libsndfile stack overflows
+# (e.g. OGG/Vorbis on Windows and large buffers on Linux) and lower peak memory.
+_WRITE_CHUNK_FRAMES = 65536
+
+
+def _write_audio_chunks(
+    sf_file,
+    audio: np.ndarray,
+    chunk_size: int = _WRITE_CHUNK_FRAMES,
+) -> None:
+    """Writes a numpy audio array to an open SoundFile in contiguous fixed-size chunks."""
+    n_frames = audio.shape[0]
+    if n_frames == 0:
+        return
+    for start in range(0, n_frames, chunk_size):
+        chunk = np.ascontiguousarray(audio[start : start + chunk_size])
+        sf_file.write(chunk)
+
 class MusicLooper:
     """High-level API access to PyMusicLooper's main functions."""
     def __init__(self, filepath: str):
@@ -131,24 +149,22 @@ class MusicLooper:
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
 
-        soundfile.write(
-            f"{out_path}-intro.{format.lower()}",
-            self.mlaudio.playback_audio[:loop_start],
-            self.mlaudio.rate,
-            format=format,
-        )
-        soundfile.write(
-            f"{out_path}-loop.{format.lower()}",
-            self.mlaudio.playback_audio[loop_start:loop_end],
-            self.mlaudio.rate,
-            format=format,
-        )
-        soundfile.write(
-            f"{out_path}-outro.{format.lower()}",
-            self.mlaudio.playback_audio[loop_end:],
-            self.mlaudio.rate,
-            format=format,
-        )
+        sections = [
+            ("intro", self.mlaudio.playback_audio[:loop_start]),
+            ("loop", self.mlaudio.playback_audio[loop_start:loop_end]),
+            ("outro", self.mlaudio.playback_audio[loop_end:]),
+        ]
+
+        ext = format.lower()
+        for suffix, section_audio in sections:
+            with soundfile.SoundFile(
+                f"{out_path}-{suffix}.{ext}",
+                mode="w",
+                samplerate=self.mlaudio.rate,
+                channels=self.mlaudio.n_channels,
+                format=format,
+            ) as sf:
+                _write_audio_chunks(sf, section_audio)
 
     def extend(
         self,
@@ -233,7 +249,8 @@ class MusicLooper:
             f"{out_path}-extended-{extended_audio_length_fmt}.{format.lower()}"
         )
 
-        # Export with buffered write logic to avoid storing the entire extended audio in-memory
+        # Export with chunked buffered write logic to avoid storing the entire extended audio in-memory
+        # and to avoid libsndfile stack overflows on large single writes
         with soundfile.SoundFile(
             output_file_path,
             mode="w",
@@ -241,13 +258,12 @@ class MusicLooper:
             channels=self.mlaudio.n_channels,
             format=format,
         ) as sf:
-            dtype = str(self.mlaudio.playback_audio.dtype)
-            sf.buffer_write(intro.tobytes(order="C"), dtype)
+            _write_audio_chunks(sf, intro)
             for _ in range(int(loop_factor)):
-                sf.buffer_write(loop.tobytes(order="C"), dtype)
-            sf.buffer_write(final_loop.tobytes(order="C"), dtype)
+                _write_audio_chunks(sf, loop)
+            _write_audio_chunks(sf, final_loop)
             if disable_fade_out:
-                sf.buffer_write(outro.tobytes(order="C"), dtype)
+                _write_audio_chunks(sf, outro)
 
         # attempt to copy over the tags
         try:
