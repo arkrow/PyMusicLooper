@@ -181,6 +181,7 @@ def play_tagged(path, tag_names, tag_offset):
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
+@click.option("--loop-only", is_flag=True, default=False, help="Only export the loop section without the intro and outro sections.")
 def split_audio(**kwargs):
     """Split the input audio into intro, loop and outro sections."""
     kwargs["split_audio"] = True

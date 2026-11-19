@@ -189,6 +189,7 @@ class LoopExportHandler(LoopHandler):
         brute_force: bool = False,
         disable_pruning: bool = False,
         split_audio: bool = False,
+        loop_only: bool = False,
         format: Literal["WAV", "FLAC", "OGG", "MP3"] = "WAV",
         to_txt: bool = False,
         to_stdout: bool = False,
@@ -214,6 +215,7 @@ class LoopExportHandler(LoopHandler):
         )
         self.output_directory = output_dir
         self.split_audio = split_audio
+        self.loop_only = loop_only
         self.format = format
         self.to_txt = to_txt
         self.to_stdout = to_stdout
@@ -274,9 +276,13 @@ class LoopExportHandler(LoopHandler):
                 loop_start,
                 loop_end,
                 format=self.format,
-                output_dir=self.output_directory
+                output_dir=self.output_directory,
+                loop_only=self.loop_only,
             )
-            message = f"Successfully exported \"{self.musiclooper.filename}\" intro/loop/outro sections to \"{self.output_directory}\""
+            sections_desc = (
+                "loop section" if self.loop_only else "intro/loop/outro sections"
+            )
+            message = f"Successfully exported \"{self.musiclooper.filename}\" {sections_desc} to \"{self.output_directory}\""
             if self.batch_mode:
                 logging.info(message)
             else:

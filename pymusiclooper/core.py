@@ -153,26 +153,33 @@ class MusicLooper:
         loop_start: int,
         loop_end: int,
         format: str = "WAV",
-        output_dir: Optional[str] = None
+        output_dir: Optional[str] = None,
+        loop_only: bool = False,
     ):
-        """Exports the audio into three files: intro, loop and outro.
+        """Exports the audio into three files: intro, loop and outro (or only loop if `loop_only` is True).
 
         Args:
             loop_start (int): Loop start in samples.
             loop_end (int): Loop end in samples.
             format (str, optional): Audio format of the exported files (formats available depend on the `soundfile` library). Defaults to "WAV".
-            output_dir (str, optional): Path to the output directory. Defaults to the same diretcory as the source audio file.
+            output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
+            loop_only (bool, optional): If True, only export the `-loop` section without `-intro` and `-outro`. Defaults to False.
         """
         if output_dir is not None:
             out_path = os.path.join(output_dir, self.mlaudio.filename)
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
 
-        sections = [
-            ("intro", self.mlaudio.playback_audio[:loop_start]),
-            ("loop", self.mlaudio.playback_audio[loop_start:loop_end]),
-            ("outro", self.mlaudio.playback_audio[loop_end:]),
-        ]
+        if loop_only:
+            sections = [
+                ("loop", self.mlaudio.playback_audio[loop_start:loop_end]),
+            ]
+        else:
+            sections = [
+                ("intro", self.mlaudio.playback_audio[:loop_start]),
+                ("loop", self.mlaudio.playback_audio[loop_start:loop_end]),
+                ("outro", self.mlaudio.playback_audio[loop_end:]),
+            ]
 
         ext = format.lower()
         for suffix, section_audio in sections:
