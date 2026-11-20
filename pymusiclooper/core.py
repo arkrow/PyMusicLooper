@@ -200,81 +200,119 @@ class MusicLooper:
         self,
         loop_start: int,
         loop_end: int,
-        extended_length: float,
+        extended_length: Optional[float] = None,
         fade_length: float = 5,
         disable_fade_out: bool = False,
         format: str = "WAV",
         output_dir: Optional[str] = None,
+        extended_count: Optional[float] = None,
     ) -> str:
-        """Extends the audio by looping to at least the specified length.
+        """Extends the audio by looping to at least the specified length or loop count.
         Returns the path to the extended audio file. 
 
         Args:
             loop_start (int): Loop start in samples.
             loop_end (int): Loop end in samples.
-            extended_length (float): Desired length of the extended audio in seconds.
+            extended_length (float, optional): Desired length of the extended audio in seconds. Mutually exclusive with `extended_count`.
             fade_length (float, optional): Desired length of the extended audio's fade out in seconds.
-            disable_fade_out (bool, optional): Disable fading out from the loop section, and instead, includes the audio outro section . If `True`, `extended_length` will be treated as an 'at least' constraint.
+            disable_fade_out (bool, optional): Disable fading out from the loop section, and instead, includes the audio outro section. If `True`, `extended_length` and `extended_count` will be treated as an 'at least' constraint.
             format (str, optional): Audio format of the exported files (formats available depend on the `soundfile` library). Defaults to "WAV".
             output_dir (str, optional): Path to the output directory. Defaults to the same directory as the source audio file.
+            extended_count (float, optional): Desired number of loop repetitions (>= 1). Mutually exclusive with `extended_length`.
         """
         if output_dir is not None:
             out_path = os.path.join(output_dir, self.mlaudio.filename)
         else:
             out_path = os.path.abspath(self.mlaudio.filepath)
 
-        if extended_length < self.mlaudio.total_duration:
+        if extended_length is None and extended_count is None:
+            raise ValueError(
+                "Must specify either extended_length or extended_count."
+            )
+        if extended_length is not None and extended_count is not None:
+            raise ValueError(
+                "Must not specify extended_length and extended_count simultaneously."
+            )
+        if (
+            extended_length is not None
+            and extended_length < self.mlaudio.total_duration
+        ):
             raise ValueError(
                 "Extended length must be greater than the audio's original length."
             )
+        if extended_count is not None and extended_count < 1:
+            raise ValueError("Extended count must be at least 1.")
 
         intro = self.mlaudio.playback_audio[:loop_start]
         loop = self.mlaudio.playback_audio[loop_start:loop_end]
         outro = self.mlaudio.playback_audio[loop_end:]
 
-        loop_extended_length = self.mlaudio.seconds_to_samples(extended_length) - intro.shape[0]
-
-        # If the outro will be included, account for its length when calculating the new loop duration
-        if disable_fade_out:
-            loop_extended_length -= outro.shape[0]
-
-        loop_factor = loop_extended_length / loop.shape[0]
-        left_over_multiplier = loop_factor - int(loop_factor)
-        extend_end_idx = loop_start + int(
-            (loop_end - loop_start) * left_over_multiplier
-        )
-
-        # Modify the extended track's final loop section based on the fade out parameter
-        final_loop = self.mlaudio.playback_audio[loop_start:extend_end_idx].copy()
-        if disable_fade_out:
-            final_loop = loop
+        if extended_count is not None:
+            if disable_fade_out:
+                n_full_loops = max(0, ceil(extended_count) - 1)
+                final_loop = loop
+            else:
+                loop_extended_length = round(extended_count * loop.shape[0])
+                n_full_loops = int(loop_extended_length // loop.shape[0])
+                remainder_samples = int(loop_extended_length % loop.shape[0])
+                if remainder_samples == 0 and n_full_loops > 0:
+                    n_full_loops -= 1
+                    remainder_samples = loop.shape[0]
+                final_loop = loop[:remainder_samples].copy()
         else:
-            samples_to_fade = min(
-                self.mlaudio.seconds_to_samples(fade_length), final_loop.shape[0]
+            loop_extended_length = (
+                self.mlaudio.seconds_to_samples(extended_length) - intro.shape[0]
             )
-            final_loop[-samples_to_fade:] = (
-                final_loop[-samples_to_fade:]
-                * np.linspace(1, 0, samples_to_fade)[:, np.newaxis]
-            )
+            # If the outro will be included, account for its length when calculating the new loop duration
+            if disable_fade_out:
+                loop_extended_length -= outro.shape[0]
+                n_full_loops = max(0, int(loop_extended_length // loop.shape[0]))
+                final_loop = loop
+            else:
+                n_full_loops = max(0, int(loop_extended_length // loop.shape[0]))
+                remainder_samples = max(
+                    0, int(loop_extended_length - n_full_loops * loop.shape[0])
+                )
+                if remainder_samples == 0 and n_full_loops > 0:
+                    n_full_loops -= 1
+                    remainder_samples = loop.shape[0]
+                final_loop = loop[:remainder_samples].copy()
 
-        # Format extended file name with its duration suffixed
-        extended_loop_length = final_loop.shape[0] + (
-            loop.shape[0] * (int(loop_factor))
-        )
+        if not disable_fade_out:
+            samples_to_fade = min(
+                self.mlaudio.seconds_to_samples(max(0.0, fade_length)),
+                final_loop.shape[0],
+            )
+            if samples_to_fade > 0:
+                final_loop[-samples_to_fade:] = (
+                    final_loop[-samples_to_fade:]
+                    * np.linspace(1, 0, samples_to_fade)[:, np.newaxis]
+                )
+
+        # Calculate total extended audio length (needed for RF64 check and duration suffix)
+        extended_loop_length = final_loop.shape[0] + (loop.shape[0] * n_full_loops)
         extended_audio_length = (
             intro.shape[0]
             + extended_loop_length
             + (outro.shape[0] if disable_fade_out else 0)
         )
-        total_length_seconds = self.mlaudio.samples_to_seconds(extended_audio_length)
-        duration_sec = ceil(total_length_seconds%60)
-        duration_mins = int(total_length_seconds//60)
-        if duration_sec == 60:
-            duration_sec = 0
-            duration_mins += 1
-        extended_audio_length_fmt = (
-            f"{duration_mins:d}m{duration_sec:02d}s"
-        )
+
+        # Format extended file name with its duration or loop count suffixed
+        if extended_count is not None:
+            loop_count_display = (
+                ceil(extended_count) if disable_fade_out else extended_count
+            )
+            extended_audio_length_fmt = f"{loop_count_display:g}lp"
+        else:
+            total_length_seconds = self.mlaudio.samples_to_seconds(
+                extended_audio_length
+            )
+            duration_sec = ceil(total_length_seconds % 60)
+            duration_mins = int(total_length_seconds // 60)
+            if duration_sec == 60:
+                duration_sec = 0
+                duration_mins += 1
+            extended_audio_length_fmt = f"{duration_mins:d}m{duration_sec:02d}s"
         output_file_path = (
             f"{out_path}-extended-{extended_audio_length_fmt}.{format.lower()}"
         )
@@ -292,7 +330,7 @@ class MusicLooper:
             format=sf_format,
         ) as sf:
             _write_audio_chunks(sf, intro)
-            for _ in range(int(loop_factor)):
+            for _ in range(n_full_loops):
                 _write_audio_chunks(sf, loop)
             _write_audio_chunks(sf, final_loop)
             if disable_fade_out:

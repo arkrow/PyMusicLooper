@@ -209,11 +209,13 @@ def split_audio(**kwargs):
 @common_loop_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="MP3", show_default=True, help="Audio format to use for the output audio file.")
-@click.option('--extended-length', type=float, required=True, help="Desired length of the extended looped track in seconds. [Must be longer than the audio's original length.]")
+@optgroup.group("extend duration", cls=RequiredMutuallyExclusiveOptionGroup, help="the target length or loop count of the extended audio")
+@optgroup.option('--extended-length', type=float, default=None, help=r"Desired length of the extended looped track in seconds. [Must be longer than the audio's original length.] [dim cyan]\[mutually exclusive with --extended-count][/] [dim red]\[at least one required][/]")
+@optgroup.option('--extended-count', type=click.FloatRange(min=1.0), default=None, help=r"Desired number of times to repeat the loop section. [dim cyan]\[mutually exclusive with --extended-length][/] [dim red]\[at least one required][/]")
 @click.option('--fade-length', type=float, default=5, show_default=True, help="Desired length of the loop fade out in seconds.")
-@click.option('--disable-fade-out', is_flag=True, default=False, help="Extend the track with all its sections (intro/loop/outro) without fading out. --extended-length will be treated as an 'at least' constraint.")
+@click.option('--disable-fade-out', is_flag=True, default=False, help="Extend the track with all its sections (intro/loop/outro) without fading out. --extended-length and --extended-count will be treated as an 'at least' constraint.")
 def extend(**kwargs):
-    """Create an extended version of the input audio by looping it to a specific length."""
+    """Create an extended version of the input audio by looping it to a specific length or loop count."""
     run_handler(**kwargs)
 
 

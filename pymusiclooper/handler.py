@@ -208,7 +208,8 @@ class LoopExportHandler(LoopHandler):
         in_place: bool = False,
         tag_mode: bool = False,
         batch_mode: bool = False,
-        extended_length: float = 0,
+        extended_length: Optional[float] = None,
+        extended_count: Optional[float] = None,
         fade_length: float = 0,
         disable_fade_out: bool = False,
         **kwargs,
@@ -237,7 +238,12 @@ class LoopExportHandler(LoopHandler):
         self.in_place = in_place
         self.tag_mode = tag_mode or (tag_names is not None) or (smpl is True)
         self.batch_mode = batch_mode
+        if extended_length and extended_count is not None:
+            raise ValueError(
+                "Must not specify --extended-length and --extended-count simultaneously."
+            )
         self.extended_length = extended_length
+        self.extended_count = extended_count
         self.disable_fade_out = disable_fade_out
         self.fade_length = fade_length
         self._is_autocreated_outdir = False
@@ -259,7 +265,8 @@ class LoopExportHandler(LoopHandler):
                 (self.tag_mode and not self.in_place)
                 or self.to_txt
                 or self.split_audio
-                or self.extended_length
+                or bool(self.extended_length)
+                or self.extended_count is not None
             )
             if needs_output_dir and not os.path.exists(self.output_directory):
                 os.mkdir(self.output_directory)
@@ -274,7 +281,7 @@ class LoopExportHandler(LoopHandler):
             if self.split_audio:
                 self.split_audio_runner(loop_start, loop_end)
 
-            if self.extended_length:
+            if self.extended_length or self.extended_count is not None:
                 self.extend_track_runner(loop_start, loop_end)
         finally:
             if (
@@ -325,6 +332,7 @@ class LoopExportHandler(LoopHandler):
                 format=self.format,
                 output_dir=self.output_directory,
                 extended_length=self.extended_length,
+                extended_count=self.extended_count,
                 disable_fade_out=self.disable_fade_out,
                 fade_length=self.fade_length,
             )
@@ -461,7 +469,8 @@ class BatchHandler:
             self.kwargs.get("in_place", False)
             and not self.kwargs.get("split_audio", False)
             and not self.kwargs.get("to_txt", False)
-            and not self.kwargs.get("extended_length", 0)
+            and not self.kwargs.get("extended_length")
+            and self.kwargs.get("extended_count") is None
         )
         output_dirs = (
             None
