@@ -25,7 +25,10 @@ from pymusiclooper.utils import download_audio, get_outputdir, mk_outputdir
 # CLI --help styling
 click.rich_click.OPTION_GROUPS = _OPTION_GROUPS
 click.rich_click.COMMAND_GROUPS = _COMMAND_GROUPS
-click.rich_click.USE_RICH_MARKUP = True
+if hasattr(click.rich_click, "TEXT_MARKUP"):
+    click.rich_click.TEXT_MARKUP = "rich"
+else:
+    click.rich_click.USE_RICH_MARKUP = True
 # End CLI styling
 
 
@@ -174,11 +177,9 @@ def play(**kwargs):
 @click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
 @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 @click.option("--start-before-end", type=click.FloatRange(min=0, min_open=True), default=None, help="Start playback this many seconds before the loop end point to preview the loop transition quickly.")
-@click.pass_context
-def play_tagged(ctx, path, tag_names, tag_offset, start_before_end):
+def play_tagged(path, tag_names, tag_offset, start_before_end):
     """[Deprecated: use 'play --read-tags' instead.] Skips loop analysis and reads the loop points directly from the tags present in the file."""
-    ctx.invoke(
-        play,
+    play.callback(
         path=path,
         tag_names=tag_names,
         tag_offset=tag_offset,
