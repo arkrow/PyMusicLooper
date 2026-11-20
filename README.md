@@ -9,19 +9,19 @@ A python-based program for repeating music seamlessly and endlessly, by automati
 
 Features:
 
-- Find loop points within any audio file (if they exist).
-- Supports loading the most common audio formats (MP3, OGG, FLAC, WAV), with additional codec support available through ffmpeg.
-- Play the audio file endlessly and seamlessly with the best automatically discovered loop points, or using the loop metadata tags present in the audio file.
-- Export to intro/loop/outro sections for editing or seamless playback within any music player that supports [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
-- Export loop points in samples directly to the terminal or to a text file (e.g. for use in creating custom themes with seamlessly looping audio).
-- Export the loop points as metadata tags to a copy of the input audio file(s), for use with game engines, etc.
-- Export a longer, extended version of an audio track by looping it seamlessly to the desired length
+- Automatically find seamless loop points within any audio file.
+- Load common audio formats (MP3, OGG, FLAC, WAV) natively, with additional codec and URL stream support via ffmpeg and yt-dlp.
+- Play audio seamlessly on repeat using discovered loop points or existing metadata tags.
+- Split tracks into intro, loop, and outro sections (or just the loop section) for editing or [gapless playback](https://en.wikipedia.org/wiki/Gapless_playback).
+- Export loop points to the terminal or a text file in samples, seconds, or timestamps.
+- Write loop metadata tags (including WAV `smpl` chunks) to a copy or directly in-place for game engines and samplers.
+- Extend tracks seamlessly by target duration or loop count.
 
 ## Pre-requisites
 
 The following software must be installed for `pymusiclooper` to function correctly.
 
-- [Python (64-bit)](https://www.python.org/downloads/) >=3.10
+- [Python (64-bit)](https://www.python.org/downloads/) >=3.10, <3.15 (Python 3.10–3.14)
 - [ffmpeg](https://ffmpeg.org/download.html): required for loading audio from youtube (or any stream supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) and adds support for loading additional audio formats and codecs such as M4A/AAC, Apple Lossless (ALAC), WMA, ATRAC (.at9), etc. A full list can be found at [ffmpeg's documentation](https://www.ffmpeg.org/general.html#Audio-Codecs). If the aforementioned features are not required, can be skipped.
 
 Supported audio formats *without* ffmpeg include: WAV, FLAC, Ogg/Vorbis, Ogg/Opus, MP3.
@@ -54,10 +54,10 @@ uv tool install git+https://github.com/arkrow/PyMusicLooper.git
 uv tool upgrade pymusiclooper
 ```
 
-Installation note: you may need to specify a Python version if the latest Python release is not supported and fails to install, e.g.
+Installation note: you may need to specify a supported Python version (3.10–3.14) if a newer Python release is not yet supported and fails to install, e.g.
 
 ```sh
-uv tool install pymusiclooper --python "3.12"
+uv tool install pymusiclooper --python "3.14"
 ```
 
 ### Option 2: Installing using pipx
@@ -105,18 +105,18 @@ all commands and their `--help` message can be seen in [CLI_README.md](https://g
 ### Play
 
 ```sh
-# Play the song on repeat with the best discovered loop point.
+# Play the song on repeat with the best discovered loop point (or existing loop metadata tags if present).
 pymusiclooper -i play --path "TRACK_NAME.mp3"
 
+# Start playback 5 seconds before the loop end to preview the loop transition immediately
+pymusiclooper play --path "TRACK_NAME.mp3" --start-before-end 5
 
 # Audio can also be loaded from any stream supported by yt-dlp, e.g. youtube
-# (also available for the `tag` and `split-audio` subcommands)
+# (also available for the `tag`, `extend`, and `split-audio` subcommands)
 pymusiclooper -i play --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-
-# Reads the loop metadata tags from an audio file and play it with the loop active
-# using the loop start and end specified in the file (must be stored as samples)
-pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
+# Require reading loop metadata tags from the audio file (skips analysis; also works with split-audio/extend/export-points)
+pymusiclooper play --path "TRACK_NAME.mp3" --read-tags --tag-names LOOP_START LOOP_END
 ```
 
 ### Export
@@ -124,11 +124,14 @@ pymusiclooper play-tagged --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_EN
 *Note: batch processing is available for all export subcommands. Simply specify a directory instead of a file as the path to be used.*
 
 ```sh
-# Split the audio track into intro, loop and outro files.
+# Split the audio track into intro, loop and outro files (or pass --loop-only for just the loop section).
 pymusiclooper -i split-audio --path "TRACK_NAME.ogg"
 
 # Extend a track to an hour long (--extended-length accepts a number in seconds)
 pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600
+
+# Extend a track by repeating the loop section a specific number of times
+pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-count 3
 
 # Extend a track to an hour long, with its outro and in OGG format
 pymusiclooper -i extend --path "TRACK_NAME.ogg" --extended-length 3600 --disable-fade-out --format "OGG"
@@ -142,7 +145,7 @@ pymusiclooper -i export-points --path "/path/to/track.wav"
 pymusiclooper export-points --path "/path/to/track.wav" --alt-export-top -1
 
 # Add metadata tags of the best discovered loop points to a copy of the input audio file
-# (or all audio files in a directory, if a directory path is used instead)
+# (WAV files automatically receive a RIFF smpl chunk; pass --in-place to tag without copying)
 pymusiclooper -i tag --path "TRACK_NAME.mp3" --tag-names LOOP_START LOOP_END
 
 
