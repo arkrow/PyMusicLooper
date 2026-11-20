@@ -1,5 +1,4 @@
 import contextlib
-import io
 import os
 import sys
 import threading
@@ -17,17 +16,14 @@ def _suppress_stderr():
     """Suppresses C-level stderr output (e.g. libmpg123 warnings from libsndfile)
     without affecting stdout.
 
-    Falls back to a no-op when `PML_DEBUG` is set or when stderr is not backed
-    by a valid OS file descriptor (e.g. windowless/GUI environments).
+    Falls back to a no-op when `PML_DEBUG` is set or when OS file descriptor 2
+    is not valid (e.g. windowless/GUI environments).
     """
     if "PML_DEBUG" in os.environ:
         yield
         return
 
-    try:
-        stderr_fd = sys.stderr.fileno() if sys.stderr is not None else 2
-    except (AttributeError, ValueError, io.UnsupportedOperation):
-        stderr_fd = 2
+    stderr_fd = 2
 
     with _STDERR_REDIRECT_LOCK:
         devnull_fd = None
