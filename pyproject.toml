@@ -43,6 +43,9 @@ Changelog = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 pymusiclooper = "pymusiclooper.__main__:cli"
 
 [dependency-groups]
+dev = [
+  "pytest>=8.0",
+]
 docs = [
   "sphinx>=8.0",
   "sphinx-click>=6.0",
