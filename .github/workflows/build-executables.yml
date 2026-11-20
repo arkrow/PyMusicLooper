@@ -24,7 +24,7 @@ jobs:
             dist_binary: dist/pymusiclooper
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -35,17 +35,19 @@ jobs:
           sudo apt-get install -y libportaudio2 libsndfile1
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: "3.14"
 
       - name: Install dependencies and PyInstaller
+        env:
+          UV_PYTHON_PREFERENCE: only-managed
         run: |
-          uv venv
-          uv pip install . pyinstaller
+          uv sync --locked --no-dev
+          uv pip install pyinstaller
 
       - name: Build executable with PyInstaller
-        run: uv run pyinstaller --clean --noconfirm pymusiclooper.spec
+        run: uv run --no-sync pyinstaller --clean --noconfirm pymusiclooper.spec
 
       - name: Smoke test built executable
         shell: bash
@@ -58,7 +60,7 @@ jobs:
         run: cp "${{ matrix.dist_binary }}" "${{ matrix.artifact_name }}"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_name }}
