@@ -1,6 +1,6 @@
 [project]
 name = "pymusiclooper"
-version = "3.6.0"
+dynamic = ["version"]
 description = "Repeat music endlessly and create seamless music loops, with play/export/tagging support."
 authors = [{ name = "arkrow", email = "arkrow@protonmail.com" }]
 requires-python = ">=3.10,<3.15"
@@ -54,8 +54,14 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "pymusiclooper/_version.py"
 
 [tool.ruff]
 ignore = ["E501", "E402"]

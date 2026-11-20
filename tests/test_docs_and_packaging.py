@@ -1,5 +1,6 @@
 import ast
 import importlib.util
+import sys
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
@@ -37,6 +38,7 @@ def test_version_fallback_on_package_not_found(monkeypatch):
     def _missing(_name):
         raise PackageNotFoundError("pymusiclooper")
 
+    monkeypatch.setitem(sys.modules, "pymusiclooper._version", None)
     monkeypatch.setattr("pymusiclooper.version", _missing)
     assert pymusiclooper._get_version() == "0.0.0+unknown"
 

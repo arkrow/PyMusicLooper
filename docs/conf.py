@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import re
 import sys
 
 import click
@@ -17,29 +16,16 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 import pymusiclooper.cli  # noqa: F401, E402
-from pymusiclooper import __version__ as _installed_version
+from pymusiclooper import __version__
 
 # rich_click.patch.patch() replaces click.Group with _PatchedRichGroup, which
 # breaks sphinx-click's isinstance(cmd, click.Group) check on Click >= 8.2.
 click.Group = click.core.Group
 
-
-def _get_project_version() -> str:
-    pyproject_path = os.path.join(_REPO_ROOT, "pyproject.toml")
-    try:
-        with open(pyproject_path, encoding="utf-8") as f:
-            match = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
-        if match:
-            return match.group(1)
-    except OSError:
-        pass
-    return _installed_version
-
-
 project = "PyMusicLooper"
 author = "arkrow"
 copyright = "2020-2026, arkrow"
-release = _get_project_version()
+release = __version__
 version = release
 
 extensions = [

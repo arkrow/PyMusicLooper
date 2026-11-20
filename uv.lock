@@ -1344,7 +1344,6 @@ wheels = [
 
 [[package]]
 name = "pymusiclooper"
-version = "3.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "click-option-group" },
