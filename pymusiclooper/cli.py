@@ -85,6 +85,18 @@ def common_loop_options(f):
     return wrapper_common_options
 
 
+def common_read_tag_options(f):
+    @click.option("--read-tags/--no-read-tags", is_flag=True, default=None, help="Always determine loop points from metadata tags / always run loop analysis. Default: use tags if present, analysis otherwise.")
+    @click.option("--tag-names", type=str, required=False, default=None, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END (note: values must be integers and in sample units). Default: auto-detected.")
+    @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
+
+    @functools.wraps(f)
+    def wrapper_read_tag_options(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    return wrapper_read_tag_options
+
+
 def common_export_options(f):
     @click.option('--output-dir', '-o', type=click.Path(exists=False, writable=True, file_okay=False), help="The output directory to use for the exported files.")
     @click.option("--recursive", "-r", is_flag=True, default=False, help="Process directories recursively.")
@@ -99,9 +111,10 @@ def common_export_options(f):
 @cli_main.command()
 @common_path_options
 @common_loop_options
+@common_read_tag_options
 @click.option("--start-before-end", type=click.FloatRange(min=0, min_open=True), default=None, help="Start playback this many seconds before the loop end point to preview the loop transition quickly.")
 def play(**kwargs):
-    """Play an audio file on repeat from the terminal with the best discovered loop points, or a chosen point if interactive mode is active."""
+    """Play an audio file on repeat from the terminal with the best discovered loop points, metadata tags, or a chosen point if interactive mode is active."""
     try:
         if kwargs.get("url", None) is not None:
             kwargs["path"] = download_audio(kwargs["url"], tempfile.gettempdir())
@@ -117,20 +130,24 @@ def play(**kwargs):
             handler = LoopHandler(**kwargs)
 
         in_samples = "PML_DISPLAY_SAMPLES" in os.environ
-        interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
 
-        chosen_loop_pair = handler.choose_loop_pair(interactive_mode=interactive_mode)
+        chosen_loop_pair = handler.choose_loop_pair(interactive_mode=handler.interactive_mode)
 
         start_time = handler.format_time(chosen_loop_pair.loop_start, in_samples=in_samples)
         end_time = handler.format_time(chosen_loop_pair.loop_end, in_samples=in_samples)
 
-        rich_console.print(
-            "\nPlaying with looping active from [green]{}[/] back to [green]{}[/]; similarity: {:.2%}".format(
-                end_time,
-                start_time,
-                chosen_loop_pair.score,
+        if handler.used_tags:
+            rich_console.print(
+                f"\nPlaying with looping active from [green]{end_time}[/] back to [green]{start_time}[/]"
             )
-        )
+        else:
+            rich_console.print(
+                "\nPlaying with looping active from [green]{}[/] back to [green]{}[/]; similarity: {:.2%}".format(
+                    end_time,
+                    start_time,
+                    chosen_loop_pair.score,
+                )
+            )
         rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
 
         start_from = 0
@@ -152,50 +169,28 @@ def play(**kwargs):
         print_exception(e)
 
 
-@cli_main.command()
+@cli_main.command(deprecated=True)
 @click.option('--path', type=click.Path(exists=True), required=True, help='Path to the audio file.')
 @click.option("--tag-names", type=str, required=False, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END  (note: values must be integers and in sample units). Default: auto-detected.")
 @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 @click.option("--start-before-end", type=click.FloatRange(min=0, min_open=True), default=None, help="Start playback this many seconds before the loop end point to preview the loop transition quickly.")
-def play_tagged(path, tag_names, tag_offset, start_before_end):
-    """Skips loop analysis and reads the loop points directly from the tags present in the file."""
-    try:
-        if tag_names is None:
-            tag_names = [None, None]
-
-        looper = MusicLooper(path)
-        loop_start, loop_end = looper.read_tags(tag_names[0], tag_names[1], tag_offset)
-
-        in_samples = "PML_DISPLAY_SAMPLES" in os.environ
-
-        start_time = (
-            loop_start
-            if in_samples
-            else looper.samples_to_ftime(loop_start)
-        )
-        end_time = (
-            loop_end
-            if in_samples
-            else looper.samples_to_ftime(loop_end)
-        )
-
-        rich_console.print(f"\nPlaying with looping active from [green]{end_time}[/] back to [green]{start_time}[/]")
-        rich_console.print("(Press [red]Ctrl+C[/] to stop looping.)")
-
-        start_from = 0
-        if start_before_end is not None:
-            offset = looper.seconds_to_samples(start_before_end)
-            start_from = max(0, loop_end - offset)
-
-        looper.play_looping(loop_start, loop_end, start_from=start_from)
-
-    except Exception as e:
-        print_exception(e)
+@click.pass_context
+def play_tagged(ctx, path, tag_names, tag_offset, start_before_end):
+    """[Deprecated: use 'play --read-tags' instead.] Skips loop analysis and reads the loop points directly from the tags present in the file."""
+    ctx.invoke(
+        play,
+        path=path,
+        tag_names=tag_names,
+        tag_offset=tag_offset,
+        read_tags=True,
+        start_before_end=start_before_end,
+    )
 
 
 @cli_main.command()
 @common_path_options
 @common_loop_options
+@common_read_tag_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="WAV", show_default=True, help="Audio format to use for the exported split audio files.")
 @click.option("--loop-only", is_flag=True, default=False, help="Only export the loop section without the intro and outro sections.")
@@ -207,6 +202,7 @@ def split_audio(**kwargs):
 @cli_main.command()
 @common_path_options
 @common_loop_options
+@common_read_tag_options
 @common_export_options
 @click.option('--format', type=click.Choice(("WAV", "FLAC", "OGG", "MP3"), case_sensitive=False), default="MP3", show_default=True, help="Audio format to use for the output audio file.")
 @optgroup.group("extend duration", cls=RequiredMutuallyExclusiveOptionGroup, help="the target length or loop count of the extended audio")
@@ -222,6 +218,7 @@ def extend(**kwargs):
 @cli_main.command()
 @common_path_options
 @common_loop_options
+@common_read_tag_options
 @common_export_options
 @click.option("--export-to", type=click.Choice(("STDOUT", "TXT"), case_sensitive=False), default="STDOUT", show_default=True, help="STDOUT: print the loop points of a track in samples to the terminal; TXT: export the loop points of a track in samples and append to a loop.txt file.")
 @click.option("--fmt", type=click.Choice(("SAMPLES", "SECONDS", "TIME"), case_sensitive=False), default="SAMPLES", show_default=True, help="Export loop points formatted as samples (default), seconds, or time (mm:ss.sss).")
@@ -250,6 +247,7 @@ def tag(**kwargs):
             "Must specify --tag-names unless writing a WAV smpl chunk."
         )
     kwargs["tag_mode"] = True
+    kwargs["read_tags"] = False
     run_handler(**kwargs)
 
 

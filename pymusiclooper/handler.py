@@ -19,25 +19,63 @@ class LoopHandler:
         self,
         *,
         path: str,
-        min_duration_multiplier: float,
+        min_duration_multiplier: float = 0.35,
         min_loop_duration: Optional[float] = None,
         max_loop_duration: Optional[float] = None,
         approx_loop_position: Optional[tuple] = None,
         brute_force: bool = False,
         disable_pruning: bool = False,
         start_before_end: Optional[float] = None,
+        read_tags: Optional[bool] = False,
+        tag_names: Optional[Tuple[str, str]] = None,
+        tag_offset: Optional[bool] = None,
         _progressbar: Progress = None,
         **kwargs,
     ):
+        self.filepath = path
+        self._musiclooper = MusicLooper(filepath=path)
+        self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
+        self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
+        self.start_before_end = start_before_end
+        self._progressbar = _progressbar
+        self.used_tags = False
+
+        if read_tags is True or read_tags is None:
+            try:
+                read_start_tag, read_end_tag = (
+                    tag_names if tag_names is not None else (None, None)
+                )
+                loop_start, loop_end = self._musiclooper.read_tags(
+                    read_start_tag, read_end_tag, tag_offset
+                )
+                logging.info(
+                    f'Loaded loop points from metadata tags of "{path}" '
+                    f"({loop_start}, {loop_end})."
+                )
+                self.loop_pair_list = [
+                    LoopPair(
+                        _loop_start_frame_idx=0,
+                        _loop_end_frame_idx=0,
+                        note_distance=0.0,
+                        loudness_difference=0.0,
+                        score=1.0,
+                        loop_start=loop_start,
+                        loop_end=loop_end,
+                    )
+                ]
+                self.used_tags = True
+                self.interactive_mode = False
+                return
+            except (ValueError, OSError):
+                if read_tags is True:
+                    raise
+
         if approx_loop_position is not None:
             self.approx_loop_start = approx_loop_position[0]
             self.approx_loop_end = approx_loop_position[1]
         else:
             self.approx_loop_start = None
             self.approx_loop_end = None
-
-        self.filepath = path
-        self._musiclooper = MusicLooper(filepath=path)
 
         logging.info(f"Loaded \"{path}\". Analyzing...")
 
@@ -50,10 +88,6 @@ class LoopHandler:
             brute_force=brute_force,
             disable_pruning=disable_pruning,
         )
-        self.interactive_mode = "PML_INTERACTIVE_MODE" in os.environ
-        self.in_samples = "PML_DISPLAY_SAMPLES" in os.environ
-        self.start_before_end = start_before_end
-        self._progressbar = _progressbar
 
     def get_all_loop_pairs(self) -> List[LoopPair]:
         """
@@ -204,6 +238,7 @@ class LoopExportHandler(LoopHandler):
         alt_export_top: int = 0,
         tag_names: Optional[Tuple[str, str]] = None,
         tag_offset: Optional[bool] = None,
+        read_tags: Optional[bool] = False,
         smpl: Optional[bool] = None,
         in_place: bool = False,
         tag_mode: bool = False,
@@ -214,6 +249,18 @@ class LoopExportHandler(LoopHandler):
         disable_fade_out: bool = False,
         **kwargs,
     ):
+        has_other_export = (
+            split_audio
+            or to_txt
+            or to_stdout
+            or bool(extended_length)
+            or extended_count is not None
+        )
+        effective_tag_mode = (
+            tag_mode
+            or (smpl is True)
+            or (tag_names is not None and not has_other_export and read_tags is False)
+        )
         super().__init__(
             path=path,
             min_duration_multiplier=min_duration_multiplier,
@@ -222,6 +269,9 @@ class LoopExportHandler(LoopHandler):
             approx_loop_position=approx_loop_position,
             brute_force=brute_force,
             disable_pruning=disable_pruning,
+            read_tags=False if effective_tag_mode else read_tags,
+            tag_names=None if effective_tag_mode else tag_names,
+            tag_offset=None if effective_tag_mode else tag_offset,
             **kwargs,
         )
         self.output_directory = output_dir
@@ -236,7 +286,7 @@ class LoopExportHandler(LoopHandler):
         self.tag_offset = tag_offset
         self.smpl = smpl
         self.in_place = in_place
-        self.tag_mode = tag_mode or (tag_names is not None) or (smpl is True)
+        self.tag_mode = effective_tag_mode
         self.batch_mode = batch_mode
         if extended_length and extended_count is not None:
             raise ValueError(

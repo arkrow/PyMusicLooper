@@ -13,16 +13,17 @@ _loop_options = [
     "--brute-force",
     "--disable-pruning",
 ]
+_read_tag_options = ["--read-tags", "--tag-names", "--tag-offset"]
 _export_options = ["--output-dir", "--format"]
 _batch_options = ["--recursive", "--flatten"]
 
 
-def _option_groups(additional_basic_options=None):
+def _option_groups(additional_basic_options=None, include_read_tag_options=True):
     if additional_basic_options is not None:
         combined_basic_options = _basic_options + additional_basic_options
     else:
         combined_basic_options = _basic_options
-    return [
+    groups = [
         {
             "name": "Basic options",
             "options": combined_basic_options,
@@ -31,22 +32,37 @@ def _option_groups(additional_basic_options=None):
             "name": "Advanced loop options",
             "options": _loop_options,
         },
-        {
-            "name": "Export options",
-            "options": _export_options,
-        },
-        {
-            "name": "Batch options",
-            "options": _batch_options,
-        },
     ]
+    if include_read_tag_options:
+        groups.append(
+            {
+                "name": "Tag reading options",
+                "options": _read_tag_options,
+            }
+        )
+    groups.extend(
+        [
+            {
+                "name": "Export options",
+                "options": _export_options,
+            },
+            {
+                "name": "Batch options",
+                "options": _batch_options,
+            },
+        ]
+    )
+    return groups
 
 
 _common_option_groups = _option_groups()
 _OPTION_GROUPS = {
     "pymusiclooper play": _option_groups(["--start-before-end"]),
     "pymusiclooper split-audio": _option_groups(["--loop-only"]),
-    "pymusiclooper tag": _option_groups(["--tag-names", "--tag-offset", "--smpl", "--in-place"]),
+    "pymusiclooper tag": _option_groups(
+        ["--tag-names", "--tag-offset", "--smpl", "--in-place"],
+        include_read_tag_options=False,
+    ),
     "pymusiclooper export-points": _option_groups(["--export-to", "--alt-export-top", "--fmt"]),
     "pymusiclooper extend": _option_groups(["--extended-length", "--extended-count", "--fade-length", "--disable-fade-out"]),
 }
