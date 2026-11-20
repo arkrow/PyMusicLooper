@@ -1,0 +1,68 @@
+name: Build Standalone Executables
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: pymusiclooper-windows-x64.exe
+            dist_binary: dist/pymusiclooper.exe
+          - os: ubuntu-latest
+            artifact_name: pymusiclooper-linux-x64
+            dist_binary: dist/pymusiclooper
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux audio libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2 libsndfile1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies and PyInstaller
+        run: |
+          uv venv
+          uv pip install . pyinstaller
+
+      - name: Build executable with PyInstaller
+        run: uv run pyinstaller --clean --noconfirm pymusiclooper.spec
+
+      - name: Smoke test built executable
+        shell: bash
+        run: |
+          "./${{ matrix.dist_binary }}" --version
+          "./${{ matrix.dist_binary }}" --help
+
+      - name: Stage release artifact
+        shell: bash
+        run: cp "${{ matrix.dist_binary }}" "${{ matrix.artifact_name }}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}
+
+      - name: Upload asset to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ matrix.artifact_name }}" --clobber
