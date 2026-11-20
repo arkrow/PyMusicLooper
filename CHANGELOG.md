@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-11-20
+
+### Added
+
+- Added support for Python 3.14 (`>=3.10, <3.15`).
+- Added WAV RIFF `smpl` chunk support: `tag` automatically writes standard `smpl` loop chunks to `.wav` files (configurable via `--smpl/--no-smpl`, with `--tag-names` optional for WAVs), and tag reading falls back to `smpl` chunks when text tags are absent ([#61](https://github.com/arkrow/PyMusicLooper/issues/61)).
+- Added `--in-place` option to `tag` to write loop metadata directly to input files without creating copies ([#58](https://github.com/arkrow/PyMusicLooper/issues/58)).
+- Added `--loop-only` option to `split-audio` to export only the `-loop` section without `-intro` and `-outro` ([#56](https://github.com/arkrow/PyMusicLooper/issues/56)).
+- Added `--start-before-end` option to `play` (and `play-tagged`) to preview loop transitions quickly and configure interactive preview (`0p`) lead-in ([#57](https://github.com/arkrow/PyMusicLooper/issues/57)).
+- Added `--extended-count` option to `extend` to extend tracks by loop repetition count, based on @Splendide-Imaginarius's contribution in PR [#75](https://github.com/arkrow/PyMusicLooper/pull/75) ([#42](https://github.com/arkrow/PyMusicLooper/issues/42)).
+- Unified tag-reading options (`--read-tags/--no-read-tags`, `--tag-names`, `--tag-offset`) across `play`, `split-audio`, `extend`, and `export-points`, based on @Splendide-Imaginarius's contribution in PR [#68](https://github.com/arkrow/PyMusicLooper/pull/68) ([#67](https://github.com/arkrow/PyMusicLooper/issues/67)).
+- Added Sphinx + `sphinx-click` documentation setup in `docs/` for generating HTML docs, Unix man pages, and Python API reference ([#38](https://github.com/arkrow/PyMusicLooper/issues/38)).
+- Added cross-platform PyInstaller spec and GitHub Actions workflow to build standalone Windows and Linux executables on releases ([#51](https://github.com/arkrow/PyMusicLooper/issues/51), [#74](https://github.com/arkrow/PyMusicLooper/issues/74)).
+- Added a self-contained `pytest` test suite under `tests/`.
+
+### Changed
+
+- Deprecated `play-tagged` in favor of `play --read-tags` (kept as a backwards-compatible proxy) ([#67](https://github.com/arkrow/PyMusicLooper/issues/67)).
+- Switched package versioning to dynamic Git-tag versioning via `hatch-vcs`.
+- Updated dependencies and refreshed `uv.lock`, including `pytaglib>=3.1.0` ([#62](https://github.com/arkrow/PyMusicLooper/issues/62)) and `yt-dlp[default]>=2026.10.21` with `yt-dlp-ejs` ([#70](https://github.com/arkrow/PyMusicLooper/issues/70)).
+
+### Fixed
+
+- Fixed `libsndfile` crashes on large exports (notably OGG/Vorbis) by writing audio in fixed-size contiguous chunks in `export` and `extend` ([#35](https://github.com/arkrow/PyMusicLooper/issues/35), [#73](https://github.com/arkrow/PyMusicLooper/issues/73)).
+- Fixed the ~3h 06m 24s WAV duration limit in `extend` by automatically upgrading WAV outputs exceeding 2 GiB to `RF64` ([#46](https://github.com/arkrow/PyMusicLooper/issues/46)).
+- Suppressed noisy C-level `stderr` decoder warnings during audio loading without affecting `stdout` or `--debug` mode.
+- Fixed `MusicLooper.export_tags()` using the file path instead of its parent directory when `output_dir=None`.
+- Fixed interactive mode's `more`, `all`, and `reset` commands triggering a spurious invalid-input prompt.
+- Fixed sample bounds clamping in `nearest_zero_crossing` and allowed full-file loops (`loop_end == total_samples`) in `PlaybackHandler`.
+- Fixed Click 8.5+ compatibility in `play-tagged` and resolved `rich-click` 1.9+ markup deprecation warnings.
+
+
 ## [3.6.0] - 2025-11-01
 
 ### Changed
