@@ -14,12 +14,13 @@ from pymusiclooper.exceptions import LoopNotFoundError
 @dataclass
 class LoopPair:
     """A data class that encapsulates the loop point related data.
-    Contains:
-        loop_start: int (exact loop start position in samples)
-        loop_end: int (exact loop end position in samples)
-        note_distance: float
-        loudness_difference: float
-        score: float. Defaults to 0.
+
+    Attributes:
+        loop_start (int): Exact loop start position in samples.
+        loop_end (int): Exact loop end position in samples.
+        note_distance (float): Spectral note distance between loop points.
+        loudness_difference (float): Loudness difference in dB between loop points.
+        score (float): Weighted cosine similarity score. Defaults to 0.
     """
 
     _loop_start_frame_idx: int

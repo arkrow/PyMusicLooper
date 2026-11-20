@@ -42,6 +42,13 @@ Changelog = "https://github.com/arkrow/PyMusicLooper/blob/master/CHANGELOG.md"
 [project.scripts]
 pymusiclooper = "pymusiclooper.__main__:cli"
 
+[dependency-groups]
+docs = [
+  "sphinx>=8.0",
+  "sphinx-click>=6.0",
+  "furo>=2024.8.6",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
