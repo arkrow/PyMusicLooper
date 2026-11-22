@@ -151,3 +151,15 @@ class MLAudio:
     def samples_to_ftime(self, samples: int):
         time_sec = librosa.core.samples_to_time(samples, sr=self.rate)
         return f"{time_sec // 60:02.0f}:{time_sec % 60:06.3f}"
+
+    def ftime_to_seconds(self, ftime: str):
+        tokens = ftime.split(':')
+        if len(tokens) != 2:
+            raise TypeError(f'Unexpected ftime format ({len(tokens)} tokens): {ftime}')
+
+        minutes, seconds = int(tokens[0]), float(tokens[1])
+        return minutes * 60 + seconds
+
+    def ftime_to_samples(self, ftime: str):
+        seconds = self.ftime_to_seconds(ftime)
+        return self.seconds_to_samples(seconds)

@@ -131,6 +131,9 @@ class MusicLooper:
     def samples_to_ftime(self, samples: int) -> str:
         return self.mlaudio.samples_to_ftime(samples)
 
+    def ftime_to_samples(self, ftime: str) -> int:
+        return self.mlaudio.ftime_to_samples(ftime)
+
     def play_looping(self, loop_start: int, loop_end: int, start_from: int = 0):
         """Plays an audio file with a loop active at the points specified
 
@@ -441,6 +444,30 @@ class MusicLooper:
         return "LEN" in upper_loop_end_tag or "OFFSET" in upper_loop_end_tag
 
 
+    def _find_tag_fmt(
+        self,
+        tag_value: str,
+    ) -> Literal["SAMPLES", "SECONDS", "TIME"]:
+        if ":" in tag_value:
+            return "TIME"
+        if "." in tag_value:
+            return "SECONDS"
+        return "SAMPLES"
+
+
+    def _find_tag_samples(
+        self,
+        tag_value: str,
+    ) -> int:
+        fmt = self._find_tag_fmt(tag_value)
+
+        if fmt == "SAMPLES":
+            return int(tag_value)
+        if fmt == "SECONDS":
+            return self.seconds_to_samples(float(tag_value))
+        return self.ftime_to_samples(tag_value)
+
+
     def export_tags(
         self,
         loop_start: int,
@@ -564,11 +591,11 @@ class MusicLooper:
                 if loop_end_tag not in audio_file.tags:
                     raise ValueError(f"The tag \"{loop_end_tag}\" is not present in the metadata of \"{self.filename}\".")
                 try:
-                    loop_start = int(audio_file.tags[loop_start_tag][0])
-                    loop_end = int(audio_file.tags[loop_end_tag][0])
+                    loop_start = self._find_tag_samples(audio_file.tags[loop_start_tag][0])
+                    loop_end = self._find_tag_samples(audio_file.tags[loop_end_tag][0])
                 except Exception as e:
                     raise TypeError(
-                        "One of the tags provided has invalid (non-integer or empty) values"
+                        "One of the tags provided has invalid or empty values"
                     ) from e
         except (ValueError, OSError):
             if auto_detect and is_wav_file(self.filepath):
