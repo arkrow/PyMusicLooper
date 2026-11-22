@@ -90,7 +90,7 @@ def common_loop_options(f):
 
 def common_read_tag_options(f):
     @click.option("--read-tags/--no-read-tags", is_flag=True, default=None, help="Always determine loop points from metadata tags / always run loop analysis. Default: use tags if present, analysis otherwise.")
-    @click.option("--tag-names", type=str, required=False, default=None, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END (note: values must be integers and in sample units). Default: auto-detected.")
+    @click.option("--tag-names", type=str, required=False, default=None, nargs=2, help="Name of the loop metadata tags to read from, e.g. --tag-names LOOP_START LOOP_END. Default: auto-detected.")
     @click.option("--tag-offset/--no-tag-offset", is_flag=True, default=None, help="Always parse second loop metadata tag as a relative length / or as an absolute length. Default: auto-detected based on tag name.")
 
     @functools.wraps(f)
