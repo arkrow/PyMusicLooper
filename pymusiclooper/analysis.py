@@ -183,9 +183,9 @@ def find_best_loop_points(
         mlaudio, chroma, bpm, candidate_pairs, disable_pruning, power_db=power_db
     )
 
-    # Set the exact loop start and end in samples and adjust them
-    # to the nearest zero crossing. Avoids audio popping/clicking while looping
-    # as much as possible.
+    # Set the exact loop start and end in samples and refine both endpoints
+    # jointly to eliminate sample-level amplitude steps and slope kinks
+    # across all channels.
     for pair in filtered_candidate_pairs:
         if mlaudio.trim_offset > 0:
             pair._loop_start_frame_idx = int(
@@ -194,15 +194,11 @@ def find_best_loop_points(
             pair._loop_end_frame_idx = int(
                 mlaudio.apply_trim_offset(pair._loop_end_frame_idx)
             )
-        pair.loop_start = nearest_zero_crossing(
+        pair.loop_start, pair.loop_end = refine_loop_transition(
             mlaudio.playback_audio,
             mlaudio.rate,
-            mlaudio.frames_to_samples(pair._loop_start_frame_idx)
-        )
-        pair.loop_end = nearest_zero_crossing(
-            mlaudio.playback_audio,
-            mlaudio.rate,
-            mlaudio.frames_to_samples(pair._loop_end_frame_idx)
+            mlaudio.frames_to_samples(pair._loop_start_frame_idx),
+            mlaudio.frames_to_samples(pair._loop_end_frame_idx),
         )
 
     # prefer longer loops for highly similar sequences
@@ -761,3 +757,183 @@ def nearest_zero_crossing(audio: np.ndarray, rate: int, sample_idx: int) -> int:
         return sample_idx
 
     return int(sample_idx + argmin - offset + offset_correction)
+
+
+@njit(cache=True)
+def _transition_discontinuity_cost(audio: np.ndarray, s: int, e: int) -> float:
+    """Computes worst-channel transition discontinuity at `audio[e - 1] -> audio[s]`.
+
+    Combines 2nd-order finite-difference curvature impulse (`d2_transition`, which catches
+    both 0th-order amplitude steps and 1st-order slope kinks) with direct continuation
+    mismatch (`|y[s] - y[e]|` and `|y[s - 1] - y[e - 1]|`), which vanishes at exact
+    phase-locked waveform continuation without biasing toward 1-sample flat plateaus.
+    """
+    n_channels = audio.shape[1]
+    worst = 0.0
+    for c in range(n_channels):
+        ym2 = audio[e - 2, c]
+        ym1 = audio[e - 1, c]
+        ye = audio[e, c]
+        ysm1 = audio[s - 1, c]
+        y0 = audio[s, c]
+        yp1 = audio[s + 1, c]
+        d2_l = abs(y0 - 2.0 * ym1 + ym2)
+        d2_r = abs(yp1 - 2.0 * y0 + ym1)
+        d2 = d2_l if d2_l > d2_r else d2_r
+        cont = 0.5 * (abs(y0 - ye) + abs(ysm1 - ym1))
+        val = d2 + cont
+        if val > worst:
+            worst = val
+    return worst
+
+
+@njit(cache=True)
+def _refine_pair_joint(
+    audio: np.ndarray,
+    s_init: int,
+    e_init: int,
+    s_anchor: int,
+    e_anchor: int,
+    radius: int,
+    max_rel_drift: int,
+) -> Tuple[int, int]:
+    """Refines `(loop_start, loop_end)` jointly to minimize multi-channel transition
+    crackle while preserving loop duration and rhythmic alignment."""
+    n = audio.shape[0]
+    best_s = s_init
+    best_e = e_init
+    best_cost = 1e9
+
+    if best_e >= 2 and best_s >= 1 and best_s + 1 < n and best_e < n:
+        best_cost = _transition_discontinuity_cost(audio, best_s, best_e)
+
+    # 1. Equal-duration joint sweep around (s_init, e_init) preserving exact period
+    k_lo = max(-radius, 1 - s_init, 2 - e_init)
+    k_hi = min(radius, (n - 2) - s_init, (n - 1) - e_init)
+    denom_r = radius if radius > 1 else 1
+    for k in range(k_lo, k_hi + 1):
+        s = s_init + k
+        e = e_init + k
+        if e <= s:
+            continue
+        cost = _transition_discontinuity_cost(audio, s, e)
+        cost += 1e-4 * (abs(s - s_anchor) + abs(e - e_anchor)) / denom_r
+        if cost < best_cost:
+            best_cost = cost
+            best_s = s
+            best_e = e
+
+    # 2. If noticeable discontinuity remains, allow bounded relative adjustment
+    #    via coarse stride-4 + fine +/-4 paired search within +/- max_rel_drift.
+    if best_cost > 0.01:
+        s_lo = max(1, s_init - radius)
+        s_hi = min(n - 2, s_init + radius)
+        e_lo_global = max(2, e_init - radius)
+        e_hi_global = min(n - 1, e_init + radius)
+        base_dur = e_init - s_init
+        denom_d = max_rel_drift if max_rel_drift > 1 else 1
+
+        coarse_s = best_s
+        coarse_e = best_e
+        coarse_cost = best_cost
+
+        for s in range(s_lo, s_hi + 1, 4):
+            e_lo = max(e_lo_global, s + base_dur - max_rel_drift, s + 1)
+            e_hi = min(e_hi_global, s + base_dur + max_rel_drift)
+            for e in range(e_lo, e_hi + 1, 4):
+                cost = _transition_discontinuity_cost(audio, s, e)
+                cost += 2e-3 * abs((e - s) - base_dur) / denom_d
+                if cost < coarse_cost:
+                    coarse_cost = cost
+                    coarse_s = s
+                    coarse_e = e
+
+        fs_lo = max(s_lo, coarse_s - 4)
+        fs_hi = min(s_hi, coarse_s + 4)
+        fe_lo = max(e_lo_global, coarse_e - 4)
+        fe_hi = min(e_hi_global, coarse_e + 4)
+        for s in range(fs_lo, fs_hi + 1):
+            for e in range(fe_lo, fe_hi + 1):
+                if e <= s or abs((e - s) - base_dur) > max_rel_drift:
+                    continue
+                cost = _transition_discontinuity_cost(audio, s, e)
+                cost += 2e-3 * abs((e - s) - base_dur) / denom_d
+                if cost < best_cost:
+                    best_cost = cost
+                    best_s = s
+                    best_e = e
+
+    return int(best_s), int(best_e)
+
+
+def refine_loop_transition(
+    audio: np.ndarray,
+    rate: int,
+    start_sample: int,
+    end_sample: int,
+) -> Tuple[int, int]:
+    """Refines `(start_sample, end_sample)` jointly to minimize sample-level transition
+    crackle across all channels.
+
+    First performs sub-frame waveform phase alignment (within +/- 1 STFT hop) when
+    the waveforms around `start_sample` and `end_sample` are strongly correlated,
+    then searches a local +/- 5 ms neighborhood to minimize worst-channel 0th-order
+    amplitude steps and 2nd-order slope-kink impulses at the transition.
+
+    Args:
+        audio (np.ndarray): Playback audio array with shape `(samples, n_channels)`.
+        rate (int): Sample rate in Hz.
+        start_sample (int): Initial loop start sample index.
+        end_sample (int): Initial loop end sample index.
+
+    Returns:
+        Tuple[int, int]: Refined `(loop_start, loop_end)` sample indices.
+    """
+    n = audio.shape[0]
+    if n < 4:
+        s_clamped = min(max(0, int(start_sample)), max(0, n - 1))
+        e_clamped = min(max(0, int(end_sample)), max(0, n - 1))
+        return s_clamped, e_clamped
+
+    s0 = min(max(1, int(start_sample)), n - 2)
+    e0 = min(max(2, int(end_sample)), n - 1)
+    if e0 <= s0:
+        return s0, e0
+
+    # Stage 1: sub-frame waveform phase alignment via FFT cross-correlation (+/- 1 STFT hop)
+    max_lag = min(512, max(1, rate // 80))
+    half_win = min(512, s0, n - s0, e0 - max_lag, n - e0 - max_lag)
+    e_aligned = e0
+    if half_win >= 128:
+        tpl = np.mean(audio[s0 - half_win : s0 + half_win], axis=1).astype(np.float64)
+        src = np.mean(
+            audio[e0 - half_win - max_lag : e0 + half_win + max_lag], axis=1
+        ).astype(np.float64)
+        tpl -= np.mean(tpl)
+        tpl_norm = float(np.linalg.norm(tpl))
+        if tpl_norm > 1e-6:
+            tpl_len = tpl.shape[0]
+            n_fft = 1 << (src.shape[0] + tpl_len - 1).bit_length()
+            cc = np.fft.irfft(
+                np.fft.rfft(src, n_fft) * np.conj(np.fft.rfft(tpl, n_fft)), n_fft
+            )
+            valid_cc = cc[: 2 * max_lag + 1]
+            src_sq = np.cumsum(np.insert(src * src, 0, 0.0))
+            win_norms = np.sqrt(
+                np.maximum(
+                    src_sq[tpl_len : tpl_len + 2 * max_lag + 1]
+                    - src_sq[: 2 * max_lag + 1],
+                    1e-12,
+                )
+            )
+            corrs = valid_cc / (tpl_norm * win_norms)
+            best_idx = int(np.argmax(corrs))
+            if corrs[best_idx] >= 0.5:
+                lag = best_idx - max_lag
+                if e0 + lag > s0:
+                    e_aligned = e0 + lag
+
+    # Stage 2: joint multi-channel minimum-crackle transition search (+/- 5 ms radius, +/- 3 ms max relative drift)
+    radius = max(1, rate // 200)
+    max_rel_drift = max(1, (3 * rate) // 1000)
+    return _refine_pair_joint(audio, s0, e_aligned, s0, e0, radius, max_rel_drift)

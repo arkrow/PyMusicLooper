@@ -14,6 +14,8 @@ from pymusiclooper.analysis import (
     _prioritize_duration,
     _weights,
     find_best_loop_points,
+    nearest_zero_crossing,
+    refine_loop_transition,
 )
 from pymusiclooper.audio import MLAudio
 
@@ -302,5 +304,49 @@ def test_find_best_loop_points_preserves_ost_fadeout_loop(tmp_path):
 
     assert abs(loop_duration_s - 24.0) < 0.2
     assert best.score > 0.98
+
+
+def test_refine_loop_transition_eliminates_quadrature_stereo_crackle():
+    """On quadrature stereo (L=sin, R=cos), L and R never cross zero simultaneously;
+    `refine_loop_transition` must phase-align and eliminate clicks on BOTH channels."""
+    sr = 44100
+    n = sr * 2
+    t = np.arange(n, dtype=np.float32) / sr
+    # True period = 100 samples (441 Hz): L and R are 90 degrees out of phase
+    left = 0.7 * np.sin(2 * np.pi * 441.0 * t)
+    right = 0.7 * np.cos(2 * np.pi * 441.0 * t)
+    stereo = np.column_stack([left, right])
+
+    # Deliberately misalign loop_end by 35 samples (~0.8 ms, ~126 deg phase error)
+    s0 = 10_000
+    e0 = 50_035  # exact period is 40_000 samples (400 cycles)
+
+    zc_s = nearest_zero_crossing(stereo, sr, s0)
+    zc_e = nearest_zero_crossing(stereo, sr, e0)
+    zc_step = float(np.max(np.abs(stereo[zc_s] - stereo[zc_e - 1])))
+
+    rf_s, rf_e = refine_loop_transition(stereo, sr, s0, e0)
+    rf_step = float(np.max(np.abs(stereo[rf_s] - stereo[rf_e - 1])))
+    rf_d2 = float(
+        np.max(
+            np.maximum(
+                np.abs(stereo[rf_s] - 2.0 * stereo[rf_e - 1] + stereo[rf_e - 2]),
+                np.abs(stereo[rf_s + 1] - 2.0 * stereo[rf_s] + stereo[rf_e - 1]),
+            )
+        )
+    )
+
+    assert rf_e > rf_s
+    # Should recover exact phase continuity across both stereo channels
+    assert rf_step < 0.05
+    assert rf_d2 < 0.01
+    assert rf_step < zc_step
+
+
+def test_refine_loop_transition_handles_tiny_audio_safely():
+    tiny = np.zeros((3, 2), dtype=np.float32)
+    s, e = refine_loop_transition(tiny, 44100, 0, 2)
+    assert 0 <= s <= e < 3
+
 
 
