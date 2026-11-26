@@ -15,6 +15,12 @@ _BOUNDARY_LOUDNESS_WINDOW_S = 0.20
 _BOUNDARY_LOUDNESS_PENALTY_CAP = 0.08
 _BOUNDARY_LOUDNESS_REF_DB = 3.5
 
+# Macroscopic across-boundary loudness-cliff penalty (true A-weighted dB over ~1.0 s)
+# Catches loud-body -> quiet-intro cliffs that slip past 200 ms lookbehind matching.
+_MACRO_LOUDNESS_WINDOW_S = 1.0
+_MACRO_LOUDNESS_PENALTY_CAP = 0.12
+_MACRO_LOUDNESS_REF_DB = 5.0
+
 # Small bidirectional continuity blend so mid-loop transitions matching on both
 # sides outscore one-sided cold-start / partial-phrase matches without
 # penalizing unique-intro or fade-out tracks.
@@ -410,6 +416,9 @@ def _assess_and_filter_loop_pairs(
     boundary_window_frames = max(
         2, int(mlaudio.seconds_to_frames(_BOUNDARY_LOUDNESS_WINDOW_S))
     )
+    macro_window_frames = max(
+        4, int(mlaudio.seconds_to_frames(_MACRO_LOUDNESS_WINDOW_S))
+    )
 
     pair_score_list = [
         _calculate_loop_score(
@@ -421,6 +430,7 @@ def _assess_and_filter_loop_pairs(
             loudness_csum=loudness_csum,
             boundary_window_frames=boundary_window_frames,
             fallback_db=pair.loudness_difference,
+            macro_window_frames=macro_window_frames,
         )
         for pair in pruned_candidate_pairs
     ]
@@ -568,6 +578,48 @@ def _loudness_jump_penalty(
     return max_penalty * (ratio * ratio)
 
 
+def _macro_loudness_cliff_db(
+    b1: int,
+    b2: int,
+    loudness_csum: np.ndarray,
+    window_frames: int,
+) -> float:
+    """Measures the macroscopic (~1 s) across-boundary loudness cliff at `b2 -> b1`
+    as `min(|L(b2 - W .. b2) - L(b1 .. b1 + W)|, |L(b2 .. b2 + W) - L(b1 .. b1 + W)|)`.
+
+    Taking the minimum of across-boundary (`d_cross`) and post-boundary (`d_post`) ensures:
+    - OST fade-outs (`b2` before outro fade) have `d_cross ~= 0 dB` (unpenalized).
+    - Synchronized quiet -> loud drops at both `b1` and `b2` have `d_post ~= 0 dB` (unpenalized).
+    - False loud-body -> quiet-intro cliffs have both `d_cross` and `d_post` large (penalized).
+    """
+    n = loudness_csum.shape[0] - 1
+    min_avail = max(1, window_frames // 2)
+    if (n - b1) < min_avail or b2 < min_avail:
+        return 0.0
+
+    l_s_post = _window_mean_db(loudness_csum, b1, b1 + window_frames)
+    l_e_pre = _window_mean_db(loudness_csum, b2 - window_frames, b2)
+    if l_s_post is None or l_e_pre is None:
+        return 0.0
+
+    d_cross = abs(l_e_pre - l_s_post)
+    if (n - b2) >= min_avail:
+        l_e_post = _window_mean_db(loudness_csum, b2, b2 + window_frames)
+        if l_e_post is not None:
+            return min(d_cross, abs(l_e_post - l_s_post))
+    return d_cross
+
+
+def _macro_loudness_cliff_penalty(
+    cliff_db: float,
+    max_penalty: float = _MACRO_LOUDNESS_PENALTY_CAP,
+    ref_db: float = _MACRO_LOUDNESS_REF_DB,
+) -> float:
+    """Quadratic bounded penalty for macroscopic (~1 s) loudness cliffs across a loop transition."""
+    ratio = min(1.0, max(0.0, cliff_db) / ref_db)
+    return max_penalty * (ratio * ratio)
+
+
 def _calculate_loop_score(
     b1: int,
     b2: int,
@@ -577,13 +629,15 @@ def _calculate_loop_score(
     loudness_csum: Optional[np.ndarray] = None,
     boundary_window_frames: int = 0,
     fallback_db: float = 0.0,
+    macro_window_frames: int = 0,
 ) -> float:
     """Calculates the loop transition score for two frame indices `b1` and `b2` over `test_duration` frames.
 
     Computes weighted chroma cosine similarity for both lookahead (subsequent) and lookbehind
     (preceding) windows, optionally subtracts a bounded quadratic penalty for audible boundary
-    loudness jumps in each direction, and blends the stronger and weaker directions to favor
-    bidirectional continuity.
+    loudness jumps in each direction, blends the stronger and weaker directions to favor
+    bidirectional continuity, and optionally applies a macroscopic (~1 s) across-boundary
+    loudness-cliff penalty.
 
     Args:
         b1 (int): Frame index of the first beat to compare
@@ -594,6 +648,7 @@ def _calculate_loop_score(
         loudness_csum (np.ndarray, optional): Cumulative sum of per-frame linear A-weighted energy. Defaults to None.
         boundary_window_frames (int, optional): Short window length (in frames) for boundary loudness comparison. Defaults to 0.
         fallback_db (float, optional): Fallback single-frame loudness difference in dB if both boundary windows are clipped. Defaults to 0.0.
+        macro_window_frames (int, optional): Macroscopic window length (in frames) for across-boundary loudness-cliff detection. Defaults to 0.
 
     Returns:
         float: Combined loop transition score in `[0, 1]`
@@ -631,10 +686,17 @@ def _calculate_loop_score(
 
     best_dir = max(lookahead_score, lookbehind_score)
     other_dir = min(lookahead_score, lookbehind_score)
-    return (
+    score = (
         (1.0 - _BIDIRECTIONAL_BLEND_WEIGHT) * best_dir
         + _BIDIRECTIONAL_BLEND_WEIGHT * other_dir
     )
+    if loudness_csum is not None and macro_window_frames > 0:
+        cliff_db = _macro_loudness_cliff_db(
+            b1, b2, loudness_csum, macro_window_frames
+        )
+        if cliff_db > 0.0:
+            score = max(0.0, score - _macro_loudness_cliff_penalty(cliff_db))
+    return score
 
 
 def _calculate_subseq_beat_similarity(

@@ -13,6 +13,8 @@ from pymusiclooper.analysis import (
     _db_diff,
     _deduplicate_loop_pairs,
     _loudness_jump_penalty,
+    _macro_loudness_cliff_db,
+    _macro_loudness_cliff_penalty,
     _prioritize_duration,
     _transition_crackle_excess,
     _weights,
@@ -240,6 +242,100 @@ def test_loop_score_penalizes_audible_boundary_jump():
     assert smooth_score == pytest.approx(1.0, abs=1e-5)
     assert jumpy_score == pytest.approx(0.92, abs=1e-4)
     assert smooth_score > jumpy_score
+
+
+def test_macro_loudness_cliff_penalty_curve_and_cap():
+    assert _macro_loudness_cliff_penalty(0.0) == 0.0
+    assert _macro_loudness_cliff_penalty(-1.0) == 0.0
+    assert (
+        _macro_loudness_cliff_penalty(1.0)
+        < _macro_loudness_cliff_penalty(3.0)
+        < _macro_loudness_cliff_penalty(5.0)
+    )
+    assert _macro_loudness_cliff_penalty(5.0) == pytest.approx(0.12)
+    assert _macro_loudness_cliff_penalty(10.0) == pytest.approx(0.12)
+
+
+def test_macro_loudness_cliff_db_catches_intro_cliff_without_penalizing_drops_or_fadeouts():
+    # Case 1: Quiet intro [0..100) at 10 dB, loud body [100..300) at 16 dB (+6 dB step)
+    # False jump from loud body (b2=220) back into quiet intro (b1=20)
+    power_db = np.full((4, 300), 10.0, dtype=np.float64)
+    power_db[:, 100:] = 16.0
+    csum = _boundary_loudness_csum(power_db)
+    cliff_false = _macro_loudness_cliff_db(20, 220, csum, window_frames=40)
+    assert cliff_false == pytest.approx(6.0, abs=1e-5)
+    assert _macro_loudness_cliff_penalty(cliff_false) == pytest.approx(0.12)
+
+    # Case 2: Synchronized quiet -> loud drop at BOTH b1=100 and b2=220
+    # Loud at [100..180) and [220..300), quiet at [60..100) and [180..220) -> d_post ~= 0 dB
+    drop_db = np.full((4, 300), 10.0, dtype=np.float64)
+    drop_db[:, 100:180] = 16.0
+    drop_db[:, 220:300] = 16.0
+    drop_csum = _boundary_loudness_csum(drop_db)
+    assert _macro_loudness_cliff_db(100, 220, drop_csum, window_frames=40) == pytest.approx(
+        0.0, abs=1e-5
+    )
+
+    # Case 3: OST fade-out: loud body [50..240), linear amplitude fade-out on [240..300)
+    # True loop b1=50 -> b2=240: d_cross (e-40..e vs s..s+40) is loud -> loud (~0 dB)
+    fade_db = np.full((4, 300), 10.0, dtype=np.float64)
+    fade_db[:, 50:240] = 16.0
+    gains = np.maximum(1.0 - np.arange(60, dtype=np.float64) / 60.0, 1e-4)
+    fade_db[:, 240:300] = 16.0 + 20.0 * np.log10(gains)
+    fade_csum = _boundary_loudness_csum(fade_db)
+    assert _macro_loudness_cliff_db(50, 240, fade_csum, window_frames=40) == pytest.approx(
+        0.0, abs=1e-5
+    )
+
+
+def test_loop_score_macro_cliff_demotes_loud_to_quiet_even_when_pre_jump_matches():
+    # Identical chroma period=100 across 360 frames
+    chroma = _make_chroma(length=360, period=100)
+    # Quiet intro [0..120) at 10 dB, loud body [120..360) at 16 dB (+6 dB),
+    # with a short 8-frame loud hit [12..20) right before b1=20 so 200 ms pre_jump_db == 0 dB.
+    power_db = np.full((4, 360), 10.0, dtype=np.float64)
+    power_db[:, 12:20] = 16.0
+    power_db[:, 120:] = 16.0
+    csum = _boundary_loudness_csum(power_db)
+    weights = _weights(60, start=6, stop=1)
+
+    # Without macro cliff penalty, lookbehind bypasses the 200 ms penalty (score ~= 0.9976)
+    bypassed_score = _calculate_loop_score(
+        20,
+        220,
+        chroma,
+        60,
+        weights=weights,
+        loudness_csum=csum,
+        boundary_window_frames=8,
+        macro_window_frames=0,
+    )
+    assert bypassed_score > 0.99
+
+    # With macro cliff penalty, loud-body -> quiet-intro candidate is decisively demoted
+    demoted_score = _calculate_loop_score(
+        20,
+        220,
+        chroma,
+        60,
+        weights=weights,
+        loudness_csum=csum,
+        boundary_window_frames=8,
+        macro_window_frames=40,
+    )
+    true_body_score = _calculate_loop_score(
+        150,
+        250,
+        chroma,
+        60,
+        weights=weights,
+        loudness_csum=csum,
+        boundary_window_frames=8,
+        macro_window_frames=40,
+    )
+    assert true_body_score == pytest.approx(1.0, abs=1e-5)
+    assert demoted_score < 0.89
+    assert true_body_score - demoted_score > 0.11
 
 
 def test_loop_score_prefers_bidirectional_over_one_sided_match():
