@@ -40,8 +40,8 @@ class LoopPair:
         loop_start (int): Exact loop start position in samples.
         loop_end (int): Exact loop end position in samples.
         note_distance (float): Spectral note distance between loop points.
-        loudness_difference (float): Loudness difference in dB between loop points.
-        score (float): Weighted cosine similarity score. Defaults to 0.
+        loudness_difference (float): A-weighted peak loudness difference in dB between loop points.
+        score (float): Overall loop quality score in `[0, 1]`, combining bidirectional weighted chroma cosine similarity with penalties for boundary loudness jumps and residual sample-level transition crackles. Defaults to 0.
     """
 
     _loop_start_frame_idx: int
@@ -78,7 +78,7 @@ def find_best_loop_points(
         LoopNotFoundError: raised in case no loops were found
 
     Returns:
-        List[LoopPair]: A list of `LoopPair` objects containing the loop points related data. See the `LoopPair` class for more info.
+        List[LoopPair]: A list of deduplicated, transition-refined `LoopPair` objects ordered by loop quality. See the `LoopPair` class for more info.
     """
     runtime_start = time.perf_counter()
     min_loop_duration = (
@@ -262,7 +262,7 @@ def _analyze_audio(
         skip_beat_analysis (bool, optional): Skips beat analysis if true and returns None for bpm and beats. Defaults to False.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, power spectrogram in dB, tempo/bpm, frame indices of detected beats)
+        Tuple[np.ndarray, np.ndarray, float, np.ndarray]: a tuple containing the (chroma spectrogram, A-weighted power spectrogram in dB, tempo/bpm, frame indices of detected beats)
     """
     S = librosa.core.stft(y=mlaudio.audio)
     S_power = np.abs(S) ** 2
@@ -320,7 +320,7 @@ def _find_candidate_pairs(
 
     Args:
         chroma (np.ndarray): The chroma spectrogram
-        power_db (np.ndarray): The power spectrogram in dB
+        power_db (np.ndarray): The A-weighted power spectrogram in dB
         beats (np.ndarray): The frame indices of detected beats
         min_loop_duration (int): Minimum loop duration (in frames)
         max_loop_duration (int): Maximum loop duration (in frames)
@@ -424,7 +424,7 @@ def _assess_and_filter_loop_pairs(
         )
         for pair in pruned_candidate_pairs
     ]
-    # Add cosine similarity as score
+    # Assign loop transition scores
     for pair, score in zip(pruned_candidate_pairs, pair_score_list):
         pair.score = score
 
@@ -578,9 +578,12 @@ def _calculate_loop_score(
     boundary_window_frames: int = 0,
     fallback_db: float = 0.0,
 ) -> float:
-    """Calculates the similarity of two sequences given the starting indices `b1` and `b2` for the period of the `test_duration` specified.
-        Returns the best score based on the cosine similarity of subsequent (or preceding) notes,
-        optionally adjusted by a bounded quadratic penalty for audible boundary loudness jumps.
+    """Calculates the loop transition score for two frame indices `b1` and `b2` over `test_duration` frames.
+
+    Computes weighted chroma cosine similarity for both lookahead (subsequent) and lookbehind
+    (preceding) windows, optionally subtracts a bounded quadratic penalty for audible boundary
+    loudness jumps in each direction, and blends the stronger and weaker directions to favor
+    bidirectional continuity.
 
     Args:
         b1 (int): Frame index of the first beat to compare
@@ -593,7 +596,7 @@ def _calculate_loop_score(
         fallback_db (float, optional): Fallback single-frame loudness difference in dB if both boundary windows are clipped. Defaults to 0.0.
 
     Returns:
-        float: the weighted average of the cosine similarity of the notes along the tested region
+        float: Combined loop transition score in `[0, 1]`
     """
     lookahead_score = _calculate_subseq_beat_similarity(
         b1, b2, chroma, test_duration, weights=weights
@@ -909,8 +912,9 @@ def refine_loop_transition(
 
     First performs sub-frame waveform phase alignment (within +/- 1 STFT hop) when
     the waveforms around `start_sample` and `end_sample` are strongly correlated,
-    then searches a local +/- 5 ms neighborhood to minimize worst-channel 0th-order
-    amplitude steps and 2nd-order slope-kink impulses at the transition.
+    then searches a local +/- 5 ms neighborhood to minimize worst-channel 2nd-order
+    curvature impulses (capturing both 0th-order amplitude steps and 1st-order
+    slope kinks) and waveform continuation mismatch at the transition.
 
     Args:
         audio (np.ndarray): Playback audio array with shape `(samples, n_channels)`.
