@@ -11,6 +11,7 @@ from pymusiclooper.analysis import (
     _calculate_subseq_beat_similarity,
     _crackle_penalty,
     _db_diff,
+    _deduplicate_loop_pairs,
     _loudness_jump_penalty,
     _prioritize_duration,
     _transition_crackle_excess,
@@ -379,6 +380,46 @@ def test_transition_crackle_excess_detects_step_pop_and_slope_kink():
     # 3. 1st-order zero-crossing slope reversal (half-cycle offset: falling zero -> rising zero)
     kink_excess = _transition_crackle_excess(audio, peak=1.0, loop_start=200, loop_end=1251)
     assert kink_excess > 0.05
+
+
+def test_deduplicate_loop_pairs_exact_and_proximity():
+    pairs = [
+        LoopPair(0, 100, 0.01, 0.1, score=0.99, loop_start=10_000, loop_end=100_000),
+        # Exact duplicate with lower score -> dropped
+        LoopPair(0, 100, 0.02, 0.2, score=0.98, loop_start=10_000, loop_end=100_000),
+        # Near-duplicate crossing a grid cell boundary (within 2000 samples on both) -> dropped
+        LoopPair(1, 101, 0.02, 0.2, score=0.97, loop_start=11_500, loop_end=98_500),
+        # Distinct loop_end (> 2000 samples apart) -> kept
+        LoopPair(0, 120, 0.02, 0.2, score=0.96, loop_start=10_100, loop_end=105_000),
+        # Distinct loop_start (> 2000 samples apart) -> kept
+        LoopPair(20, 100, 0.02, 0.2, score=0.95, loop_start=15_000, loop_end=100_100),
+    ]
+
+    exact = _deduplicate_loop_pairs(pairs, tolerance_samples=0)
+    assert len(exact) == 4
+    assert exact[0].score == 0.99
+
+    prox = _deduplicate_loop_pairs(pairs, tolerance_samples=2000)
+    assert [(p.loop_start, p.loop_end) for p in prox] == [
+        (10_000, 100_000),
+        (10_100, 105_000),
+        (15_000, 100_100),
+    ]
+
+
+def test_find_best_loop_points_brute_force_has_no_near_duplicates(loopable_wav):
+    mlaudio = MLAudio(str(loopable_wav))
+    pairs = find_best_loop_points(mlaudio, brute_force=True)
+    assert len(pairs) > 0
+
+    tol = max(1, int(round(0.05 * mlaudio.rate)))
+    for i, a in enumerate(pairs):
+        for b in pairs[i + 1 :]:
+            assert not (
+                abs(a.loop_start - b.loop_start) <= tol
+                and abs(a.loop_end - b.loop_end) <= tol
+            )
+
 
 
 

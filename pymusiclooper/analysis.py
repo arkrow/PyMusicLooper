@@ -26,6 +26,11 @@ _CRACKLE_PENALTY_CAP = 0.05
 _CRACKLE_REF_EXCESS = 0.15
 _CRACKLE_CONTEXT_SAMPLES = 64
 
+# Proximity window (in seconds) for deduplicating exact and near-identical
+# loop candidates after transition refinement (applies to beat-tracked,
+# approximate, and brute-force searches).
+_DEDUP_PROXIMITY_S = 0.05
+
 
 @dataclass
 class LoopPair:
@@ -220,6 +225,13 @@ def find_best_loop_points(
             if crackle_excess > 0.0:
                 pair.score = max(0.0, pair.score - _crackle_penalty(crackle_excess))
         filtered_candidate_pairs.sort(key=lambda x: x.score, reverse=True)
+
+    # Deduplicate exact and near-identical (loop_start, loop_end) candidates
+    # (e.g. adjacent frames converging during transition refinement or brute-force search)
+    filtered_candidate_pairs = _deduplicate_loop_pairs(
+        filtered_candidate_pairs,
+        tolerance_samples=max(1, int(round(_DEDUP_PROXIMITY_S * mlaudio.rate))),
+    )
 
     # prefer longer loops for highly similar sequences
     if len(filtered_candidate_pairs) > 1:
@@ -1018,3 +1030,52 @@ def _crackle_penalty(
     """Quadratic bounded penalty for residual sample-level transition crackle."""
     ratio = min(1.0, max(0.0, crackle_excess) / ref_excess)
     return max_penalty * (ratio * ratio)
+
+
+def _deduplicate_loop_pairs(
+    pair_list: List[LoopPair],
+    tolerance_samples: int = 0,
+) -> List[LoopPair]:
+    """Deduplicates exact and near-identical `(loop_start, loop_end)` pairs in
+    O(N) time using a 2D spatial grid, preserving the highest-scoring occurrence
+    from an already score-sorted `pair_list`.
+
+    Two pairs are considered duplicates if both `|s1 - s2| <= tolerance_samples`
+    and `|e1 - e2| <= tolerance_samples`.
+    """
+    if len(pair_list) <= 1:
+        return pair_list
+
+    if tolerance_samples <= 0:
+        seen = set()
+        kept: List[LoopPair] = []
+        for pair in pair_list:
+            key = (pair.loop_start, pair.loop_end)
+            if key not in seen:
+                seen.add(key)
+                kept.append(pair)
+        return kept
+
+    cell = tolerance_samples
+    grid: dict[Tuple[int, int], List[Tuple[int, int]]] = {}
+    kept = []
+    for pair in pair_list:
+        s = pair.loop_start
+        e = pair.loop_end
+        bx = s // cell
+        by = e // cell
+        is_dup = False
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for ks, ke in grid.get((bx + dx, by + dy), ()):
+                    if abs(s - ks) <= tolerance_samples and abs(e - ke) <= tolerance_samples:
+                        is_dup = True
+                        break
+                if is_dup:
+                    break
+            if is_dup:
+                break
+        if not is_dup:
+            grid.setdefault((bx, by), []).append((s, e))
+            kept.append(pair)
+    return kept
