@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-11-26
+
+### Added
+
+- Added joint multi-channel loop transition refinement (`refine_loop_transition`) combining sub-frame FFT cross-correlation phase alignment with a local minimum-discontinuity search to eliminate amplitude steps and slope-kink crackles across all channels.
+- Added a residual sample-level crackle penalty applied after transition refinement when an audible discontinuity remains.
+- Added a bounded boundary loudness-jump penalty (200 ms A-weighted broadband window) and bidirectional continuity blend to loop scoring, improving candidate ranking ([#80](https://github.com/arkrow/PyMusicLooper/issues/80)).
+- Added proximity deduplication (50 ms window) for exact and near-identical refined loop points across normal, approximate, and `--brute-force` modes.
+
+### Changed
+
+- Replaced redundant double-dB scaling in audio analysis with true A-weighted decibels and recalibrated loudness thresholds accordingly. `LoopPair.loudness_difference` (and the loudness column in interactive output / `--alt-export-top`) now reports true A-weighted dB values rather than compressed legacy values ([#80](https://github.com/arkrow/PyMusicLooper/issues/80)).
+
+### Fixed
+
+- Fixed boundary-window scoring in `_calculate_subseq_beat_similarity` so clipped lookahead/lookbehind windows near track start or end are no longer penalized with zero-padding when sufficient overlap exists, and fixed lookbehind padding direction for sub-threshold windows ([#80](https://github.com/arkrow/PyMusicLooper/issues/80)).
+- Fixed `_prioritize_duration` running before sample positions were populated, restoring preference for longer loops among near-tied top candidates.
+- Fixed choppy terminal audio playback (and NumPy 2.5+ `sounddevice` array-shape deprecation warnings) by switching `PlaybackHandler` to `RawOutputStream` with a fixed blocksize (`DEFAULT_BLOCKSIZE = 2048`).
+
+
 ## [3.7.0] - 2026-11-20
 
 ### Added
