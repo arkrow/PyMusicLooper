@@ -10,6 +10,11 @@ from numba import njit
 from pymusiclooper.audio import MLAudio
 from pymusiclooper.exceptions import LoopNotFoundError
 
+# Boundary loudness-jump penalty parameters (true A-weighted dB over ~200 ms)
+_BOUNDARY_LOUDNESS_WINDOW_S = 0.20
+_BOUNDARY_LOUDNESS_PENALTY_CAP = 0.08
+_BOUNDARY_LOUDNESS_REF_DB = 3.5
+
 
 @dataclass
 class LoopPair:
@@ -170,7 +175,7 @@ def find_best_loop_points(
         )
 
     filtered_candidate_pairs = _assess_and_filter_loop_pairs(
-        mlaudio, chroma, bpm, candidate_pairs, disable_pruning
+        mlaudio, chroma, bpm, candidate_pairs, disable_pruning, power_db=power_db
     )
 
     # Set the exact loop start and end in samples and adjust them
@@ -334,6 +339,7 @@ def _assess_and_filter_loop_pairs(
     bpm: float,
     candidate_pairs: List[LoopPair],
     disable_pruning: bool = False,
+    power_db: Optional[np.ndarray] = None,
 ) -> List[LoopPair]:
     """Assigns the scores to each loop pair and prunes the list of candidate loop pairs
 
@@ -343,6 +349,7 @@ def _assess_and_filter_loop_pairs(
         bpm (float): The estimated bpm/tempo of the track
         candidate_pairs (List[LoopPair]): The list of candidate loop pairs found
         disable_pruning (bool, optional): Returns all the candidate loop points without filtering. Defaults to False.
+        power_db (np.ndarray, optional): A-weighted power spectrogram in dB used for boundary loudness-jump penalties. Defaults to None.
 
     Returns:
         List[LoopPair]: A scored and filtered list of valid loop candidate pairs
@@ -364,6 +371,13 @@ def _assess_and_filter_loop_pairs(
 
     weights = _weights(test_offset, start=max(2, test_offset // num_test_beats), stop=1)
 
+    loudness_csum = (
+        _boundary_loudness_csum(power_db) if power_db is not None else None
+    )
+    boundary_window_frames = max(
+        2, int(mlaudio.seconds_to_frames(_BOUNDARY_LOUDNESS_WINDOW_S))
+    )
+
     pair_score_list = [
         _calculate_loop_score(
             int(pair._loop_start_frame_idx),
@@ -371,6 +385,9 @@ def _assess_and_filter_loop_pairs(
             chroma,
             test_duration=test_offset,
             weights=weights,
+            loudness_csum=loudness_csum,
+            boundary_window_frames=boundary_window_frames,
+            fallback_db=pair.loudness_difference,
         )
         for pair in pruned_candidate_pairs
     ]
@@ -448,15 +465,89 @@ def _prioritize_duration(pair_list: List[LoopPair]) -> List[LoopPair]:
         pair_list.insert(0, pair_list.pop(duration_argmax))
 
 
+def _boundary_loudness_csum(power_db: np.ndarray) -> np.ndarray:
+    """Computes a 1D float64 cumulative sum of per-frame linear A-weighted energy."""
+    frame_power = np.sum(10.0 ** (power_db.astype(np.float64) / 10.0), axis=0)
+    return np.cumsum(np.insert(frame_power, 0, 0.0))
+
+
+def _window_mean_db(loudness_csum: np.ndarray, start: int, end: int) -> Optional[float]:
+    n = loudness_csum.shape[0] - 1
+    start = max(0, min(n, start))
+    end = max(start, min(n, end))
+    if end <= start:
+        return None
+    mean_power = (loudness_csum[end] - loudness_csum[start]) / (end - start)
+    return float(10.0 * np.log10(max(mean_power, 1e-12)))
+
+
+def _boundary_loudness_diff_db(
+    b1: int,
+    b2: int,
+    loudness_csum: np.ndarray,
+    window_frames: int,
+    use_lookahead: bool,
+    fallback_db: float = 0.0,
+) -> float:
+    """Measures the perceptual A-weighted broadband loudness jump (in dB) across
+    a short window adjacent to the loop boundary in the chosen direction."""
+    n = loudness_csum.shape[0] - 1
+    min_avail = max(1, window_frames // 2)
+
+    d_post: Optional[float] = None
+    if (n - b2) >= min_avail and (n - b1) >= min_avail:
+        l1 = _window_mean_db(loudness_csum, b1, b1 + window_frames)
+        l2 = _window_mean_db(loudness_csum, b2, b2 + window_frames)
+        if l1 is not None and l2 is not None:
+            d_post = abs(l1 - l2)
+
+    d_pre: Optional[float] = None
+    if b1 >= min_avail and b2 >= min_avail:
+        l1 = _window_mean_db(loudness_csum, b1 - window_frames, b1)
+        l2 = _window_mean_db(loudness_csum, b2 - window_frames, b2)
+        if l1 is not None and l2 is not None:
+            d_pre = abs(l1 - l2)
+
+    if use_lookahead:
+        if d_post is not None:
+            return d_post
+        if d_pre is not None:
+            return d_pre
+    else:
+        if d_pre is not None:
+            return d_pre
+        if d_post is not None:
+            return d_post
+    return float(fallback_db)
+
+
+def _loudness_jump_penalty(
+    jump_db: float,
+    max_penalty: float = _BOUNDARY_LOUDNESS_PENALTY_CAP,
+    ref_db: float = _BOUNDARY_LOUDNESS_REF_DB,
+) -> float:
+    """Quadratic bounded penalty for audible boundary loudness jumps.
+
+    Negligible below human JND (~0.5 dB) and capped at `max_penalty` once
+    `jump_db` reaches `ref_db`.
+    """
+    ratio = min(1.0, max(0.0, jump_db) / ref_db)
+    return max_penalty * (ratio * ratio)
+
+
 def _calculate_loop_score(
     b1: int,
     b2: int,
     chroma: np.ndarray,
     test_duration: int,
     weights: Optional[np.ndarray] = None,
+    loudness_csum: Optional[np.ndarray] = None,
+    boundary_window_frames: int = 0,
+    fallback_db: float = 0.0,
 ) -> float:
     """Calculates the similarity of two sequences given the starting indices `b1` and `b2` for the period of the `test_duration` specified.
-        Returns the best score based on the cosine similarity of subsequent (or preceding) notes.
+        Returns the best score based on the cosine similarity of subsequent (or preceding) notes,
+        optionally adjusted by a bounded quadratic penalty for audible boundary loudness jumps.
 
     Args:
         b1 (int): Frame index of the first beat to compare
@@ -464,6 +555,9 @@ def _calculate_loop_score(
         chroma (np.ndarray): The chroma spectrogram of the audio
         test_duration (int): How many frames along the chroma spectrogram to test.
         weights (np.ndarray, optional): If specified, will provide a weighted average of the note scores according to the weight array provided. Defaults to None.
+        loudness_csum (np.ndarray, optional): Cumulative sum of per-frame linear A-weighted energy. Defaults to None.
+        boundary_window_frames (int, optional): Short window length (in frames) for boundary loudness comparison. Defaults to 0.
+        fallback_db (float, optional): Fallback single-frame loudness difference in dB if both boundary windows are clipped. Defaults to 0.0.
 
     Returns:
         float: the weighted average of the cosine similarity of the notes along the tested region
@@ -474,6 +568,30 @@ def _calculate_loop_score(
     lookbehind_score = _calculate_subseq_beat_similarity(
         b1, b2, chroma, -test_duration, weights=weights[::-1]
     )
+
+    if loudness_csum is not None and boundary_window_frames > 0:
+        post_jump_db = _boundary_loudness_diff_db(
+            b1,
+            b2,
+            loudness_csum,
+            boundary_window_frames,
+            use_lookahead=True,
+            fallback_db=fallback_db,
+        )
+        pre_jump_db = _boundary_loudness_diff_db(
+            b1,
+            b2,
+            loudness_csum,
+            boundary_window_frames,
+            use_lookahead=False,
+            fallback_db=fallback_db,
+        )
+        lookahead_score = max(
+            0.0, lookahead_score - _loudness_jump_penalty(post_jump_db)
+        )
+        lookbehind_score = max(
+            0.0, lookbehind_score - _loudness_jump_penalty(pre_jump_db)
+        )
 
     return max(lookahead_score, lookbehind_score)
 

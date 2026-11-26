@@ -5,9 +5,12 @@ import soundfile as sf
 from pymusiclooper.analysis import (
     LoopPair,
     _analyze_audio,
+    _boundary_loudness_csum,
+    _boundary_loudness_diff_db,
     _calculate_loop_score,
     _calculate_subseq_beat_similarity,
     _db_diff,
+    _loudness_jump_penalty,
     _prioritize_duration,
     _weights,
     find_best_loop_points,
@@ -176,4 +179,108 @@ def test_analyze_audio_power_db_is_true_decibels(tmp_path):
 
     assert _db_diff(power_db[..., f_ref], power_db[..., f_plus2]) == pytest.approx(2.0, abs=0.15)
     assert _db_diff(power_db[..., f_ref], power_db[..., f_minus30]) == pytest.approx(30.0, abs=0.5)
+
+
+def test_loudness_jump_penalty_curve_and_cap():
+    assert _loudness_jump_penalty(0.0) == 0.0
+    assert _loudness_jump_penalty(-1.0) == 0.0
+    # Negligible below human loudness JND (~0.5 dB)
+    assert _loudness_jump_penalty(0.5) < 0.002
+    # Strictly increasing and reaches full 8% cap at 3.5 dB
+    assert _loudness_jump_penalty(1.5) < _loudness_jump_penalty(2.5) < _loudness_jump_penalty(3.5)
+    assert _loudness_jump_penalty(3.5) == pytest.approx(0.08)
+    assert _loudness_jump_penalty(10.0) == pytest.approx(0.08)
+
+
+def test_boundary_loudness_diff_db_measures_step_and_handles_edges():
+    # 100 frames at 10 dB, followed by 100 frames at 13 dB (+3.0 dB step at frame 100)
+    power_db = np.full((4, 200), 10.0, dtype=np.float64)
+    power_db[:, 100:] = 13.0
+    csum = _boundary_loudness_csum(power_db)
+
+    # Lookahead post-boundary comparison: [20..40) at 10 dB vs [120..140) at 13 dB -> 3.0 dB
+    assert _boundary_loudness_diff_db(20, 120, csum, window_frames=20, use_lookahead=True) == pytest.approx(
+        3.0, abs=1e-6
+    )
+    # Lookbehind pre-boundary comparison: [20..40) vs [40..60) both at 10 dB -> 0.0 dB
+    assert _boundary_loudness_diff_db(40, 60, csum, window_frames=20, use_lookahead=False) == pytest.approx(
+        0.0, abs=1e-6
+    )
+    # When post window is clipped at EOF (< window_frames // 2), falls back to pre window
+    assert _boundary_loudness_diff_db(98, 198, csum, window_frames=20, use_lookahead=True) == pytest.approx(
+        3.0, abs=1e-6
+    )
+    # When both pre and post windows are too short, falls back to fallback_db
+    tiny_csum = _boundary_loudness_csum(np.full((4, 6), 10.0, dtype=np.float64))
+    assert _boundary_loudness_diff_db(
+        2, 4, tiny_csum, window_frames=20, use_lookahead=True, fallback_db=1.25
+    ) == pytest.approx(1.25)
+
+
+def test_loop_score_penalizes_audible_boundary_jump():
+    # Identical chroma across 300 frames, but frames 150..300 are +3.5 dB louder
+    chroma = _make_chroma(length=300, period=100)
+    power_db = np.full((8, 300), 10.0, dtype=np.float64)
+    power_db[:, 150:] = 13.5
+    csum = _boundary_loudness_csum(power_db)
+    weights = _weights(60, start=6, stop=1)
+
+    smooth_score = _calculate_loop_score(
+        10, 110, chroma, 60, weights=weights, loudness_csum=csum, boundary_window_frames=16
+    )
+    jumpy_score = _calculate_loop_score(
+        80, 180, chroma, 60, weights=weights, loudness_csum=csum, boundary_window_frames=16
+    )
+
+    assert smooth_score == pytest.approx(1.0, abs=1e-5)
+    assert jumpy_score == pytest.approx(0.92, abs=1e-4)
+    assert smooth_score > jumpy_score
+
+
+def test_find_best_loop_points_preserves_ost_fadeout_loop(tmp_path):
+    """End-to-end test: unique intro + 24s loop + 4s fade-out of loop start still picks 24s."""
+    sr = 22050
+
+    def chord_bar(freqs, dur=2.0, amp=0.4):
+        t = np.arange(int(dur * sr), dtype=np.float32) / sr
+        env = 0.25 + 0.75 * np.exp(-5.0 * ((t % 0.5) / 0.5))
+        sig = sum(np.sin(2 * np.pi * f * t) for f in freqs) / len(freqs)
+        return (amp * env * sig).astype(np.float32)
+
+    C = [261.63, 329.63, 392.00]
+    G = [196.00, 246.94, 392.00]
+    Am = [220.00, 261.63, 329.63]
+    F = [174.61, 220.00, 349.23]
+    Dm = [293.66, 349.23, 440.00]
+    Em = [329.63, 392.00, 493.88]
+    Bb = [233.08, 293.66, 349.23]
+    Fs = [185.00, 233.08, 277.18]
+    Eb = [311.13, 392.00, 466.16]
+    C_alt = [261.63, 329.63, 392.00, 493.88]
+    G_alt = [196.00, 246.94, 392.00, 440.00]
+
+    intro = np.concatenate([chord_bar(Fs), chord_bar(Eb), chord_bar(Bb)])
+    body = np.concatenate(
+        [
+            chord_bar(C), chord_bar(G), chord_bar(Am), chord_bar(F),
+            chord_bar(Em), chord_bar(Dm),
+            chord_bar(C_alt), chord_bar(G_alt), chord_bar(Am), chord_bar(F),
+            chord_bar(Bb), chord_bar(Dm),
+        ]
+    )
+    outro_raw = np.concatenate([chord_bar(C), chord_bar(G)])
+    outro = outro_raw * np.linspace(1.0, 0.0, len(outro_raw), dtype=np.float32)
+    mono = np.concatenate([intro, body, outro])
+
+    wav_path = tmp_path / "ost_fadeout.wav"
+    sf.write(str(wav_path), np.column_stack([mono, mono]), sr)
+
+    mlaudio = MLAudio(str(wav_path))
+    pairs = find_best_loop_points(mlaudio)
+    best = pairs[0]
+    loop_duration_s = (best.loop_end - best.loop_start) / mlaudio.rate
+
+    assert abs(loop_duration_s - 24.0) < 0.2
+    assert best.score > 0.98
+
 
