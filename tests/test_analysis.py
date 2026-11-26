@@ -9,9 +9,11 @@ from pymusiclooper.analysis import (
     _boundary_loudness_diff_db,
     _calculate_loop_score,
     _calculate_subseq_beat_similarity,
+    _crackle_penalty,
     _db_diff,
     _loudness_jump_penalty,
     _prioritize_duration,
+    _transition_crackle_excess,
     _weights,
     find_best_loop_points,
     nearest_zero_crossing,
@@ -347,6 +349,37 @@ def test_refine_loop_transition_handles_tiny_audio_safely():
     tiny = np.zeros((3, 2), dtype=np.float32)
     s, e = refine_loop_transition(tiny, 44100, 0, 2)
     assert 0 <= s <= e < 3
+
+
+def test_crackle_penalty_curve_and_cap():
+    assert _crackle_penalty(0.0) == 0.0
+    assert _crackle_penalty(-0.1) == 0.0
+    assert _crackle_penalty(0.01) < 0.001
+    assert _crackle_penalty(0.05) < _crackle_penalty(0.10) < _crackle_penalty(0.15)
+    assert _crackle_penalty(0.15) == pytest.approx(0.05)
+    assert _crackle_penalty(1.0) == pytest.approx(0.05)
+
+
+def test_transition_crackle_excess_detects_step_pop_and_slope_kink():
+    sr = 44100
+    t = np.arange(2000, dtype=np.float64) / sr
+    # Exact period = 100 samples (441 Hz)
+    sine = np.sin(2 * np.pi * 441.0 * t)
+    audio = np.column_stack([sine, sine])
+
+    # 1. Exact continuous continuation: 0 excess crackle
+    assert _transition_crackle_excess(audio, peak=1.0, loop_start=200, loop_end=1200) == pytest.approx(
+        0.0, abs=1e-4
+    )
+
+    # 2. 0th-order amplitude step pop (quarter-cycle offset: jumping from 1.0 to 0.0)
+    pop_excess = _transition_crackle_excess(audio, peak=1.0, loop_start=200, loop_end=1226)
+    assert pop_excess > 0.5
+
+    # 3. 1st-order zero-crossing slope reversal (half-cycle offset: falling zero -> rising zero)
+    kink_excess = _transition_crackle_excess(audio, peak=1.0, loop_start=200, loop_end=1251)
+    assert kink_excess > 0.05
+
 
 
 

@@ -20,6 +20,12 @@ _BOUNDARY_LOUDNESS_REF_DB = 3.5
 # penalizing unique-intro or fade-out tracks.
 _BIDIRECTIONAL_BLEND_WEIGHT = 0.03
 
+# Fallback sample-level transition crackle penalty (applied after transition
+# refinement if an audible step or slope-kink discontinuity still remains).
+_CRACKLE_PENALTY_CAP = 0.05
+_CRACKLE_REF_EXCESS = 0.15
+_CRACKLE_CONTEXT_SAMPLES = 64
+
 
 @dataclass
 class LoopPair:
@@ -200,6 +206,20 @@ def find_best_loop_points(
             mlaudio.frames_to_samples(pair._loop_start_frame_idx),
             mlaudio.frames_to_samples(pair._loop_end_frame_idx),
         )
+
+    # Penalize any residual sample-level crackle that transition refinement could not eliminate
+    playback_peak = float(np.max(np.abs(mlaudio.playback_audio)))
+    if playback_peak > 1e-8:
+        for pair in filtered_candidate_pairs:
+            crackle_excess = _transition_crackle_excess(
+                mlaudio.playback_audio,
+                playback_peak,
+                pair.loop_start,
+                pair.loop_end,
+            )
+            if crackle_excess > 0.0:
+                pair.score = max(0.0, pair.score - _crackle_penalty(crackle_excess))
+        filtered_candidate_pairs.sort(key=lambda x: x.score, reverse=True)
 
     # prefer longer loops for highly similar sequences
     if len(filtered_candidate_pairs) > 1:
@@ -937,3 +957,64 @@ def refine_loop_transition(
     radius = max(1, rate // 200)
     max_rel_drift = max(1, (3 * rate) // 1000)
     return _refine_pair_joint(audio, s0, e_aligned, s0, e0, radius, max_rel_drift)
+
+
+def _transition_crackle_excess(
+    audio: np.ndarray,
+    peak: float,
+    loop_start: int,
+    loop_end: int,
+    context_samples: int = _CRACKLE_CONTEXT_SAMPLES,
+) -> float:
+    """Measures peak-normalized excess 2nd-order finite-difference impulse at the
+    transition `audio[loop_end - 1] -> audio[loop_start]` above the local 95th-percentile
+    natural curvature across all channels.
+
+    Captures both 0th-order amplitude steps (pops) and 1st-order slope kinks
+    (zero-crossing crackles) while ignoring naturally bright/percussive material.
+    """
+    n, n_channels = audio.shape
+    if (
+        loop_end < 2
+        or loop_start < 1
+        or loop_start + 1 >= n
+        or loop_end >= n
+        or peak <= 1e-8
+    ):
+        return 0.0
+
+    inv_peak = 1.0 / peak
+    d2_left = (
+        np.abs(audio[loop_start] - 2.0 * audio[loop_end - 1] + audio[loop_end - 2])
+        * inv_peak
+    )
+    d2_right = (
+        np.abs(audio[loop_start + 1] - 2.0 * audio[loop_start] + audio[loop_end - 1])
+        * inv_peak
+    )
+    d2_transition = np.maximum(d2_left, d2_right)
+
+    e0 = max(0, loop_end - context_samples)
+    s1 = min(n, loop_start + context_samples)
+    nat_e = (
+        np.abs(np.diff(audio[e0:loop_end], n=2, axis=0)) * inv_peak
+        if (loop_end - e0) >= 3
+        else np.zeros((1, n_channels), dtype=np.float64)
+    )
+    nat_s = (
+        np.abs(np.diff(audio[loop_start:s1], n=2, axis=0)) * inv_peak
+        if (s1 - loop_start) >= 3
+        else np.zeros((1, n_channels), dtype=np.float64)
+    )
+    nat_p95 = np.percentile(np.vstack([nat_e, nat_s]), 95, axis=0)
+    return float(np.max(np.maximum(0.0, d2_transition - nat_p95)))
+
+
+def _crackle_penalty(
+    crackle_excess: float,
+    max_penalty: float = _CRACKLE_PENALTY_CAP,
+    ref_excess: float = _CRACKLE_REF_EXCESS,
+) -> float:
+    """Quadratic bounded penalty for residual sample-level transition crackle."""
+    ratio = min(1.0, max(0.0, crackle_excess) / ref_excess)
+    return max_penalty * (ratio * ratio)
