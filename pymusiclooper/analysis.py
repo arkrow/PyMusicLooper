@@ -173,10 +173,6 @@ def find_best_loop_points(
         mlaudio, chroma, bpm, candidate_pairs, disable_pruning
     )
 
-    # prefer longer loops for highly similar sequences
-    if len(filtered_candidate_pairs) > 1:
-        _prioritize_duration(filtered_candidate_pairs)
-
     # Set the exact loop start and end in samples and adjust them
     # to the nearest zero crossing. Avoids audio popping/clicking while looping
     # as much as possible.
@@ -198,6 +194,10 @@ def find_best_loop_points(
             mlaudio.rate,
             mlaudio.frames_to_samples(pair._loop_end_frame_idx)
         )
+
+    # prefer longer loops for highly similar sequences
+    if len(filtered_candidate_pairs) > 1:
+        _prioritize_duration(filtered_candidate_pairs)
 
     if not filtered_candidate_pairs:
         raise LoopNotFoundError(
@@ -515,6 +515,9 @@ def _calculate_subseq_beat_similarity(
         max_offset = min(b1_end - b1_start, b2_end - b2_start)
         b1_end, b2_end = (b1_start + max_offset, b2_start + max_offset)
 
+    if max_offset == 0:
+        return 0.0
+
     dot_prod = np.einsum(
         "ij,ij->j", chroma[..., b1_start:b1_end], chroma[..., b2_start:b2_end]
     )
@@ -523,12 +526,40 @@ def _calculate_subseq_beat_similarity(
     cosine_sim = dot_prod / (np.maximum(b1_norm * b2_norm, 1e-10))
 
     if max_offset < test_length:
-        return np.average(
-            np.pad(cosine_sim, pad_width=(0, test_length - max_offset), mode="constant", constant_values=0),
-            weights=weights,
+        # Avoid penalizing valid loop points near track boundaries where the
+        # comparison window is clipped by start/end of audio, while still
+        # guarding against tiny boundary fragments (< 25% of test_length)
+        # receiving spurious high scores.
+        min_frames = max(1, test_length // 4)
+        is_lookbehind = test_end_offset < 0
+        if max_offset >= min_frames:
+            eff_weights = (
+                None
+                if weights is None
+                else (weights[-max_offset:] if is_lookbehind else weights[:max_offset])
+            )
+            return float(np.average(cosine_sim, weights=eff_weights))
+
+        pad_len = min_frames - max_offset
+        pad_width = (pad_len, 0) if is_lookbehind else (0, pad_len)
+        eff_weights = (
+            None
+            if weights is None
+            else (weights[-min_frames:] if is_lookbehind else weights[:min_frames])
+        )
+        return float(
+            np.average(
+                np.pad(
+                    cosine_sim,
+                    pad_width=pad_width,
+                    mode="constant",
+                    constant_values=0,
+                ),
+                weights=eff_weights,
+            )
         )
     else:
-        return np.average(cosine_sim, weights=weights)
+        return float(np.average(cosine_sim, weights=weights))
 
 
 def _weights(length: int, start: int = 100, stop: int = 1):
