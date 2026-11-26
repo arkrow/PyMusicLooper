@@ -4,8 +4,10 @@ import soundfile as sf
 
 from pymusiclooper.analysis import (
     LoopPair,
+    _analyze_audio,
     _calculate_loop_score,
     _calculate_subseq_beat_similarity,
+    _db_diff,
     _prioritize_duration,
     _weights,
     find_best_loop_points,
@@ -150,3 +152,28 @@ def test_find_best_loop_points_short_tail_end_to_end(tmp_path):
 
     assert abs(loop_duration_s - 24.0) < 0.2
     assert best.score > 0.99
+
+
+def test_analyze_audio_power_db_is_true_decibels(tmp_path):
+    """Verifies `_analyze_audio` returns true A-weighted dB (no double-dB compression or sign flip)."""
+    sr = 22050
+    t = np.arange(sr, dtype=np.float32) / sr
+    tone = np.sin(2 * np.pi * 440.0 * t).astype(np.float32)
+
+    # First half at 0.5 amplitude, second half +2.0 dB louder, plus a quiet -30 dB section
+    gain_2db = 10 ** (2.0 / 20.0)
+    gain_m30db = 10 ** (-30.0 / 20.0)
+    mono = np.concatenate([0.5 * tone, 0.5 * gain_2db * tone, 0.5 * gain_m30db * tone])
+    wav_path = tmp_path / "db_scale.wav"
+    sf.write(str(wav_path), np.column_stack([mono, mono]), sr)
+
+    mlaudio = MLAudio(str(wav_path))
+    _, power_db, _, _ = _analyze_audio(mlaudio, skip_beat_analysis=True)
+
+    f_ref = mlaudio.seconds_to_frames(0.5)
+    f_plus2 = mlaudio.seconds_to_frames(1.5)
+    f_minus30 = mlaudio.seconds_to_frames(2.5)
+
+    assert _db_diff(power_db[..., f_ref], power_db[..., f_plus2]) == pytest.approx(2.0, abs=0.15)
+    assert _db_diff(power_db[..., f_ref], power_db[..., f_minus30]) == pytest.approx(30.0, abs=0.5)
+

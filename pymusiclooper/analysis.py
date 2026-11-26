@@ -235,7 +235,8 @@ def _analyze_audio(
         S=S_weighed, sr=mlaudio.rate, n_mels=128, fmax=8000
     )
     chroma = librosa.feature.chroma_stft(S=S_power)
-    power_db = librosa.power_to_db(S_weighed, ref=np.median)
+    # `perceptual_weighting` already converts `S_power` to A-weighted decibels.
+    power_db = S_weighed
 
     if skip_beat_analysis:
         return chroma, power_db, None, None
@@ -295,11 +296,10 @@ def _find_candidate_pairs(
     ## Mainly found through trial and error,
     ## higher values typically result in the inclusion of musically unrelated beats/notes
     ACCEPTABLE_NOTE_DEVIATION = 0.0875
-    ## Since the _db_diff comparison is takes a perceptually weighted power_db frame,
-    ## the difference should be imperceptible (ideally, close to 0)
-    ## Based on trial and error, values higher than ~0.5 have a perceptible
-    ## difference in loudness
-    ACCEPTABLE_LOUDNESS_DIFFERENCE = 0.5
+    ## Maximum A-weighted peak loudness difference in true decibels (3.5 dB).
+    ## Calibrated against the legacy double-dB threshold (0.5), which admitted
+    ## ~3.0-4.0 dB of true A-weighted loudness difference on normalized music.
+    ACCEPTABLE_LOUDNESS_DIFFERENCE = 3.5
 
     deviation = _norm(chroma[..., beats] * ACCEPTABLE_NOTE_DEVIATION)
 
@@ -389,7 +389,7 @@ def _prune_candidates(
     candidate_pairs: List[LoopPair],
     keep_top_notes: float = 75,
     keep_top_loudness: float = 50,
-    acceptable_loudness=0.25,
+    acceptable_loudness: float = 2.0,
 ) -> List[LoopPair]:
     db_diff_array = np.array([pair.loudness_difference for pair in candidate_pairs])
     note_dist_array = np.array([pair.note_distance for pair in candidate_pairs])
