@@ -15,6 +15,11 @@ _BOUNDARY_LOUDNESS_WINDOW_S = 0.20
 _BOUNDARY_LOUDNESS_PENALTY_CAP = 0.08
 _BOUNDARY_LOUDNESS_REF_DB = 3.5
 
+# Small bidirectional continuity blend so mid-loop transitions matching on both
+# sides outscore one-sided cold-start / partial-phrase matches without
+# penalizing unique-intro or fade-out tracks.
+_BIDIRECTIONAL_BLEND_WEIGHT = 0.03
+
 
 @dataclass
 class LoopPair:
@@ -593,7 +598,12 @@ def _calculate_loop_score(
             0.0, lookbehind_score - _loudness_jump_penalty(pre_jump_db)
         )
 
-    return max(lookahead_score, lookbehind_score)
+    best_dir = max(lookahead_score, lookbehind_score)
+    other_dir = min(lookahead_score, lookbehind_score)
+    return (
+        (1.0 - _BIDIRECTIONAL_BLEND_WEIGHT) * best_dir
+        + _BIDIRECTIONAL_BLEND_WEIGHT * other_dir
+    )
 
 
 def _calculate_subseq_beat_similarity(

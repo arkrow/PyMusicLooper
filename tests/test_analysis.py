@@ -95,7 +95,7 @@ def test_loop_score_prefers_exact_short_tail_over_imperfect_interior_loop():
     true_score = _calculate_loop_score(10, 310, chroma, test_length, weights=weights)
     interior_score = _calculate_loop_score(10, 160, chroma, test_length, weights=weights)
 
-    assert true_score == pytest.approx(1.0, abs=1e-6)
+    assert true_score > 0.97
     assert true_score > interior_score
 
 
@@ -154,7 +154,7 @@ def test_find_best_loop_points_short_tail_end_to_end(tmp_path):
     loop_duration_s = (best.loop_end - best.loop_start) / mlaudio.rate
 
     assert abs(loop_duration_s - 24.0) < 0.2
-    assert best.score > 0.99
+    assert best.score > 0.97
 
 
 def test_analyze_audio_power_db_is_true_decibels(tmp_path):
@@ -226,7 +226,7 @@ def test_loop_score_penalizes_audible_boundary_jump():
     weights = _weights(60, start=6, stop=1)
 
     smooth_score = _calculate_loop_score(
-        10, 110, chroma, 60, weights=weights, loudness_csum=csum, boundary_window_frames=16
+        20, 120, chroma, 60, weights=weights, loudness_csum=csum, boundary_window_frames=16
     )
     jumpy_score = _calculate_loop_score(
         80, 180, chroma, 60, weights=weights, loudness_csum=csum, boundary_window_frames=16
@@ -235,6 +235,26 @@ def test_loop_score_penalizes_audible_boundary_jump():
     assert smooth_score == pytest.approx(1.0, abs=1e-5)
     assert jumpy_score == pytest.approx(0.92, abs=1e-4)
     assert smooth_score > jumpy_score
+
+
+def test_loop_score_prefers_bidirectional_over_one_sided_match():
+    # Build chroma with period 100 from frame 50..250, and a unique intro on frames 0..50
+    rng = np.random.default_rng(12)
+    intro = rng.uniform(0.1, 1.0, size=(12, 50))
+    loop = rng.uniform(0.1, 1.0, size=(12, 100))
+    chroma = np.concatenate([intro, loop, loop], axis=1)
+    chroma /= np.max(chroma, axis=0, keepdims=True)
+    weights = _weights(40, start=4, stop=1)
+
+    # Frame 50 vs 150: lookahead matches (1.0), lookbehind hits unique intro (low)
+    one_sided = _calculate_loop_score(50, 150, chroma, 40, weights=weights)
+    # Frame 90 vs 190: both lookahead and lookbehind match (1.0 / 1.0)
+    two_sided = _calculate_loop_score(90, 190, chroma, 40, weights=weights)
+
+    assert two_sided == pytest.approx(1.0, abs=1e-6)
+    assert two_sided > one_sided
+    # One-sided still retains > 97% so unique-intro tracks remain strongly scored
+    assert one_sided > 0.97
 
 
 def test_find_best_loop_points_preserves_ost_fadeout_loop(tmp_path):
